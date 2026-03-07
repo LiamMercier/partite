@@ -13,9 +13,11 @@ target_include_directories(libproject
         $<INSTALL_INTERFACE:include>
 )
 
-add_subdirectory(graphs)
+add_subdirectory(include/libproject/graphs)
 
 if(LIBPROJECT_BUILD_TESTS)
+    include(FetchContent)
+
     FetchContent_Declare(
         googletest
         GIT_REPOSITORY https://github.com/google/googletest.git
@@ -23,6 +25,7 @@ if(LIBPROJECT_BUILD_TESTS)
         GIT_SHALLOW TRUE
     )
 
+    FetchContent_MakeAvailable(googletest)
     enable_testing()
     add_subdirectory(tests)
 endif()

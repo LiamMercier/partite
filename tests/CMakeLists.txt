@@ -1,4 +1,5 @@
 add_executable(unit-tests
+    graph-constant-tests.cpp
 )
 
 target_link_libraries(unit-tests PRIVATE
