@@ -20,11 +20,27 @@ class AdjacencyMatrix
 public:
     static constexpr bool is_directed = Directed;
 
+    AdjacencyMatrix(size_t num_vertices)
+    :vertex_count_(num_vertices)
+    {
+        if constexpr (is_directed)
+        {
+            adj_.resize(vertex_count_ * vertex_count_);
+        }
+        else
+        {
+            // For an undirected graph, we only need to store the top triangular
+            // section of the matrix because A[u][v] == A[v][u]. Thus, we can
+            // use almost half the memory by not storing these duplicate values.
+            adj_.resize((vertex_count_ * (vertex_count_ + 1)) / 2);
+        }
+    }
+
 private:
 
     // Flattened matrix representation. We map 2D -> 1D internally.
     std::vector<EdgeID> adj_;
-    size_t vertices_;
+    size_t vertex_count_;
 };
 
 };
