@@ -1,6 +1,7 @@
 add_executable(unit-tests
     graph-constant-tests.cpp
     property-graph-tests.cpp
+    graph-representation-tests.cpp
 )
 
 target_link_libraries(unit-tests PRIVATE

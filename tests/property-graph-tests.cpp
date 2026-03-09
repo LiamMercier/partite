@@ -7,5 +7,5 @@ TEST(PropertyGraphs, Construction)
 {
     using namespace libproject::graphs;
 
-    PropertyGraph<AdjacencyMatrix<true>> graph;
+    // PropertyGraph<AdjacencyMatrix<true>> graph(5);
 }

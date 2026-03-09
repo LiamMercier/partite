@@ -13,8 +13,15 @@ namespace libproject::graphs
 {
     struct VertexID
     {
+        static constexpr GRAPH_VERTEX_ID_TYPE max = std::numeric_limits<GRAPH_VERTEX_ID_TYPE>::max();
+        static constexpr GRAPH_VERTEX_ID_TYPE empty = max;
+
         VertexID(GRAPH_VERTEX_ID_TYPE v)
         :value(v)
+        {}
+
+        VertexID()
+        :value(0)
         {}
 
         constexpr auto operator<=>(const VertexID & other) const = default;
@@ -24,8 +31,15 @@ namespace libproject::graphs
 
     struct EdgeID
     {
+        static constexpr GRAPH_EDGE_ID_TYPE max = std::numeric_limits<GRAPH_EDGE_ID_TYPE>::max();
+        static constexpr GRAPH_EDGE_ID_TYPE empty = max;
+
         EdgeID(GRAPH_EDGE_ID_TYPE v)
         :value(v)
+        {}
+
+        EdgeID()
+        :value(0)
         {}
 
         constexpr auto operator<=>(const EdgeID & other) const = default;

@@ -7,3 +7,4 @@ Draft of a mathematics library
 TODO: make this proper documentation
 
 - Each GraphRepresentation compatible class exposes "is_directed" as a bool for consumers
+- Each GraphRepresentation provides add_edge(from, to, edge_id) to add edges

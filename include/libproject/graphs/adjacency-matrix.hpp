@@ -6,20 +6,13 @@
 namespace libproject::graphs
 {
 
-// TODO: should we even allow dynamic vertices in this setup?
-//
-//       Probably not, we have Theta(V^2) reallocation, or Theta(V)
-//       amortized reallocation if we expand in a way that every
-//       V additions we need to realloc. Seems like no solid use case.
-
-// TODO: Directed should control if we can apply optimizations, such as
-//       using half as much memory for graphs vs digraphs.
 template <bool Directed>
 class AdjacencyMatrix
 {
 public:
     static constexpr bool is_directed = Directed;
 
+    // Create an AdjacencyMatrix with all zero edges.
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
     {
@@ -33,6 +26,52 @@ public:
             // section of the matrix because A[u][v] == A[v][u]. Thus, we can
             // use almost half the memory by not storing these duplicate values.
             adj_.resize((vertex_count_ * (vertex_count_ + 1)) / 2);
+        }
+    }
+
+    void add_edge(VertexID from, VertexID to, EdgeID edge_id)
+    {
+        size_t index = compute_index(from, to);
+        adj_[index] = edge_id;
+        return;
+    }
+
+    void remove_edge(VertexID from, VertexID to)
+    {
+        size_t index = compute_index(from, to);
+        adj_[index] = VertexID::empty;
+        return;
+    }
+
+private:
+    inline size_t compute_index(VertexID from, VertexID to)
+    {
+        if constexpr (is_directed)
+        {
+            return from.value * vertex_count_ + to.value;
+        }
+        else
+        {
+            if (from > to)
+            {
+                std::swap(from, to);
+            }
+
+            // let from be u, and to be v
+            //
+            // row i has |V| - i elements, so the elements before row u is
+            //
+            // \sum_{i=0}^{u-1}(|V|-i)
+            //      = u|V| - ((u - 1) * u) / 2
+            //
+            // the offset inside of this row is of course, (v - u)
+            //
+            // combining terms, the index is
+            //
+            // u|V| + v - ((u + 1) * u) / 2
+            return from.value * vertex_count_
+                   + to.value
+                   - ((from.value + 1) * from.value) / 2;
         }
     }
 
