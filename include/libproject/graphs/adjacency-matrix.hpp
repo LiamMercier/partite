@@ -3,6 +3,9 @@
 
 #include <libproject/graphs/graph-constants.hpp>
 
+namespace libproject::graphs
+{
+
 // TODO: should we even allow dynamic vertices in this setup?
 //
 //       Probably not, we have Theta(V^2) reallocation, or Theta(V)
@@ -14,8 +17,14 @@
 template <bool Directed>
 class AdjacencyMatrix
 {
+public:
+    static constexpr bool is_directed = Directed;
+
 private:
 
-    // Flattened matrix representation. We must map 2D -> 1D internally.
+    // Flattened matrix representation. We map 2D -> 1D internally.
     std::vector<EdgeID> adj_;
+    size_t vertices_;
+};
+
 };

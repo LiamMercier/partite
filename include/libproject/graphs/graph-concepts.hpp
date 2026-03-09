@@ -3,7 +3,17 @@
 #include <libproject/graphs/graph-constants.hpp>
 
 // Definition of a graph topology
-concept GraphRepresentation = requires(T t, VertexID v_id, EdgeID e_id)
+namespace libproject::graphs
 {
-    // TODO: probably just require we can fetch neighbors
-}
+
+template <typename T>
+concept GraphRepresentation = requires(T rep,
+                                       VertexID v_id,
+                                       EdgeID e_id)
+{
+    { T::is_directed } -> std::convertible_to<bool>;
+
+    // TODO: require lookup, etc.
+};
+
+};
