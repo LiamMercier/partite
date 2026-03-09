@@ -29,6 +29,20 @@ public:
         }
     }
 
+    EdgeID find_edge(VertexID from, VertexID to) const
+    {
+        size_t index = compute_index(from, to);
+        return adj_[index];
+    }
+
+    bool has_edge(VertexID from, VertexID to) const
+    {
+        size_t index = compute_index(from, to);
+        EdgeID edge_id = adj_[index];
+
+        return (edge_id != EdgeID::empty);
+    }
+
     void add_edge(VertexID from, VertexID to, EdgeID edge_id)
     {
         size_t index = compute_index(from, to);
