@@ -4,8 +4,19 @@ project(libproject
         LANGUAGES CXX
         VERSION 1.0.0)
 
+set(CMAKE_CXX_STANDARD 23)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+
 # setup main library target
 add_library(libproject INTERFACE)
+
+set(GRAPH_VERTEX_ID_TYPE uint32_t CACHE STRING "Vertex ID type at compile time")
+set(GRAPH_EDGE_ID_TYPE uint32_t CACHE STRING "Vertex ID type at compile time")
+
+target_compile_definitions(libproject INTERFACE
+    GRAPH_VERTEX_ID_TYPE=${GRAPH_VERTEX_ID_TYPE}
+    GRAPH_EDGE_ID_TYPE=${GRAPH_EDGE_ID_TYPE}
+)
 
 target_include_directories(libproject
     INTERFACE
