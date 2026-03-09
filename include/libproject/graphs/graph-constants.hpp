@@ -9,8 +9,27 @@
 #define GRAPH_EDGE_ID_TYPE uint32_t
 #endif
 
-namespace libproject::Graphs
+namespace libproject::graphs
 {
-    using vertex_id = GRAPH_VERTEX_ID_TYPE;
-    using edge_id = GRAPH_EDGE_ID_TYPE;
+    struct VertexID
+    {
+        VertexID(GRAPH_VERTEX_ID_TYPE v)
+        :value(v)
+        {}
+
+        constexpr auto operator<=>(const VertexID & other) const = default;
+
+        GRAPH_VERTEX_ID_TYPE value;
+    };
+
+    struct EdgeID
+    {
+        EdgeID(GRAPH_EDGE_ID_TYPE v)
+        :value(v)
+        {}
+
+        constexpr auto operator<=>(const EdgeID & other) const = default;
+
+        GRAPH_EDGE_ID_TYPE value;
+    };
 };
