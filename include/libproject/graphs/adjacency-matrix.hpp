@@ -1,6 +1,5 @@
 #pragma once
 #include <vector>
-#include <cassert>
 
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
