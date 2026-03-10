@@ -31,6 +31,10 @@ public:
         }
     }
 
+    //
+    // Edge lookup and modification functions
+    //
+
     EdgeID find_edge(VertexID from, VertexID to) const
     {
         size_t index = compute_index(from, to);
@@ -59,8 +63,22 @@ public:
         return;
     }
 
+    //
+    // Utility functions
+    //
+
+    size_t vertex_count() const noexcept
+    {
+        return vertex_count_;
+    }
+
+    size_t size() const noexcept
+    {
+        return vertex_count();
+    }
+
 private:
-    inline size_t compute_index(VertexID from, VertexID to)
+    size_t compute_index(VertexID from, VertexID to)
     {
         if constexpr (is_directed)
         {
