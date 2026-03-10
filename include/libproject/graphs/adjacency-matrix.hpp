@@ -1,6 +1,8 @@
 #pragma once
 #include <vector>
+#include <cassert>
 
+#include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
 
 namespace libproject::graphs
@@ -38,20 +40,55 @@ public:
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
     {
         size_t index = compute_index(from, to);
+
+        libproject_assert(index < adj_.size(),
+                          "AdjacencyMatrix::find_edge: index "
+                          + std::to_string(index)
+                          + " is out of bounds for matrix of "
+                          + std::to_string(adj_.size())
+                          + " elements.\nInput: {from: "
+                          + std::to_string(from.value)
+                          + ", to: "
+                          + std::to_string(to.value)
+                          +"}");
+
         return adj_[index];
     }
 
     bool has_edge(VertexID from, VertexID to) const noexcept
     {
         size_t index = compute_index(from, to);
-        EdgeID edge_id = adj_[index];
 
+        libproject_assert(index < adj_.size(),
+                          "AdjacencyMatrix::has_edge: index "
+                          + std::to_string(index)
+                          + " is out of bounds for matrix of "
+                          + std::to_string(adj_.size())
+                          + " elements.\nInput: {from: "
+                          + std::to_string(from.value)
+                          + ", to: "
+                          + std::to_string(to.value)
+                          +"}");
+
+        EdgeID edge_id = adj_[index];
         return (edge_id != EdgeID::empty);
     }
 
     void add_edge(VertexID from, VertexID to, EdgeID edge_id) noexcept
     {
         size_t index = compute_index(from, to);
+
+        libproject_assert(index < adj_.size(),
+                          "AdjacencyMatrix::add_edge: index "
+                          + std::to_string(index)
+                          + " is out of bounds for matrix of "
+                          + std::to_string(adj_.size())
+                          + " elements.\nInput: {from: "
+                          + std::to_string(from.value)
+                          + ", to: "
+                          + std::to_string(to.value)
+                          +"}");
+
         adj_[index] = edge_id;
         return;
     }
@@ -59,7 +96,19 @@ public:
     void remove_edge(VertexID from, VertexID to) noexcept
     {
         size_t index = compute_index(from, to);
-        adj_[index] = VertexID::empty;
+
+        libproject_assert(index < adj_.size(),
+                          "AdjacencyMatrix::remove_edge: index "
+                          + std::to_string(index)
+                          + " is out of bounds for matrix of "
+                          + std::to_string(adj_.size())
+                          + " elements.\nInput: {from: "
+                          + std::to_string(from.value)
+                          + ", to: "
+                          + std::to_string(to.value)
+                          +"}");
+
+        adj_[index] = EdgeID::empty;
         return;
     }
 
@@ -78,7 +127,7 @@ public:
     }
 
 private:
-    size_t compute_index(VertexID from, VertexID to) noexcept
+    size_t compute_index(VertexID from, VertexID to) const noexcept
     {
         if constexpr (is_directed)
         {
