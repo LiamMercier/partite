@@ -18,14 +18,16 @@ public:
     {
         if constexpr (is_directed)
         {
-            adj_.resize(vertex_count_ * vertex_count_);
+            adj_.resize(vertex_count_ * vertex_count_,
+                        EdgeID::empty);
         }
         else
         {
             // For an undirected graph, we only need to store the top triangular
             // section of the matrix because A[u][v] == A[v][u]. Thus, we can
             // use almost half the memory by not storing these duplicate values.
-            adj_.resize((vertex_count_ * (vertex_count_ + 1)) / 2);
+            adj_.resize((vertex_count_ * (vertex_count_ + 1)) / 2,
+                        EdgeID::empty);
         }
     }
 
