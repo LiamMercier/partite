@@ -11,9 +11,13 @@ concept GraphRepresentation = requires(T rep,
                                        VertexID v_id,
                                        EdgeID e_id)
 {
+    // Ensure we have properly set Directed.
     { T::is_directed } -> std::convertible_to<bool>;
 
-    // TODO: require lookup, etc.
+    // Ensure lookup.
+    { rep.find_edge(v_id, v_id) };
+    { rep.has_edge(v_id, v_id) };
+
 };
 
 };
