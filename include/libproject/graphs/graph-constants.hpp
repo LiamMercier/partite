@@ -29,6 +29,8 @@ namespace libproject::graphs
         GRAPH_VERTEX_ID_TYPE value;
     };
 
+    static_assert(sizeof(VertexID) == sizeof(GRAPH_VERTEX_ID_TYPE));
+
     struct EdgeID
     {
         static constexpr GRAPH_EDGE_ID_TYPE max = std::numeric_limits<GRAPH_EDGE_ID_TYPE>::max();
@@ -46,4 +48,6 @@ namespace libproject::graphs
 
         GRAPH_EDGE_ID_TYPE value;
     };
+
+    static_assert(sizeof(EdgeID) == sizeof(GRAPH_EDGE_ID_TYPE));
 };
