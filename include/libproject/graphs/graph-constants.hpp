@@ -29,6 +29,7 @@ namespace libproject::graphs
         GRAPH_VERTEX_ID_TYPE value;
     };
 
+    static_assert(std::is_trivially_copyable_v<VertexID>);
     static_assert(sizeof(VertexID) == sizeof(GRAPH_VERTEX_ID_TYPE));
 
     struct EdgeID
@@ -49,5 +50,6 @@ namespace libproject::graphs
         GRAPH_EDGE_ID_TYPE value;
     };
 
+    static_assert(std::is_trivially_copyable_v<EdgeID>);
     static_assert(sizeof(EdgeID) == sizeof(GRAPH_EDGE_ID_TYPE));
 };
