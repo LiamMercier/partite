@@ -3,10 +3,10 @@
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
 
+using namespace libproject::graphs;
+
 TEST(GraphRepresentations, AdjacencyMatrixConstruction)
 {
-    using namespace libproject::graphs;
-
     {
         AdjacencyMatrix<true> A(5);
 
@@ -73,4 +73,36 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
         }
     }
 
+}
+
+// Test that we can properly represent an example graph.
+TEST(GraphRepresentations, AdjacencyMatrixExample)
+{
+    // We will use the undirected graph G = (V, E) where
+    // V = {1, 2, 3, 4}
+    // E = {(1, 2), (2, 3), (2, 4)}
+    AdjacencyMatrix<false> A(4);
+    A.add_edge(1, 2, 0);
+    A.add_edge(2, 3, 1);
+    A.add_edge(2, 4, 2);
+
+    // Do some lookup operations
+    EXPECT_TRUE(A.has_edge(1, 2));
+    EXPECT_TRUE(A.has_edge(2, 3));
+    EXPECT_TRUE(A.has_edge(2, 4));
+
+    EXPECT_EQ(A.find_edge(1, 2), 0);
+    EXPECT_EQ(A.find_edge(2, 3), 1);
+    EXPECT_EQ(A.find_edge(2, 4), 2);
+
+    // Remove an edge
+    A.remove_edge(1, 2);
+
+    EXPECT_FALSE(A.has_edge(1, 2));
+    EXPECT_EQ(A.find_edge(1, 2), EdgeID::empty);
+
+    // Try adding the edge back, everything should work the same.
+    A.add_edge(1, 2, 0);
+    EXPECT_TRUE(A.has_edge(1, 2));
+    EXPECT_EQ(A.find_edge(1, 2), 0);
 }

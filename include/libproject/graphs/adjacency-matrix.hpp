@@ -35,6 +35,7 @@ public:
     //
     // Edge lookup and modification functions
     //
+    // TODO: overloads that accept pairs for developer ease of use
 
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
     {
