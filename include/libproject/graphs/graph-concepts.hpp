@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ranges>
+
 #include <libproject/graphs/graph-constants.hpp>
 
 // Definition of a graph topology
@@ -14,10 +16,11 @@ concept GraphRepresentation = requires(T rep,
     // Ensure we have properly set Directed.
     { T::is_directed } -> std::convertible_to<bool>;
 
-    // Ensure lookup.
-    { rep.find_edge(v_id, v_id) };
-    { rep.has_edge(v_id, v_id) };
+    // Ensure we can query the number of vertices
+    { rep.vertex_count() } -> std::integral;
 
+    // Ensure we can iterate on neighbors.
+    { rep.neighbors(v_id) } -> std::ranges::range;
 };
 
 };
