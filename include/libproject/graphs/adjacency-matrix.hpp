@@ -1,5 +1,6 @@
 #pragma once
 #include <vector>
+#include <utility>
 
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
@@ -33,6 +34,16 @@ public:
     }
 
     //
+    // Iteration
+    //
+
+    auto neighbors(VertexID v) const
+    {
+        // TODO: replace with function body that properly finds neighbors.
+        return std::ranges::iota_view{0, 1};
+    }
+
+    //
     // Edge lookup and modification functions
     //
     // TODO: overloads that accept pairs for developer ease of use
@@ -55,6 +66,11 @@ public:
         return adj_[index];
     }
 
+    EdgeID find_edge(std::pair<VertexID, VertexID> edge) const noexcept
+    {
+        return find_edge(edge.first, edge.second);
+    }
+
     bool has_edge(VertexID from, VertexID to) const noexcept
     {
         size_t index = compute_index(from, to);
@@ -72,6 +88,11 @@ public:
 
         EdgeID edge_id = adj_[index];
         return (edge_id != EdgeID::empty);
+    }
+
+    bool has_edge(std::pair<VertexID, VertexID> edge) const noexcept
+    {
+        return has_edge(edge.first, edge.second);
     }
 
     void add_edge(VertexID from, VertexID to, EdgeID edge_id) noexcept
@@ -93,6 +114,11 @@ public:
         return;
     }
 
+    void add_edge(std::pair<VertexID, VertexID> edge, EdgeID edge_id) noexcept
+    {
+        add_edge(edge.first, edge.second, edge_id);
+    }
+
     void remove_edge(VertexID from, VertexID to) noexcept
     {
         size_t index = compute_index(from, to);
@@ -110,6 +136,11 @@ public:
 
         adj_[index] = EdgeID::empty;
         return;
+    }
+
+    void remove_edge(std::pair<VertexID, VertexID> edge) noexcept
+    {
+        remove_edge(edge.first, edge.second);
     }
 
     //

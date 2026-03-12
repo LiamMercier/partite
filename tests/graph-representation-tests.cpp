@@ -106,3 +106,52 @@ TEST(GraphRepresentations, AdjacencyMatrixExample)
     EXPECT_TRUE(A.has_edge(1, 2));
     EXPECT_EQ(A.find_edge(1, 2), 0);
 }
+
+TEST(GraphRepresentations, AdjacencyMatrixPairOverloads)
+{
+    // We will use the undirected graph G = (V, E) where
+    // V = {1, 2, 3, 4}
+    // E = {(1, 2), (2, 3), (2, 4)}
+    AdjacencyMatrix<false> A(4);
+    A.add_edge({1, 2}, 0);
+    A.add_edge({2, 3}, 1);
+    A.add_edge({2, 4}, 2);
+
+    // Do some lookup operations
+    EXPECT_TRUE(A.has_edge({1, 2}));
+    EXPECT_TRUE(A.has_edge({2, 3}));
+    EXPECT_TRUE(A.has_edge({2, 4}));
+
+    EXPECT_EQ(A.find_edge({1, 2}), 0);
+    EXPECT_EQ(A.find_edge({2, 3}), 1);
+    EXPECT_EQ(A.find_edge({2, 4}), 2);
+
+    // Remove an edge
+    A.remove_edge({1, 2});
+
+    EXPECT_FALSE(A.has_edge({1, 2}));
+    EXPECT_EQ(A.find_edge({1, 2}), EdgeID::empty);
+
+    // Try adding the edge back, everything should work the same.
+    A.add_edge({1, 2}, 0);
+    EXPECT_TRUE(A.has_edge({1, 2}));
+    EXPECT_EQ(A.find_edge({1, 2}), 0);
+}
+
+TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
+{
+    AdjacencyMatrix<false> A(5);
+
+    A.add_edge(2, 0, 0);
+    A.add_edge(2, 1, 1);
+    A.add_edge(2, 2, 2);
+    A.add_edge(2, 3, 3);
+    A.add_edge(2, 4, 4);
+
+    auto res = A.neighbors(2);
+
+    for (const auto & x : res)
+    {
+        std::cout << x << " ";
+    }
+}
