@@ -241,3 +241,103 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
         }
     }
 }
+
+TEST(GraphRepresentations, AdjacencyMatrixDegrees)
+{
+    {
+        // Use the directed graph G = (V, E) where
+        // V = {0, 1, 2, 3, 5}
+        // E = {(0, 1), (1, 2), (1, 3), (4, 1), (4, 2), (2, 4), (4, 0), (3, 0)}
+        //
+        // We then expect degrees to be:
+        //
+        //            | 0 | 1 | 2 | 3 | 4 |
+        // --------------------------------
+        // in_degree  | 2 | 2 | 2 | 1 | 1 |
+        // out_degree | 1 | 2 | 1 | 1 | 3 |
+        // degree     | 3 | 4 | 3 | 2 | 4 |
+
+        AdjacencyMatrix<true> A(5);
+
+        // Try to throw off the count by removing empty edges.
+        //
+        // This should always be guarded against.
+        A.remove_edge({0, 1});
+        A.remove_edge({1, 2});
+        A.remove_edge({1, 3});
+        A.remove_edge({4, 1});
+
+        A.add_edge({0, 1}, 0);
+        A.add_edge({1, 2}, 1);
+        A.add_edge({1, 3}, 2);
+        A.add_edge({4, 1}, 3);
+        A.add_edge({4, 2}, 4);
+        A.add_edge({2, 4}, 5);
+        A.add_edge({4, 0}, 6);
+        A.add_edge({3, 0}, 7);
+
+        std::vector<size_t> expected_in_deg
+            {
+                2, 2, 2, 1, 1
+            };
+
+        std::vector<size_t> expected_out_deg
+            {
+                1, 2, 1, 1, 3
+            };
+
+        std::vector<size_t> expected_deg
+            {
+                3, 4, 3, 2, 4
+            };
+
+        for (size_t i = 0; i < A.vertex_count(); i++)
+        {
+            EXPECT_EQ(expected_in_deg[i], A.in_degree(i));
+            EXPECT_EQ(expected_out_deg[i], A.out_degree(i));
+            EXPECT_EQ(expected_deg[i], A.degree(i));
+        }
+    }
+
+    {
+        // Use the undirected graph G = (V, E) where
+        // V = {0, 1, 2, 3, 5}
+        // E = {(0, 1), (1, 2), (1, 3), (4, 1), (2, 4), (4, 0), (3, 0)}
+        //
+        // We then expect degrees to be:
+        //
+        //            | 0 | 1 | 2 | 3 | 4 |
+        // --------------------------------
+        // degree     | 3 | 4 | 2 | 2 | 3 |
+
+        AdjacencyMatrix<false> A(5);
+
+        // Try to throw off the count by removing empty edges.
+        //
+        // This should always be guarded against.
+        A.remove_edge({0, 1});
+        A.remove_edge({1, 2});
+        A.remove_edge({1, 3});
+        A.remove_edge({4, 1});
+
+        A.add_edge({0, 1}, 0);
+        A.add_edge({1, 2}, 1);
+        A.add_edge({1, 3}, 2);
+        A.add_edge({4, 1}, 3);
+        A.add_edge({2, 4}, 4);
+        A.add_edge({4, 0}, 5);
+        A.add_edge({3, 0}, 6);
+
+        std::vector<size_t> expected_deg
+            {
+                3, 4, 2, 2, 3
+            };
+
+        for (size_t i = 0; i < A.vertex_count(); i++)
+        {
+            EXPECT_EQ(expected_deg[i], A.in_degree(i));
+            EXPECT_EQ(expected_deg[i], A.out_degree(i));
+            EXPECT_EQ(expected_deg[i], A.degree(i));
+        }
+    }
+}

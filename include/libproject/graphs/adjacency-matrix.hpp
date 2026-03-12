@@ -207,14 +207,14 @@ public:
             libproject_assert(to.value < in_deg_.size(),
                               "AdjacencyMatrix::add_edge: index "
                               + std::to_string(to.value)
-                              + " is out of bounds for degree list of "
+                              + " is out of bounds for in degree list of "
                               + std::to_string(in_deg_.size())
                               + " elements (usually |V|)");
 
             libproject_assert(from.value < out_deg_.size(),
                               "AdjacencyMatrix::add_edge: index "
                               + std::to_string(from.value)
-                              + " is out of bounds for degree list of "
+                              + " is out of bounds for out degree list of "
                               + std::to_string(out_deg_.size())
                               + " elements (usually |V|)");
 
@@ -277,14 +277,14 @@ public:
             libproject_assert(to.value < in_deg_.size(),
                               "AdjacencyMatrix::remove_edge: index "
                               + std::to_string(to.value)
-                              + " is out of bounds for degree list of "
+                              + " is out of bounds for in degree list of "
                               + std::to_string(in_deg_.size())
                               + " elements (usually |V|)");
 
             libproject_assert(from.value < out_deg_.size(),
                               "AdjacencyMatrix::remove_edge: index "
                               + std::to_string(from.value)
-                              + " is out of bounds for degree list of "
+                              + " is out of bounds for out degree list of "
                               + std::to_string(out_deg_.size())
                               + " elements (usually |V|)");
 
