@@ -25,6 +25,9 @@ public:
         {
             adj_.resize(vertex_count_ * vertex_count_,
                         EdgeID::empty);
+
+            in_deg_.resize(vertex_count_);
+            out_deg_.resize(vertex_count_);
         }
         else
         {
@@ -33,6 +36,8 @@ public:
             // use almost half the memory by not storing these duplicate values.
             adj_.resize((vertex_count_ * (vertex_count_ + 1)) / 2,
                         EdgeID::empty);
+
+            deg_.resize(vertex_count_);
         }
     }
 
@@ -42,7 +47,6 @@ public:
 
     auto neighbors(VertexID v) const
     {
-
         if constexpr(is_directed)
         {
             // In a directed graph, we simply want all of the index values
@@ -160,7 +164,64 @@ public:
                           + std::to_string(to.value)
                           +"}");
 
+        // Prevent double counting degrees.
+        if (adj_[index] != EdgeID::empty)
+        {
+            libproject_assert(false,
+                              "AdjacencyMatrix::add_edge: tried to "
+                              "overwrite edge ("
+                              + std::to_string(from.value)
+                              + " "
+                              + std::to_string(to.value)
+                              +") [EdgeID "
+                              + std::to_string(adj_[index].value)
+                              + "] to be [EdgeID "
+                              + std::to_string(edge_id.value)
+                              + "]");
+            return;
+        }
+
         adj_[index] = edge_id;
+
+        if constexpr (!Directed)
+        {
+            libproject_assert(from.value < deg_.size(),
+                              "AdjacencyMatrix::add_edge: index "
+                              + std::to_string(from.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(deg_.size())
+                              + " elements (usually |V|)");
+
+            libproject_assert(to.value < deg_.size(),
+                              "AdjacencyMatrix::add_edge: index "
+                              + std::to_string(to.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(deg_.size())
+                              + " elements (usually |V|)");
+
+            deg_[from.value] += 1;
+            deg_[to.value] += 1;
+        }
+        else
+        {
+            libproject_assert(to.value < in_deg_.size(),
+                              "AdjacencyMatrix::add_edge: index "
+                              + std::to_string(to.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(in_deg_.size())
+                              + " elements (usually |V|)");
+
+            libproject_assert(from.value < out_deg_.size(),
+                              "AdjacencyMatrix::add_edge: index "
+                              + std::to_string(from.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(out_deg_.size())
+                              + " elements (usually |V|)");
+
+            in_deg_[to.value] += 1;
+            out_deg_[from.value] += 1;
+        }
+
         return;
     }
 
@@ -184,7 +245,53 @@ public:
                           + std::to_string(to.value)
                           +"}");
 
+        // Prevent reducing the degree count for empty removal.
+        if (adj_[index] == EdgeID::empty)
+        {
+            return;
+        }
+
         adj_[index] = EdgeID::empty;
+
+        if constexpr (!Directed)
+        {
+            libproject_assert(from.value < deg_.size(),
+                              "AdjacencyMatrix::remove_edge: index "
+                              + std::to_string(from.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(deg_.size())
+                              + " elements (usually |V|)");
+
+            libproject_assert(to.value < deg_.size(),
+                              "AdjacencyMatrix::remove_edge: index "
+                              + std::to_string(to.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(deg_.size())
+                              + " elements (usually |V|)");
+
+            deg_[from.value] -= 1;
+            deg_[to.value] -= 1;
+        }
+        else
+        {
+            libproject_assert(to.value < in_deg_.size(),
+                              "AdjacencyMatrix::remove_edge: index "
+                              + std::to_string(to.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(in_deg_.size())
+                              + " elements (usually |V|)");
+
+            libproject_assert(from.value < out_deg_.size(),
+                              "AdjacencyMatrix::remove_edge: index "
+                              + std::to_string(from.value)
+                              + " is out of bounds for degree list of "
+                              + std::to_string(out_deg_.size())
+                              + " elements (usually |V|)");
+
+            in_deg_[to.value] -= 1;
+            out_deg_[from.value] -= 1;
+        }
+
         return;
     }
 
@@ -196,6 +303,42 @@ public:
     //
     // Utility functions
     //
+
+    size_t degree(VertexID v) const noexcept
+    {
+        if constexpr (!Directed)
+        {
+            return deg_[v.value];
+        }
+        else
+        {
+            return in_degree(v) + out_degree(v);
+        }
+    }
+
+    size_t in_degree(VertexID v) const noexcept
+    {
+        if constexpr (Directed)
+        {
+            return in_deg_[v.value];
+        }
+        else
+        {
+            return degree(v);
+        }
+    }
+
+    size_t out_degree(VertexID v) const noexcept
+    {
+        if constexpr (Directed)
+        {
+            return out_deg_[v.value];
+        }
+        else
+        {
+            return degree(v);
+        }
+    }
 
     size_t vertex_count() const noexcept
     {
@@ -395,6 +538,13 @@ private:
     // Flattened matrix representation. We map 2D -> 1D internally.
     std::vector<EdgeID> adj_;
     size_t vertex_count_;
+
+    // Mapping from VertexID -> size_t (vertex degree)
+    //
+    // For undirected graphs, we only need one vector. Two for digraphs.
+    std::conditional_t<!Directed, std::vector<size_t>, std::monostate> deg_;
+    std::conditional_t<Directed, std::vector<size_t>, std::monostate> in_deg_;
+    std::conditional_t<Directed, std::vector<size_t>, std::monostate> out_deg_;
 };
 
 };
