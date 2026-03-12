@@ -246,7 +246,7 @@ TEST(GraphRepresentations, AdjacencyMatrixDegrees)
 {
     {
         // Use the directed graph G = (V, E) where
-        // V = {0, 1, 2, 3, 5}
+        // V = {0, 1, 2, 3, 4}
         // E = {(0, 1), (1, 2), (1, 3), (4, 1), (4, 2), (2, 4), (4, 0), (3, 0)}
         //
         // We then expect degrees to be:
@@ -301,7 +301,7 @@ TEST(GraphRepresentations, AdjacencyMatrixDegrees)
 
     {
         // Use the undirected graph G = (V, E) where
-        // V = {0, 1, 2, 3, 5}
+        // V = {0, 1, 2, 3, 4}
         // E = {(0, 1), (1, 2), (1, 3), (4, 1), (2, 4), (4, 0), (3, 0)}
         //
         // We then expect degrees to be:
@@ -339,5 +339,108 @@ TEST(GraphRepresentations, AdjacencyMatrixDegrees)
             EXPECT_EQ(expected_deg[i], A.out_degree(i));
             EXPECT_EQ(expected_deg[i], A.degree(i));
         }
+    }
+}
+
+TEST(GraphRepresentations, AdjacencyMatrixEdges)
+{
+    {
+        // Use the directed graph G = (V, E) where
+        // V = {0, 1, 2, 3, 4, 5, 6}
+        // E = {(0, 3), (0, 5), (1, 2), (1, 5), (3, 1),
+        //      (3, 2), (3, 4), (3, 6), (4, 6), (5, 4)}
+
+        AdjacencyMatrix<true> A(7);
+
+        A.add_edge({0, 3}, 0);
+        A.add_edge({0, 5}, 1);
+        A.add_edge({1, 2}, 2);
+        A.add_edge({1, 5}, 3);
+        A.add_edge({3, 1}, 4);
+        A.add_edge({3, 2}, 5);
+        A.add_edge({3, 4}, 6);
+        A.add_edge({3, 6}, 7);
+        A.add_edge({4, 6}, 8);
+        A.add_edge({5, 4}, 9);
+
+        auto res = A.edges();
+        std::unordered_map<size_t, size_t> edges
+        {
+            {0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0},
+            {5, 0}, {6, 0}, {7, 0}, {8, 0}, {9, 0},
+            {EdgeID::empty, 0}
+        };
+
+        // Ensure we have no unexpected edges.
+        for (const auto & edge : res)
+        {
+            EXPECT_TRUE(edges.contains(size_t(edge.value)));
+        }
+
+        // Count edges.
+        for (const auto & edge : res)
+        {
+            size_t val = edges[edge.value];
+            edges[edge.value] = val + 1;
+        }
+
+        // Ensure edges 0 through 9 occur once.
+        for (size_t i = 0; i < 10; i++)
+        {
+            EXPECT_EQ(edges[i], 1);
+        }
+
+        // Ensure we returned no empty edges.
+        EXPECT_EQ(edges[EdgeID::empty], 0);
+    }
+
+    {
+        // Use the undirected graph G = (V, E) where
+        // V = {0, 1, 2, 3, 4}
+        // E = {(0, 3), (0, 5), (1, 2), (1, 3), (1, 5)
+        //      (2, 3), (3, 4), (3, 6), (4, 5), (4, 6)}
+
+        AdjacencyMatrix<false> A(7);
+
+        A.add_edge({0, 3}, 0);
+        A.add_edge({0, 5}, 1);
+        A.add_edge({1, 2}, 2);
+        A.add_edge({1, 5}, 3);
+        A.add_edge({3, 1}, 4);
+        A.add_edge({3, 2}, 5);
+        A.add_edge({3, 4}, 6);
+        A.add_edge({3, 6}, 7);
+        A.add_edge({4, 6}, 8);
+        A.add_edge({5, 4}, 9);
+
+        auto res = A.edges();
+        std::unordered_map<size_t, size_t> edges
+        {
+            {0, 0}, {1, 0}, {2, 0}, {3, 0}, {4, 0},
+            {5, 0}, {6, 0}, {7, 0}, {8, 0}, {9, 0},
+            {EdgeID::empty, 0}
+        };
+
+        // Ensure we have no unexpected edges.
+        for (const auto & edge : res)
+        {
+            EXPECT_TRUE(edges.contains(size_t(edge.value)));
+        }
+
+        // Count edges.
+        for (const auto & edge : res)
+        {
+            size_t val = edges[edge.value];
+            edges[edge.value] = val + 1;
+        }
+
+        // Ensure edges 0 through 9 occur once.
+        for (size_t i = 0; i < 10; i++)
+        {
+            EXPECT_EQ(edges[i], 1);
+        }
+
+        // Ensure we returned no empty edges.
+        EXPECT_EQ(edges[EdgeID::empty], 0);
     }
 }
