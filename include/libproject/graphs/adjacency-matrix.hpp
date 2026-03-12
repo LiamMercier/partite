@@ -98,6 +98,18 @@ public:
         }
     }
 
+    // Iterator over every edge in the adjacency list.
+    auto edges() const
+    {
+        return std::views::iota(size_t{0}, adj_.size())
+               | std::views::transform([this](int indx){
+                        return adj_[indx];
+                    })
+               | std::views::filter([](const auto & e_id){
+                        return e_id != EdgeID::empty;
+                    });
+    }
+
     //
     // Edge lookup and modification functions
     //
@@ -339,6 +351,12 @@ public:
             return degree(v);
         }
     }
+
+    // TODO: has_self_loops()
+
+    // TODO: has_self_loop(v)
+
+    // TODO: is_valid_vertex(v)
 
     size_t vertex_count() const noexcept
     {
