@@ -79,63 +79,63 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
 TEST(GraphRepresentations, AdjacencyMatrixExample)
 {
     // We will use the undirected graph G = (V, E) where
-    // V = {1, 2, 3, 4}
-    // E = {(1, 2), (2, 3), (2, 4)}
+    // V = {0, 1, 2, 3}
+    // E = {(0, 1), (1, 2), (1, 3)}
     AdjacencyMatrix<false> A(4);
-    A.add_edge(1, 2, 0);
-    A.add_edge(2, 3, 1);
-    A.add_edge(2, 4, 2);
+    A.add_edge(0, 1, 0);
+    A.add_edge(1, 2, 1);
+    A.add_edge(1, 3, 2);
 
     // Do some lookup operations
+    EXPECT_TRUE(A.has_edge(0, 1));
     EXPECT_TRUE(A.has_edge(1, 2));
-    EXPECT_TRUE(A.has_edge(2, 3));
-    EXPECT_TRUE(A.has_edge(2, 4));
+    EXPECT_TRUE(A.has_edge(1, 3));
 
-    EXPECT_EQ(A.find_edge(1, 2), 0);
-    EXPECT_EQ(A.find_edge(2, 3), 1);
-    EXPECT_EQ(A.find_edge(2, 4), 2);
+    EXPECT_EQ(A.find_edge(0, 1), 0);
+    EXPECT_EQ(A.find_edge(1, 2), 1);
+    EXPECT_EQ(A.find_edge(1, 3), 2);
 
     // Remove an edge
-    A.remove_edge(1, 2);
+    A.remove_edge(0, 1);
 
-    EXPECT_FALSE(A.has_edge(1, 2));
-    EXPECT_EQ(A.find_edge(1, 2), EdgeID::empty);
+    EXPECT_FALSE(A.has_edge(0, 1));
+    EXPECT_EQ(A.find_edge(0, 1), EdgeID::empty);
 
     // Try adding the edge back, everything should work the same.
-    A.add_edge(1, 2, 0);
-    EXPECT_TRUE(A.has_edge(1, 2));
-    EXPECT_EQ(A.find_edge(1, 2), 0);
+    A.add_edge(0, 1, 0);
+    EXPECT_TRUE(A.has_edge(0, 1));
+    EXPECT_EQ(A.find_edge(0, 1), 0);
 }
 
 TEST(GraphRepresentations, AdjacencyMatrixPairOverloads)
 {
     // We will use the undirected graph G = (V, E) where
-    // V = {1, 2, 3, 4}
-    // E = {(1, 2), (2, 3), (2, 4)}
+    // V = {0, 1, 2, 3}
+    // E = {(0, 1), (1, 2), (1, 3)}
     AdjacencyMatrix<false> A(4);
-    A.add_edge({1, 2}, 0);
-    A.add_edge({2, 3}, 1);
-    A.add_edge({2, 4}, 2);
+    A.add_edge({0, 1}, 0);
+    A.add_edge({1, 2}, 1);
+    A.add_edge({1, 3}, 2);
 
     // Do some lookup operations
+    EXPECT_TRUE(A.has_edge({0, 1}));
     EXPECT_TRUE(A.has_edge({1, 2}));
-    EXPECT_TRUE(A.has_edge({2, 3}));
-    EXPECT_TRUE(A.has_edge({2, 4}));
+    EXPECT_TRUE(A.has_edge({1, 3}));
 
-    EXPECT_EQ(A.find_edge({1, 2}), 0);
-    EXPECT_EQ(A.find_edge({2, 3}), 1);
-    EXPECT_EQ(A.find_edge({2, 4}), 2);
+    EXPECT_EQ(A.find_edge({0, 1}), 0);
+    EXPECT_EQ(A.find_edge({1, 2}), 1);
+    EXPECT_EQ(A.find_edge({1, 3}), 2);
 
     // Remove an edge
-    A.remove_edge({1, 2});
+    A.remove_edge({0, 1});
 
-    EXPECT_FALSE(A.has_edge({1, 2}));
-    EXPECT_EQ(A.find_edge({1, 2}), EdgeID::empty);
+    EXPECT_FALSE(A.has_edge({0, 1}));
+    EXPECT_EQ(A.find_edge({0, 1}), EdgeID::empty);
 
     // Try adding the edge back, everything should work the same.
-    A.add_edge({1, 2}, 0);
-    EXPECT_TRUE(A.has_edge({1, 2}));
-    EXPECT_EQ(A.find_edge({1, 2}), 0);
+    A.add_edge({0, 1}, 0);
+    EXPECT_TRUE(A.has_edge({0, 1}));
+    EXPECT_EQ(A.find_edge({0, 1}), 0);
 }
 
 TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
