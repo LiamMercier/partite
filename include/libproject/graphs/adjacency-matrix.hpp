@@ -1,6 +1,9 @@
 #pragma once
 #include <vector>
 #include <utility>
+#include <iterator>
+#include <ranges>
+#include <cstddef>
 
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
@@ -34,19 +37,66 @@ public:
     }
 
     //
-    // Iteration
+    // Iteration front end
     //
 
     auto neighbors(VertexID v) const
     {
-        // TODO: replace with function body that properly finds neighbors.
-        return std::ranges::iota_view{0, 1};
+
+        if constexpr(is_directed)
+        {
+            // In a directed graph, we simply want all of the index values
+            // corresponding to row v. We can use the transformation:
+            //
+            // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
+            return std::views::iota(size_t{0}, vertex_count_)
+                   | std::views::transform(
+                       [this, v_0 = (v.value * vertex_count_)](int indx)
+                       {
+                           return adj_[v_0 + indx];
+                       })
+                   | std::views::filter([](const auto & e_id)
+                       {
+                           return e_id != EdgeID::empty;
+                       });
+        }
+        else
+        {
+            // We wish to search all edges (v, 0), ..., (v, |V|)
+            //
+            // index(v, v), ..., index(v, |V|) is stored in row v
+            //
+            // For i < v we know index(v, v - i) = index(v - i, v)
+            // is stored in colum v of row i
+            //
+            // Thus the search is an L shape through the matrix.
+            //
+            // ? ? 0 ? ?
+            //   ? 1 ? ?
+            //     2 3 4
+            //       ? ?
+            //         ?
+
+            // To do this without unnecessary multiplications, we use a
+            // custom iterator and view that keeps track of the
+            // current index and adds the correct offset.
+            //
+            // Then, map the index into array elements.
+            //
+            // Then, filter elements that represent empty edges.
+            return NeighborsIndexView(v.value, vertex_count_)
+                | std::views::transform([this](int indx){
+                        return adj_[indx];
+                    })
+                | std::views::filter([](const auto & e_id){
+                    return e_id != EdgeID::empty;
+                });
+        }
     }
 
     //
     // Edge lookup and modification functions
     //
-    // TODO: overloads that accept pairs for developer ease of use
 
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
     {
@@ -171,7 +221,7 @@ private:
                 std::swap(from, to);
             }
 
-            // let from be u, and to be v
+            // let "from" be u, and "to" be v
             //
             // row i has |V| - i elements, so the elements before row u is
             //
@@ -188,6 +238,157 @@ private:
                    - ((from.value + 1) * from.value) / 2;
         }
     }
+
+//
+// Custom view for internal use in AdjacencyMatrix
+//
+
+private:
+    // Adjacency matrix based custom view to reduce multiplications when
+    // traversing the flat array.
+    //
+    // The increment logic is based on the following proof of concept,
+    // but translated so we can return a view.
+    //
+    //     // We wish to find all edges (v, 0), ..., (v, |V|)
+    //     //
+    //     // index(v, v), ..., index(v, |V|) is stored in row v
+    //     //
+    //     // index(v, v - i) = index(v - i, v) is stored in row i
+    //     //
+    //     // Thus, instead of computing index multiple times, we can compute
+    //     // one index and increase / decrease offsets.
+    //     //
+    //     // We know that row i has exactly i elements missing, thus for i < v
+    //     //
+    //     // index(v, (i + 1)) - index(v, i) = |V| - (i + 1)
+    //     //
+    //     // So, start at index(v, 0) = index(0, v) = v and then for i = 1 to v
+    //     // increase the value by |V| - i
+    //     //
+    //     // Then, for j = v + 1 to |V| increase the value by 1
+    //
+    //     // we need to remove this vector and make a view later
+    //     std::vector<size_t> n;
+    //
+    //     // start at index(0, v)
+    //     size_t index = v;
+    //     n.push_back(index);
+    //
+    //     // for i = 1 to v increase the value by |V| - i
+    //     for (size_t i = 1; i <= v; i++)
+    //     {
+    //         index += (vertex_count_ - i);
+    //         n.push_back(index);
+    //     }
+    //
+    //     // for j = v + 1 to |V| increase the value by 1
+    //     for (size_t j = v + 1; j < vertex_count_; j++)
+    //     {
+    //         index += 1;
+    //         n.push_back(index);
+    //     }
+    //
+    //     return n;
+    class NeighborsIndexView
+    {
+    public:
+        NeighborsIndexView(size_t v, size_t vertex_count)
+        :v_(v),
+        vertex_count_(vertex_count)
+        {}
+
+        class Iterator
+        {
+            public:
+                using iterator_concept = std::forward_iterator_tag;
+                using value_type = size_t;
+                // (size_t - size_t) specific type.
+                using difference_type = std::ptrdiff_t;
+
+                Iterator() = default;
+
+                // Start at index = v
+                Iterator(size_t v, size_t V)
+                :v_(v),
+                V_(V),
+                step_(0),
+                current_index_(v)
+                {}
+
+                // End at step = |V| (at which point index = compute_index(v, |V|))
+                Iterator(size_t v, size_t V, size_t step)
+                :v_(v),
+                V_(V),
+                step_(step),
+                current_index_(0)
+                {}
+
+                // Iterator value is just the current array index
+                size_t operator*() const
+                {
+                    return current_index_;
+                }
+
+                // Increment based on the rules in the above loops
+                Iterator & operator++()
+                {
+                    step_++;
+
+                    if(step_ <= v_)
+                    {
+                        current_index_ += (V_ - step_);
+                    }
+                    else
+                    {
+                        current_index_ += 1;
+                    }
+
+                    return *this;
+                }
+
+                // forced to do this to satisfy forward_iterator_tag
+                //
+                // do not use
+                Iterator operator++(int)
+                {
+                    Iterator tmp = *this;
+                    ++(*this);
+                    return tmp;
+                }
+
+                // we only compare against .end() so we just want to have done each step.
+                bool operator==(const Iterator & other) const
+                {
+                    return step_ == other.step_;
+                }
+
+            private:
+                size_t v_{0};
+                size_t V_{0};
+                size_t step_{0};
+                size_t current_index_{0};
+        };
+
+        Iterator begin() const
+        {
+            return Iterator(v_, vertex_count_);
+        }
+
+        Iterator end() const
+        {
+            return Iterator{v_, vertex_count_, vertex_count_};
+        }
+
+    // v is the vertex we are computing for, vertex_count_ is |V|
+    private:
+        size_t v_;
+        size_t vertex_count_;
+    };
+
+//
+// Adjacency Matrix private data members.
+//
 
 private:
 
