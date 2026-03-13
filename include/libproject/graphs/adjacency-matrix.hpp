@@ -312,6 +312,54 @@ public:
         remove_edge(edge.first, edge.second);
     }
 
+    // Clear all edges
+    void clear()
+    {
+        // Set edges to empty.
+        for (EdgeID & edge : adj_)
+        {
+            edge.value = EdgeID::empty;
+        }
+
+        // Set degree to zero for all vertices.
+        if constexpr (!Directed)
+        {
+            libproject_assert(deg_.size() == vertex_count_,
+                              "AdjacencyMatrix::clear: degree list size "
+                              "does not equal vertex count\n|V|: "
+                              + std::to_string(vertex_count_)
+                              + "\nDegree list size: "
+                              + std::to_string(deg_.size()));
+
+            for (size_t i = 0; i < vertex_count_; i++)
+            {
+                deg_[i] = 0;
+            }
+        }
+        else
+        {
+            libproject_assert(in_deg_.size() == vertex_count_,
+                              "AdjacencyMatrix::clear: indegree list size "
+                              "does not equal vertex count\n|V|: "
+                              + std::to_string(vertex_count_)
+                              + "\nDegree list size: "
+                              + std::to_string(in_deg_.size()));
+
+            libproject_assert(out_deg_.size() == vertex_count_,
+                              "AdjacencyMatrix::clear: outdegree list size "
+                              "does not equal vertex count\n|V|: "
+                              + std::to_string(vertex_count_)
+                              + "\nDegree list size: "
+                              + std::to_string(out_deg_.size()));
+
+            for (size_t i = 0; i < vertex_count_; i++)
+            {
+                in_deg_[i] = 0;
+                out_deg_[i] = 0;
+            }
+        }
+    }
+
     //
     // Utility functions
     //
