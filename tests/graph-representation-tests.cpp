@@ -444,3 +444,70 @@ TEST(GraphRepresentations, AdjacencyMatrixEdges)
         EXPECT_EQ(edges[EdgeID::empty], 0);
     }
 }
+
+TEST(GraphRepresentations, AdjacencyMatrixClear)
+{
+    {
+        AdjacencyMatrix<true> A(7);
+
+        A.add_edge({0, 3}, 0);
+        A.add_edge({0, 5}, 1);
+        A.add_edge({1, 2}, 2);
+        A.add_edge({1, 5}, 3);
+        A.add_edge({3, 1}, 4);
+        A.add_edge({3, 2}, 5);
+        A.add_edge({3, 4}, 6);
+        A.add_edge({3, 6}, 7);
+        A.add_edge({4, 6}, 8);
+        A.add_edge({5, 4}, 9);
+
+        A.clear();
+
+        // Ensure all degrees are zero
+        for (size_t i = 0; i < A.size(); i++)
+        {
+            EXPECT_EQ(A.degree(i), 0);
+        }
+
+        // Ensure each edge is empty
+        for (size_t i = 0; i < A.size(); i++)
+        {
+            for (size_t j = 0; j < A.size(); j++)
+            {
+                EXPECT_FALSE(A.has_edge(i, j));
+            }
+        }
+    }
+
+    {
+        AdjacencyMatrix<false> A(7);
+
+        A.add_edge({0, 3}, 0);
+        A.add_edge({0, 5}, 1);
+        A.add_edge({1, 2}, 2);
+        A.add_edge({1, 5}, 3);
+        A.add_edge({3, 1}, 4);
+        A.add_edge({3, 2}, 5);
+        A.add_edge({3, 4}, 6);
+        A.add_edge({3, 6}, 7);
+        A.add_edge({4, 6}, 8);
+        A.add_edge({5, 4}, 9);
+
+        A.clear();
+
+        // Ensure all degrees are zero
+        for (size_t i = 0; i < A.size(); i++)
+        {
+            EXPECT_EQ(A.degree(i), 0);
+        }
+
+        // Ensure each edge is empty
+        for (size_t i = 0; i < A.size(); i++)
+        {
+            for (size_t j = 0; j < A.size(); j++)
+            {
+                EXPECT_FALSE(A.has_edge(i, j));
+            }
+        }
+    }
+}
