@@ -21,7 +21,7 @@ public:
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
     {
-        if constexpr (is_directed)
+        if constexpr (Directed)
         {
             adj_.resize(vertex_count_ * vertex_count_,
                         EdgeID::empty);
@@ -313,7 +313,7 @@ public:
     }
 
     // Clear all edges
-    void clear()
+    void clear() noexcept
     {
         // Set edges to empty.
         for (EdgeID & edge : adj_)
@@ -400,11 +400,47 @@ public:
         }
     }
 
-    // TODO: has_self_loops()
+    bool has_self_loops() const noexcept
+    {
+        if constexpr (Directed)
+        {
+            size_t index = 0;
 
-    // TODO: has_self_loop(v)
+            for (size_t i = 0; i < vertex_count_; i++)
+            {
+                if (adj_[index] != EdgeID::empty)
+                {
+                    return true;
+                }
 
-    // TODO: is_valid_vertex(v)
+                index += vertex_count_ + 1;
+            }
+
+            return false;
+        }
+        else
+        {
+            size_t index = 0;
+            for (size_t i = 0; i < vertex_count_; i++)
+            {
+                if (adj_[index] != EdgeID::empty)
+                {
+                    return true;
+                }
+
+                index += vertex_count_ - i;
+            }
+
+            return false;
+        }
+    }
+
+    bool has_self_loop(VertexID v) const noexcept
+    {
+        return has_edge(v, v);
+    }
+
+    //bool is_valid_vertex(v) const noexcept
 
     size_t vertex_count() const noexcept
     {
@@ -419,7 +455,7 @@ public:
 private:
     size_t compute_index(VertexID from, VertexID to) const noexcept
     {
-        if constexpr (is_directed)
+        if constexpr (Directed)
         {
             return from.value * vertex_count_ + to.value;
         }
