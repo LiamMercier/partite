@@ -11,7 +11,6 @@
 namespace libproject::graphs
 {
 
-// TODO:: transpose()
 template <bool Directed>
 class AdjacencyMatrix
 {
@@ -396,6 +395,41 @@ public:
     // Utility functions
     //
 
+    [[nodiscard]] AdjacencyMatrix compute_transpose() const
+    {
+        if constexpr (Directed)
+        {
+            // Construct a new, empty matrix.
+            AdjacencyMatrix rev(vertex_count_);
+
+            // Go over each edge (v, u) and insert (u, v)
+            for (size_t v = 0; v < vertex_count_; v++)
+            {
+                for (size_t u = 0; u < vertex_count_; u++)
+                {
+                    EdgeID e_id = find_edge(VertexID(v), VertexID(u));
+
+                    if (e_id != EdgeID::empty)
+                    {
+                        rev.add_edge(u, v, e_id);
+                    }
+                }
+            }
+
+            return rev;
+        }
+        // The transpose of an undirected graph is the same graph.
+        else
+        {
+            return AdjacencyMatrix {
+                adj_,
+                vertex_count_,
+                deg_
+            };
+        }
+
+    }
+
     size_t degree(VertexID v) const noexcept
     {
         if constexpr (!Directed)
@@ -665,6 +699,18 @@ private:
         size_t v_;
         size_t vertex_count_;
     };
+
+private:
+    // Internal constructors for returning a copy.
+    AdjacencyMatrix(std::vector<EdgeID> adj,
+                    size_t v_count,
+                    std::vector<size_t> deg)
+        requires (!Directed)
+    :adj_(std::move(adj)),
+    vertex_count_(v_count),
+    deg_(std::move(deg))
+    {
+    }
 
 //
 // Adjacency Matrix private data members.

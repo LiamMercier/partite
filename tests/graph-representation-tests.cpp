@@ -285,8 +285,8 @@ TEST(GraphRepresentations, AdjacencyMatrixInwardNeighbors)
         }
     }
 
-    // Ensure we don't return (v, u) for in_neighbors(v) in a digraph, and
-    // visa versa for out_neighbors(v)
+    // Ensure we don't return (v, u) for in_neighbors(v) in a digraph
+    // and visa versa for out_neighbors(v)
     {
         AdjacencyMatrix<true> A(5);
 
@@ -314,7 +314,7 @@ TEST(GraphRepresentations, AdjacencyMatrixInwardNeighbors)
 
         auto out_res = A.out_neighbors(4);
         indx = 0;
-        for (const auto & e : res)
+        for (const auto & e : out_res)
         {
             if (indx > 2)
             {
@@ -322,8 +322,8 @@ TEST(GraphRepresentations, AdjacencyMatrixInwardNeighbors)
                 break;
             }
 
-            EXPECT_FALSE(out_eids.contains(e.value));
-            EXPECT_TRUE(in_eids.contains(e.value));
+            EXPECT_TRUE(out_eids.contains(e.value));
+            EXPECT_FALSE(in_eids.contains(e.value));
         }
     }
 }
@@ -666,3 +666,74 @@ TEST(GraphRepresentations, AdjacencyMatrixLoopUtils)
         }
     }
 }
+
+TEST(GraphRepresentations, AdjacencyMatrixTranspose)
+{
+    {
+        AdjacencyMatrix<true> A(5);
+
+        // Setup the digraph
+        //
+        // V = {0, 1, 2, 3}
+        // E = {(0, 1), (1, 0), (0, 2), (1, 2), (3, 2)}
+
+        A.add_edge({0, 1}, 0);
+        A.add_edge({1, 0}, 1);
+        A.add_edge({0, 2}, 2);
+        A.add_edge({1, 2}, 3);
+        A.add_edge({3, 2}, 4);
+
+        // The transpose will have edges
+        // E = {(1, 0), (0, 1), (2, 0), (2, 1), (2, 3)}
+        auto At = A.compute_transpose();
+
+        std::vector<std::pair<VertexID, VertexID>> expected_edges
+        {
+            {1, 0}, {0, 1}, {2, 0}, {2, 1}, {2, 3}
+        };
+
+        size_t expected_eid = 0;
+
+        for (const auto & e : expected_edges)
+        {
+            EXPECT_TRUE(At.has_edge(e));
+            EXPECT_EQ(At.find_edge(e).value, expected_eid);
+            expected_eid++;
+        }
+    }
+
+    // Test computing the transpose adjacency matrix of
+    // an undirected graph.
+    //
+    // This should just be a copy of the graph.
+    {
+        AdjacencyMatrix<false> A(5);
+
+        A.add_edge({0, 1}, 0);
+        A.add_edge({0, 2}, 1);
+        A.add_edge({1, 2}, 2);
+        A.add_edge({3, 2}, 3);
+
+        auto At = A.compute_transpose();
+
+        // Some of these are flipped randomly for robustness because
+        // in an undirected graph we should be handling (a, b) == (b, a).
+        std::vector<std::pair<VertexID, VertexID>> expected_edges
+        {
+            {1, 0}, {0, 2}, {1, 2}, {2, 3}
+        };
+
+        size_t expected_eid = 0;
+
+        for (const auto & e : expected_edges)
+        {
+            EXPECT_TRUE(At.has_edge(e));
+            EXPECT_EQ(At.find_edge(e).value, expected_eid);
+            expected_eid++;
+        }
+    }
+
+
+}
+
+
