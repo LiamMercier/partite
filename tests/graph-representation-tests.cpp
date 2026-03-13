@@ -3,6 +3,9 @@
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
 
+#include <unordered_map>
+#include <unordered_set>
+
 using namespace libproject::graphs;
 
 TEST(GraphRepresentations, AdjacencyMatrixConstruction)
@@ -181,8 +184,7 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
         }
     }
 
-    // Ensure we can call neighbors for everything and get
-    // an empty edge back.
+    // Ensure we can call neighbors and get no empty edges.
 
     {
         AdjacencyMatrix<false> A(5);
@@ -193,7 +195,8 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
 
             for (const auto & e : res)
             {
-                EXPECT_EQ(e, EdgeID::empty);
+                FAIL() << "Unexpected edge in empty AdjacencyMatrix!";
+                break;
             }
         }
     }
@@ -207,7 +210,8 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
 
             for (const auto & e : res)
             {
-                EXPECT_EQ(e, EdgeID::empty);
+                FAIL() << "Unexpected edge in empty AdjacencyMatrix!";
+                break;
             }
         }
     }
@@ -232,12 +236,94 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
         {
             if (indx > 2)
             {
-                FAIL() << "A.neighbors(4) returned too many values!";
+                FAIL() << "A.neighbors() returned too many values!";
                 break;
             }
 
             EXPECT_EQ(e, expected[indx]);
             indx += 1;
+        }
+    }
+}
+
+TEST(GraphRepresentations, AdjacencyMatrixInwardNeighbors)
+{
+    // Test fully connected node
+    {
+        AdjacencyMatrix<true> A(5);
+
+        A.add_edge(0, 4, 0);
+        A.add_edge(1, 4, 1);
+        A.add_edge(2, 4, 2);
+        A.add_edge(3, 4, 3);
+        A.add_edge(4, 4, 4);
+
+        auto res = A.in_neighbors(4);
+
+        EdgeID expected_eid(0);
+        for (const auto & e : res)
+        {
+            EXPECT_NE(e, EdgeID::empty);
+            EXPECT_EQ(e, expected_eid);
+            expected_eid.value += 1;
+        }
+    }
+
+    // Ensure we can call neighbors on empty graph
+    {
+        AdjacencyMatrix<true> A(5);
+
+        for (int i = 0; i < A.size(); i++)
+        {
+            auto res = A.neighbors(i);
+
+            for (const auto & e : res)
+            {
+                FAIL() << "Unexpected edge in empty AdjacencyMatrix!";
+                break;
+            }
+        }
+    }
+
+    // Ensure we don't return (v, u) for in_neighbors(v) in a digraph, and
+    // visa versa for out_neighbors(v)
+    {
+        AdjacencyMatrix<true> A(5);
+
+        A.add_edge({4, 0}, 0);
+        A.add_edge({1, 4}, 1);
+        A.add_edge({2, 4}, 2);
+        A.add_edge({4, 3}, 3);
+
+        std::unordered_set<size_t> out_eids {0, 3};
+        std::unordered_set<size_t> in_eids {1, 2};
+
+        auto res = A.in_neighbors(4);
+        size_t indx = 0;
+        for (const auto & e : res)
+        {
+            if (indx > 2)
+            {
+                FAIL() << "A.in_neighbors(4) returned too many values!";
+                break;
+            }
+
+            EXPECT_FALSE(out_eids.contains(e.value));
+            EXPECT_TRUE(in_eids.contains(e.value));
+        }
+
+        auto out_res = A.out_neighbors(4);
+        indx = 0;
+        for (const auto & e : res)
+        {
+            if (indx > 2)
+            {
+                FAIL() << "A.out_neighbors(4) returned too many values!";
+                break;
+            }
+
+            EXPECT_FALSE(out_eids.contains(e.value));
+            EXPECT_TRUE(in_eids.contains(e.value));
         }
     }
 }
