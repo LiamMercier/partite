@@ -192,7 +192,9 @@ public:
         return has_edge(edge.first, edge.second);
     }
 
-    void add_edge(VertexID from, VertexID to, EdgeID edge_id) noexcept
+    [[maybe_unused]] bool add_edge(VertexID from,
+                                   VertexID to,
+                                   EdgeID edge_id) noexcept
     {
         size_t index = compute_index(from, to);
 
@@ -221,7 +223,7 @@ public:
                               + "] to be [EdgeID "
                               + std::to_string(edge_id.value)
                               + "]");
-            return;
+            return false;
         }
 
         adj_[index] = edge_id;
@@ -265,15 +267,16 @@ public:
             out_deg_[from.value] += 1;
         }
 
-        return;
+        return true;
     }
 
-    void add_edge(std::pair<VertexID, VertexID> edge, EdgeID edge_id) noexcept
+    [[maybe_unused]] bool add_edge(std::pair<VertexID, VertexID> edge,
+                                   EdgeID edge_id) noexcept
     {
-        add_edge(edge.first, edge.second, edge_id);
+        return add_edge(edge.first, edge.second, edge_id);
     }
 
-    void remove_edge(VertexID from, VertexID to) noexcept
+    [[maybe_unused]] bool remove_edge(VertexID from, VertexID to) noexcept
     {
         size_t index = compute_index(from, to);
 
@@ -291,7 +294,7 @@ public:
         // Prevent reducing the degree count for empty removal.
         if (adj_[index] == EdgeID::empty)
         {
-            return;
+            return false;
         }
 
         adj_[index] = EdgeID::empty;
@@ -335,12 +338,13 @@ public:
             out_deg_[from.value] -= 1;
         }
 
-        return;
+        return true;
     }
 
-    void remove_edge(std::pair<VertexID, VertexID> edge) noexcept
+    [[maybe_unused]] bool remove_edge(std::pair<VertexID,
+                                                VertexID> edge) noexcept
     {
-        remove_edge(edge.first, edge.second);
+        return remove_edge(edge.first, edge.second);
     }
 
     // Clear all edges
@@ -395,6 +399,10 @@ public:
     // Utility functions
     //
 
+    // TODO <optimization>: consider a compute_transpose overload that
+    //                      takes a list (view?) of edges to check from
+    //                      the graph container's EdgeArrays to/from vectors.
+
     [[nodiscard]] AdjacencyMatrix compute_transpose() const
     {
         if constexpr (Directed)
@@ -405,6 +413,8 @@ public:
             // Go over each edge (v, u) and insert (u, v)
             for (size_t v = 0; v < vertex_count_; v++)
             {
+                // TODO <optimization>: we could stop early when we
+                //                      have found out_deg(v) elements.
                 for (size_t u = 0; u < vertex_count_; u++)
                 {
                     EdgeID e_id = find_edge(VertexID(v), VertexID(u));
