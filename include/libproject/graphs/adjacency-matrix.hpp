@@ -440,7 +440,10 @@ public:
         return has_edge(v, v);
     }
 
-    //bool is_valid_vertex(v) const noexcept
+    bool is_valid_vertex(VertexID v) const noexcept
+    {
+        return v.value < vertex_count_;
+    }
 
     size_t vertex_count() const noexcept
     {

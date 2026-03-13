@@ -511,3 +511,72 @@ TEST(GraphRepresentations, AdjacencyMatrixClear)
         }
     }
 }
+
+TEST(GraphRepresentations, AdjacencyMatrixLoopUtils)
+{
+    {
+        for (size_t i = 0; i < 7; i++)
+        {
+            AdjacencyMatrix<true> A(7);
+            A.add_edge({i, i}, 0);
+
+            EXPECT_TRUE(A.has_self_loops());
+            EXPECT_TRUE(A.has_self_loop(i));
+        }
+
+        for (size_t i = 0; i < 7; i++)
+        {
+            AdjacencyMatrix<false> A(7);
+
+            for (size_t j = 0; j < i; j++)
+            {
+                A.add_edge({i, j}, 0);
+            }
+
+            for (size_t j = i + 1; j < 7; j++)
+            {
+                A.add_edge({i, j}, 0);
+            }
+
+            EXPECT_FALSE(A.has_self_loops());
+
+            for (size_t j = 0; j < 7; j++)
+            {
+                EXPECT_FALSE(A.has_self_loop(j));
+            }
+        }
+    }
+
+    {
+        for (size_t i = 0; i < 7; i++)
+        {
+            AdjacencyMatrix<false> A(7);
+            A.add_edge({i, i}, 0);
+
+            EXPECT_TRUE(A.has_self_loops());
+            EXPECT_TRUE(A.has_self_loop(i));
+        }
+
+        for (size_t i = 0; i < 7; i++)
+        {
+            AdjacencyMatrix<false> A(7);
+
+            for (size_t j = 0; j < i; j++)
+            {
+                A.add_edge({i, j}, 0);
+            }
+
+            for (size_t j = i + 1; j < 7; j++)
+            {
+                A.add_edge({i, j}, 0);
+            }
+
+            EXPECT_FALSE(A.has_self_loops());
+
+            for (size_t j = 0; j < 7; j++)
+            {
+                EXPECT_FALSE(A.has_self_loop(j));
+            }
+        }
+    }
+}
