@@ -47,9 +47,12 @@ public:
         return has_edge(edge.first, edge.second);
     }
 
-    // For templates with edge data.
-    bool add_edge(VertexID from, VertexID to, EdgeData data)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+    template<typename... Args>
+    bool add_edge(VertexID from, VertexID to, Args&&... args)
+        requires (std::is_same_v<EdgeData, std::monostate>
+                  && sizeof...(Args) == 0) ||
+                 (!std::is_same_v<EdgeData, std::monostate>
+                  && std::constructible_from<EdgeData, Args...>)
     {
         EdgeID e_id;
 
@@ -68,7 +71,11 @@ public:
                 return res;
             }
 
-            edges_.data[e_id.value] = std::move(data);
+            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            {
+                edges_.data[e_id.value] = EdgeData{std::forward<Args>(args)...};
+            }
+
             edges_.from[e_id.value] = from;
             edges_.to[e_id.value] = to;
         }
@@ -77,58 +84,28 @@ public:
         {
             e_id = edges_.size();
 
-            bool res = representation_.add_edge(from, to, e_id);
-
-            // Prevent bad modifications.
-            if (!res)
+            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
             {
-                return res;
+                (edges_.data).emplace_back(std::forward<Args>(args)...);
             }
 
-            (edges_.data).push_back(std::move(data));
             (edges_.from).push_back(from);
             (edges_.to).push_back(to);
-        }
-
-        return true;
-    }
-
-    // For templates without edge data
-    bool add_edge(VertexID from, VertexID to)
-        requires (std::is_same_v<EdgeData, std::monostate>)
-    {
-        EdgeID e_id;
-
-        if (!free_edges_.empty())
-        {
-            e_id = free_edges_.back();
-            free_edges_.pop_back();
 
             bool res = representation_.add_edge(from, to, e_id);
 
             // Prevent bad modifications.
             if (!res)
             {
-                free_edges_.push_back(e_id);
+                if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+                {
+                    (edges_.data).pop_back();
+                }
+
+                (edges_.from).pop_back();
+                (edges_.to).pop_back();
                 return res;
             }
-
-            edges_.from[e_id.value] = from;
-            edges_.to[e_id.value] = to;
-        }
-        else
-        {
-            e_id = edges_.size();
-
-            bool res = representation_.add_edge(from, to, e_id);
-
-            if (!res)
-            {
-                return res;
-            }
-
-            (edges_.from).push_back(from);
-            (edges_.to).push_back(to);
         }
 
         return true;
@@ -188,7 +165,7 @@ public:
         // Overwrite with default data.
         out = std::move(edges_.data[res.value]);
 
-        edges_.data[res.value] = EdgeData();
+        edges_.data[res.value] = {};
         edges_.from[res.value] = VertexID::empty;
         edges_.to[res.value] = VertexID::empty;
 
