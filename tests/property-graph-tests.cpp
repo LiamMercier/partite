@@ -39,7 +39,7 @@ TEST(PropertyGraphs, AdjacencyMatrixTranspose)
 
         for (const auto & e : expected_edges)
         {
-            //EXPECT_TRUE(Gt.has_edge(e));
+            EXPECT_TRUE(Gt.has_edge(e));
             //EXPECT_EQ(Gt.find_edge(e).value, expected_eid);
             expected_eid++;
         }

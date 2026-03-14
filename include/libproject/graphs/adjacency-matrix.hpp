@@ -276,7 +276,7 @@ public:
         return add_edge(edge.first, edge.second, edge_id);
     }
 
-    [[maybe_unused]] bool remove_edge(VertexID from, VertexID to) noexcept
+    [[maybe_unused]] EdgeID remove_edge(VertexID from, VertexID to) noexcept
     {
         size_t index = compute_index(from, to);
 
@@ -291,10 +291,12 @@ public:
                           + std::to_string(to.value)
                           +"}");
 
+        EdgeID old_edge = adj_[index];
+
         // Prevent reducing the degree count for empty removal.
-        if (adj_[index] == EdgeID::empty)
+        if (old_edge == EdgeID::empty)
         {
-            return false;
+            return old_edge;
         }
 
         adj_[index] = EdgeID::empty;
@@ -338,11 +340,11 @@ public:
             out_deg_[from.value] -= 1;
         }
 
-        return true;
+        return old_edge;
     }
 
-    [[maybe_unused]] bool remove_edge(std::pair<VertexID,
-                                                VertexID> edge) noexcept
+    [[maybe_unused]] EdgeID remove_edge(std::pair<VertexID,
+                                                  VertexID> edge) noexcept
     {
         return remove_edge(edge.first, edge.second);
     }

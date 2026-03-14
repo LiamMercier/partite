@@ -37,6 +37,16 @@ public:
     // Edge operations
     //
 
+    bool has_edge(VertexID from, VertexID to) const
+    {
+        return representation_.has_edge(from, to);
+    }
+
+    bool has_edge(std::pair<VertexID, VertexID> edge) const
+    {
+        return has_edge(edge.first, edge.second);
+    }
+
     // For templates with edge data.
     bool add_edge(VertexID from, VertexID to, EdgeData data)
         requires (!std::is_same_v<EdgeData, std::monostate>)
@@ -137,7 +147,33 @@ public:
         return add_edge(edge.first, edge.second);
     }
 
-    // bool remove_edge()
+    [[maybe_unused]] bool remove_edge(VertexID from, VertexID to)
+    {
+        EdgeID res = representation_.remove_edge(from, to);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        // Overwrite with default data.
+        if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+        {
+            edges_.data[res] = EdgeData();
+        }
+
+        return true;
+    }
+
+    [[maybe_unused]] bool remove_edge(std::pair<VertexID, VertexID> edge)
+    {
+        return remove_edge(edge.first, edge.second);
+    }
+
+    // TODO <feature>: consider EdgeData pop_edge(from, to) or similar?
 
     //
     // Transformations
