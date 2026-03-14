@@ -85,7 +85,7 @@ public:
                 return res;
             }
 
-            (edges_.data).push_back(data);
+            (edges_.data).push_back(std::move(data));
             (edges_.from).push_back(from);
             (edges_.to).push_back(to);
         }
@@ -118,7 +118,7 @@ public:
         }
         else
         {
-            e_id = (edges_.to).size();
+            e_id = edges_.size();
 
             bool res = representation_.add_edge(from, to, e_id);
 
@@ -138,7 +138,7 @@ public:
     bool add_edge(std::pair<VertexID, VertexID> edge, EdgeData data)
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
-        return add_edge(edge.first, edge.second, data);
+        return add_edge(edge.first, edge.second, std::move(data));
     }
 
     bool add_edge(std::pair<VertexID, VertexID> edge)
@@ -147,6 +147,7 @@ public:
         return add_edge(edge.first, edge.second);
     }
 
+    // Remove an edge, this will have to invalidate any EdgeData reference.
     [[maybe_unused]] bool remove_edge(VertexID from, VertexID to)
     {
         EdgeID res = representation_.remove_edge(from, to);
@@ -159,11 +160,8 @@ public:
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
 
-        // Overwrite with default data.
-        if constexpr (!std::is_same_v<EdgeData, std::monostate>)
-        {
-            edges_.data[res] = EdgeData();
-        }
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
 
         return true;
     }
@@ -173,7 +171,39 @@ public:
         return remove_edge(edge.first, edge.second);
     }
 
-    // TODO <feature>: consider EdgeData pop_edge(from, to) or similar?
+    // Remove and return an edge's data. EdgeData must not be monostate.
+    bool try_pop_edge(VertexID from, VertexID to, EdgeData & out)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    {
+        EdgeID res = representation_.remove_edge(from, to);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        // Overwrite with default data.
+        out = std::move(edges_.data[res.value]);
+
+        edges_.data[res.value] = EdgeData();
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return true;
+    }
+
+    bool try_pop_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    {
+        return try_pop_edge(edge.first, edge.second, out);
+    }
+
+    // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
+    //
+    // TODO: maybe also provide erase_edge() for explicit immediate overwrites
 
     //
     // Transformations
@@ -209,7 +239,7 @@ private:
             }
         }
 
-        size_t size()
+        size_t size() const noexcept
         {
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
             {
