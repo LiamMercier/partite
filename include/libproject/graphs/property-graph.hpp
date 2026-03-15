@@ -8,10 +8,20 @@
 namespace libproject::graphs
 {
 
+template <typename EdgeData>
+struct EdgeInput
+{
+    VertexID from;
+    VertexID to;
+
+    // This might be monostate, if so, don't store memory.
+    [[no_unique_address]] EdgeData data{};
+};
+
 // TODO: debug mode asserts
 template <GraphRepresentation Representation,
-          typename VertexData = std::monostate,
-          typename EdgeData = std::monostate>
+          typename EdgeData = std::monostate,
+          typename VertexData = std::monostate>
 class PropertyGraph
 {
 public:
@@ -32,6 +42,50 @@ public:
     vertices_(num_vertices)
     {
     }
+
+    // Constructor for bulk edge descriptors.
+    //
+    // In the general case, there is no way for us to optimize
+    // construction without knowing the representation. We call
+    // add_edge for each edge in the list to build the graph.
+    //
+    // Asymptotically, the expected time is Theta(|E| * add_edge(e))
+    // so if add_edge(e) is expected to take Theta(1) time, there is no
+    // asymptotic increase over reading the graph memory.
+    //
+    // TODO <optimization>: If we find a representation specific optimization
+    //                      for construction we can use constexpr to call
+    //                      the specific optimization for that representation.
+    template <std::ranges::input_range EdgeRange>
+    PropertyGraph(size_t num_vertices, EdgeRange && edge_range)
+    :representation_(num_vertices),
+    vertices_(num_vertices)
+    {
+        // First, lets reserve.
+        if constexpr (std::ranges::sized_range<EdgeRange>)
+        {
+            size_t expected_edges = std::ranges::size(edge_range);
+            edges_.reserve(expected_edges);
+        }
+
+        for (auto && item : edge_range)
+        {
+            if constexpr (std::is_same_v<EdgeData, std::monostate>)
+            {
+                const auto & [from, to] = item;
+                add_edge(from, to);
+            }
+            else
+            {
+                auto && [from, to, data] = item;
+                add_edge(from, to, std::forward<decltype(data)>(data));
+            }
+        }
+    }
+
+    // TODO <feature>: some sort of from_edges(|V|, edges) that assumes
+    //       graph is empty? Or, some other way of transforming an
+    //       empty graph to be the desired graph that performs faster?
 
     //
     // Edge operations
@@ -62,13 +116,13 @@ public:
             e_id = free_edges_.back();
             free_edges_.pop_back();
 
-            bool res = representation_.add_edge(from, to, e_id);
+            bool success = representation_.add_edge(from, to, e_id);
 
-            // Prevent bad modifications.
-            if (!res)
+            // Undo bad modifications.
+            if (!success)
             {
                 free_edges_.push_back(e_id);
-                return res;
+                return success;
             }
 
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
@@ -84,6 +138,14 @@ public:
         {
             e_id = edges_.size();
 
+            // Push back now, if we throw (bad allocation) then representation_
+            // is not corrupted and recovery could be possible.
+            //
+            // Though, we would need to worry about edges_.from being size N + 1
+            // and edges_.to being size N depending on when we throw.
+            //
+            // TODO <feautre>: function the user can call to check that
+            //                 each array is of equal size so they can be fixed.
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
             {
                 (edges_.data).emplace_back(std::forward<Args>(args)...);
@@ -92,10 +154,10 @@ public:
             (edges_.from).push_back(from);
             (edges_.to).push_back(to);
 
-            bool res = representation_.add_edge(from, to, e_id);
+            bool success = representation_.add_edge(from, to, e_id);
 
-            // Prevent bad modifications.
-            if (!res)
+            // Undo invalid modifications.
+            if (!success)
             {
                 if constexpr (!std::is_same_v<EdgeData, std::monostate>)
                 {
@@ -104,24 +166,22 @@ public:
 
                 (edges_.from).pop_back();
                 (edges_.to).pop_back();
-                return res;
+                return success;
             }
         }
 
         return true;
     }
 
-    // std::pair overloads.
-    bool add_edge(std::pair<VertexID, VertexID> edge, EdgeData data)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+    // std::pair overload.
+    template<typename... Args>
+    bool add_edge(std::pair<VertexID, VertexID> edge, Args&&... args)
+        requires (std::is_same_v<EdgeData, std::monostate>
+                  && sizeof...(Args) == 0) ||
+                 (!std::is_same_v<EdgeData, std::monostate>
+                  && std::constructible_from<EdgeData, Args...>)
     {
-        return add_edge(edge.first, edge.second, std::move(data));
-    }
-
-    bool add_edge(std::pair<VertexID, VertexID> edge)
-        requires (std::is_same_v<EdgeData, std::monostate>)
-    {
-        return add_edge(edge.first, edge.second);
+        return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
     }
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
@@ -213,6 +273,17 @@ private:
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
             {
                 data.resize(N);
+            }
+        }
+
+        void reserve(size_t N)
+        {
+            from.reserve(N);
+            to.reserve(N);
+
+            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            {
+                data.reserve(N);
             }
         }
 
