@@ -46,6 +46,7 @@ public:
     //
 
     auto in_neighbors(VertexID v) const
+        requires (Directed)
     {
         // For a digraph's incoming edges, we want all index values
         // corresponding to column v. We can use the transformation:
@@ -64,29 +65,22 @@ public:
     }
 
     auto out_neighbors(VertexID v) const
+            requires (Directed)
     {
-        if constexpr(Directed)
-        {
-            // For a digraph's outgoing edges, we want all index values
-            // corresponding to row v. We can use the transformation:
-            //
-            // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
-            return std::views::iota(size_t{0}, vertex_count_)
-                    | std::views::transform(
-                        [this, v_0 = (v.value * vertex_count_)](int indx)
-                        {
-                            return adj_[v_0 + indx];
-                        })
-                    | std::views::filter([](const auto & e_id)
-                        {
-                            return e_id != EdgeID::empty;
-                        });
-        }
-        else
-        {
-            static_assert(Directed, "out_neighbors is not defined "
-                                     "for undirected graphs");
-        }
+        // For a digraph's outgoing edges, we want all index values
+        // corresponding to row v. We can use the transformation:
+        //
+        // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::transform(
+                    [this, v_0 = (v.value * vertex_count_)](int indx)
+                    {
+                        return adj_[v_0 + indx];
+                    })
+                | std::views::filter([](const auto & e_id)
+                    {
+                        return e_id != EdgeID::empty;
+                    });
     }
 
     auto neighbors(VertexID v) const

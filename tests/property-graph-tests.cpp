@@ -159,6 +159,10 @@ TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
 
         // Replace (4, 6) with (4, 2)
         graph.remove_edge(e.from, e.to);
+
+        EXPECT_EQ(graph.edge_count(), 7);
+        EXPECT_EQ(graph.vertex_count(), 7);
+
         graph.add_edge(4, 2);
 
         // Now check if each edge is still valid.
@@ -174,6 +178,7 @@ TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
         }
 
         EXPECT_FALSE(graph.has_edge(4, 6));
+        EXPECT_EQ(graph.edge_count(), 8);
     }
 
     // Traversal example

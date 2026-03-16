@@ -140,6 +140,8 @@ public:
             edges_.reserve(expected_edges);
         }
 
+        // TODO: write a debug build assert that edges do not reference
+        //       vertices out of the range size given.
         for (auto && item : edge_range)
         {
             if constexpr (std::is_same_v<EdgeData, std::monostate>)
@@ -363,6 +365,43 @@ public:
 
     // TODO: out_edge_views(VertexID v) for returning the edge views.
 
+    // Usage ideas
+    /*
+        for (const auto & edge_id : graph.out_edges(v))
+        {
+            EdgeData & data = graph.get_edge_data(edge_id);
+            func(data)
+        }
+
+        for (const auto & ev : graph.out_edge_views(v))
+        {
+            // ev has members
+            //
+            // ev.from
+            // ev.to
+            // ev.edge_id
+        }
+
+        for (const auto & u : graph.neighbors(v))
+        {
+            visit(u)
+        }
+     */
+
+    //
+    // Utility functions
+    //
+
+    size_t vertex_count() const noexcept
+    {
+        return vertices_.size();
+    }
+
+    size_t edge_count() const noexcept
+    {
+        return (edges_.size() - free_edges_.size());
+    }
+
     //
     // Transformations
     //
@@ -408,6 +447,7 @@ private:
             }
         }
 
+        // TODO: debug build asserts that these all line up
         size_t size() const noexcept
         {
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
