@@ -11,6 +11,35 @@ namespace libproject::graphs
 template <typename EdgeData>
 struct EdgeInput
 {
+    // Construct an EdgeInput from something like
+    // {VertexID, VertexID}
+    EdgeInput(VertexID f, VertexID t)
+        requires (std::is_same_v<EdgeData, std::monostate>)
+    :from(f),
+    to(t)
+    {}
+
+    // Construct an EdgeInput from something like
+    // {{VertexID, VertexID}, EdgeData}
+    //
+    // Example: {{0, 1}, "edge value"}
+    EdgeInput(std::pair<VertexID, VertexID> verts, EdgeData e)
+    :from(verts.first),
+    to(verts.second),
+    data(std::move(e))
+    {
+    }
+
+    // Construct an EdgeInput from something like
+    // {VertexID, VertexID, EdgeData}
+    EdgeInput(std::tuple<VertexID, VertexID, EdgeData> edge)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    :from(std::get<0>(edge)),
+    to(std::get<1>(edge)),
+    data(std::get<2>(edge))
+    {
+    }
+
     VertexID from;
     VertexID to;
 
@@ -60,6 +89,35 @@ public:
     PropertyGraph(size_t num_vertices, EdgeRange && edge_range)
     :representation_(num_vertices),
     vertices_(num_vertices)
+    {
+        // First, lets reserve.
+        if constexpr (std::ranges::sized_range<EdgeRange>)
+        {
+            size_t expected_edges = std::ranges::size(edge_range);
+            edges_.reserve(expected_edges);
+        }
+
+        for (auto && item : edge_range)
+        {
+            if constexpr (std::is_same_v<EdgeData, std::monostate>)
+            {
+                const auto & [from, to] = item;
+                add_edge(from, to);
+            }
+            else
+            {
+                auto && [from, to, data] = item;
+                add_edge(from, to, std::forward<decltype(data)>(data));
+            }
+        }
+    }
+
+    // Cosntruct a graph from a list of verices and a list of edges.
+    template <std::ranges::input_range VertexRange,
+              std::ranges::input_range EdgeRange>
+    PropertyGraph(VertexRange && vertex_range, EdgeRange && edge_range)
+    :representation_(std::ranges::size(vertex_range)),
+    vertices_(std::ranges::begin(vertex_range), std::ranges::end(vertex_range))
     {
         // First, lets reserve.
         if constexpr (std::ranges::sized_range<EdgeRange>)
