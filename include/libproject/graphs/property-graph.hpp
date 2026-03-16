@@ -8,7 +8,7 @@
 namespace libproject::graphs
 {
 
-template <typename EdgeData>
+template <typename EdgeData = std::monostate>
 struct EdgeInput
 {
     // Construct an EdgeInput from something like
@@ -46,6 +46,19 @@ public:
 
     // This might be monostate, if so, don't store memory.
     [[no_unique_address]] EdgeData data{};
+};
+
+template <>
+struct EdgeInput<std::monostate>
+{
+    EdgeInput(VertexID f, VertexID t)
+    :from(f),
+    to(t)
+    {}
+
+public:
+    VertexID from;
+    VertexID to;
 };
 
 // TODO: debug mode asserts
@@ -304,9 +317,10 @@ public:
 
     // std::pair overloads.
 
-    EdgeID find_edge_id(std::pair<VertexID, VertexID> edge) const
+    // By default, return the EdgeID
+    EdgeID find_edge(std::pair<VertexID, VertexID> edge) const
     {
-        return find_edge_id(edge.first, edge.second);
+        return find_edge(edge.first, edge.second);
     }
 
     bool has_edge(std::pair<VertexID, VertexID> edge) const

@@ -146,11 +146,112 @@ TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
 {
     // No edge or vertex data example.
     {
-        PropertyGraph<AdjacencyMatrix<true>> graph(5);
+        std::vector<EdgeInput<>> edges
+        {
+            {0, 2}, {2, 1}, {1, 5}, {1, 3},
+            {1, 4}, {3, 4}, {3, 6}, {4, 6}
+        };
 
-        // Use the example digraph
+        PropertyGraph<AdjacencyMatrix<true>> graph(7, edges);
+
+        auto e = edges.back();
+        edges.pop_back();
+
+        // Replace (4, 6) with (4, 2)
+        graph.remove_edge(e.from, e.to);
+        graph.add_edge(4, 2);
+
+        // Now check if each edge is still valid.
+        edges.push_back({4, 2});
+
+        size_t expected_id = 0;
+        for (const auto & e : edges)
+        {
+            EXPECT_TRUE(graph.has_edge(e.from, e.to));
+            EXPECT_EQ(graph.find_edge(e.from, e.to), expected_id);
+
+            expected_id++;
+        }
+
+        EXPECT_FALSE(graph.has_edge(4, 6));
+    }
+
+    // Traversal example
+    {
+        std::vector<int> vertices
+        {
+            0, 0, 0, 0, 0
+        };
+
+        std::vector<EdgeInput<std::string>> edges
+        {
+            {{0, 1}, "a"}, {{0, 2}, "b"}, {{0, 3}, "c"},
+            {{1, 4}, "d"}, {{2, 3}, "e"}, {{3, 4}, "f"}
+        };
+
+        PropertyGraph<AdjacencyMatrix<false>,
+                      std::string,
+                      int> graph(vertices, edges);
+
+        // basic traversal algorithm
+        std::string concat;
+        VertexID id{0};
+        std::vector<bool> seen(vertices.size(), false);
+        seen[id.value] = true;
+
+        // This isn't really an algorithm, just a poor DFS style test to
+        // make sure we can properly use the graph.
+        while (id != VertexID::empty)
+        {
+            bool done = false;
+
+            for (size_t i = 0; i < vertices.size(); i++)
+            {
+                if (!seen[i] && graph.has_edge(id, i))
+                {
+                    // Find the edge data
+                    EdgeID this_id = graph.find_edge(id, i);
+                    std::string & this_data = graph.get_edge_data(this_id);
+
+                    // Append this character to the edges we have used
+                    concat.append(this_data);
+
+                    // Increase the distance of i to be one more than id
+                    int & id_int = graph.get_vertex_data(id);
+                    int & i_int = graph.get_vertex_data(i);
+
+                    i_int = id_int + 1;
+
+                    // Mark as seen.
+                    seen[i] = true;
+
+                    // go to the next iteration
+                    id = i;
+                    done = true;
+                    break;
+                }
+            }
+
+            // If we get here, break.
+            if (!done)
+            {
+                id = VertexID::empty;
+            }
+        }
+
+        // Expected traversal:
         //
-        //
+        // concat: "adfe"
+        // vertex data: {0, 1, 4, 3, 2}
+        std::vector<int> expected_dists {0, 1, 4, 3, 2};
+
+        for (size_t i = 0; i < vertices.size(); i++)
+        {
+            int dist = graph.get_vertex_data(i);
+            EXPECT_EQ(dist, expected_dists[i]);
+        }
+
+        EXPECT_EQ(concat, "adfe");
 
     }
 }
