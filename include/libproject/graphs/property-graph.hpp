@@ -40,6 +40,7 @@ struct EdgeInput
     {
     }
 
+public:
     VertexID from;
     VertexID to;
 
@@ -54,12 +55,12 @@ template <GraphRepresentation Representation,
 class PropertyGraph
 {
 public:
-    // TODO: do we actually want this? Decide later.
+    // TODO: do we need this?
     struct EdgeView
     {
         VertexID from;
         VertexID to;
-        EdgeData* data;
+        EdgeID id;
     };
 
 public:
@@ -149,14 +150,41 @@ public:
     // Edge operations
     //
 
+    // By default, return the EdgeID
+    EdgeID find_edge(VertexID from, VertexID to) const
+    {
+        return representation_.find_edge(from, to);
+    }
+
+    // For returning a reference to the EdgeData of an edge.
+    EdgeData & get_edge_data(EdgeID e_id)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    {
+        return edges_.data[e_id.value];
+    }
+
+    // For copying the EdgeData of an edge.
+    const EdgeData & get_edge_data(EdgeID e_id) const
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    {
+        return edges_.data[e_id.value];
+    }
+
+    VertexData & get_vertex_data(VertexID v_id)
+        requires (!std::is_same_v<VertexData, std::monostate>)
+    {
+        return vertices_[v_id.value];
+    }
+
+    const VertexData & get_vertex_data(VertexID v_id) const
+        requires (!std::is_same_v<VertexData, std::monostate>)
+    {
+        return vertices_[v_id.value];
+    }
+
     bool has_edge(VertexID from, VertexID to) const
     {
         return representation_.has_edge(from, to);
-    }
-
-    bool has_edge(std::pair<VertexID, VertexID> edge) const
-    {
-        return has_edge(edge.first, edge.second);
     }
 
     template<typename... Args>
@@ -231,17 +259,6 @@ public:
         return true;
     }
 
-    // std::pair overload.
-    template<typename... Args>
-    bool add_edge(std::pair<VertexID, VertexID> edge, Args&&... args)
-        requires (std::is_same_v<EdgeData, std::monostate>
-                  && sizeof...(Args) == 0) ||
-                 (!std::is_same_v<EdgeData, std::monostate>
-                  && std::constructible_from<EdgeData, Args...>)
-    {
-        return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
-    }
-
     // Remove an edge, this will have to invalidate any EdgeData reference.
     [[maybe_unused]] bool remove_edge(VertexID from, VertexID to)
     {
@@ -259,11 +276,6 @@ public:
         edges_.to[res.value] = VertexID::empty;
 
         return true;
-    }
-
-    [[maybe_unused]] bool remove_edge(std::pair<VertexID, VertexID> edge)
-    {
-        return remove_edge(edge.first, edge.second);
     }
 
     // Remove and return an edge's data. EdgeData must not be monostate.
@@ -290,6 +302,33 @@ public:
         return true;
     }
 
+    // std::pair overloads.
+
+    EdgeID find_edge_id(std::pair<VertexID, VertexID> edge) const
+    {
+        return find_edge_id(edge.first, edge.second);
+    }
+
+    bool has_edge(std::pair<VertexID, VertexID> edge) const
+    {
+        return has_edge(edge.first, edge.second);
+    }
+
+    template<typename... Args>
+    bool add_edge(std::pair<VertexID, VertexID> edge, Args&&... args)
+        requires (std::is_same_v<EdgeData, std::monostate>
+                  && sizeof...(Args) == 0) ||
+                 (!std::is_same_v<EdgeData, std::monostate>
+                  && std::constructible_from<EdgeData, Args...>)
+    {
+        return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
+    }
+
+    [[maybe_unused]] bool remove_edge(std::pair<VertexID, VertexID> edge)
+    {
+        return remove_edge(edge.first, edge.second);
+    }
+
     bool try_pop_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
@@ -299,6 +338,16 @@ public:
     // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
     //
     // TODO: maybe also provide erase_edge() for explicit immediate overwrites
+
+    //
+    // Iteration functions
+    //
+
+    // TODO: out_neighbors(VertexID v) returning a VertexID range
+
+    // TODO: out_edges(VertexID v) returning an EdgeID range
+
+    // TODO: out_edge_views(VertexID v) for returning the edge views.
 
     //
     // Transformations

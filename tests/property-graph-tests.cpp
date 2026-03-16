@@ -87,6 +87,59 @@ TEST(PropertyGraphs, AdjacencyMatrixConstruction)
             }
         }
     }
+
+    // Example storing names on nodes, distance on edges
+    {
+        std::vector<std::string> vertices
+        {
+            "a", "b", "c", "d", "e"
+        };
+
+        std::vector<EdgeInput<int>> edges
+        {
+            {{0, 1}, 5}, {{0, 2}, -1}, {{0, 3}, 6},
+            {{1, 4}, 3}, {{2, 3}, 8}, {{3, 4}, 4}
+        };
+
+        // We use the graph
+        //
+        // V = [{0, "a"}, {1, "b"}, {2, "c"}, {3, "d"}, {4, "e"}]
+        // E = [{{0, 1}, 5}, {{0, 2}, -1}, {{0, 3}, 6},
+        //      {{1, 4}, 3}, {{2, 3}, 8}, {{3, 4}, 4}]
+        PropertyGraph<AdjacencyMatrix<false>,
+                      int,
+                      std::string> graph(vertices, edges);
+
+        size_t expected_id = 0;
+
+        // Ensure everything exists.
+        for (const auto & e : edges)
+        {
+            EXPECT_TRUE(graph.has_edge(e.from, e.to));
+
+            EdgeID id = graph.find_edge(e.from, e.to);
+            EXPECT_EQ(id, expected_id);
+
+            int & data_ref = graph.get_edge_data(id);
+            int data = graph.get_edge_data(id);
+
+            EXPECT_EQ(data_ref, e.data);
+            EXPECT_EQ(data, e.data);
+
+            std::string & fdata_ref = graph.get_vertex_data(e.from);
+            std::string fdata = graph.get_vertex_data(e.from);
+
+            std::string & tdata_ref = graph.get_vertex_data(e.to);
+            std::string tdata = graph.get_vertex_data(e.to);
+
+            EXPECT_EQ(fdata_ref, vertices[e.from.value]);
+            EXPECT_EQ(fdata, vertices[e.from.value]);
+            EXPECT_EQ(tdata_ref, vertices[e.to.value]);
+            EXPECT_EQ(tdata, vertices[e.to.value]);
+
+            expected_id++;
+        }
+    }
 }
 
 TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
