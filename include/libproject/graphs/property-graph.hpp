@@ -20,6 +20,15 @@ struct EdgeInput
     {}
 
     // Construct an EdgeInput from something like
+    // {VertexID, VertexID}
+    EdgeInput(VertexID f, VertexID t, EdgeData d)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+    :from(f),
+    to(t),
+    data(std::move(d))
+    {}
+
+    // Construct an EdgeInput from something like
     // {{VertexID, VertexID}, EdgeData}
     //
     // Example: {{0, 1}, "edge value"}
@@ -358,6 +367,36 @@ public:
     //
     // Iteration functions
     //
+
+    // Return a range of VertexID values.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid for us to iterate over.
+    auto neighbors(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return representation_.neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                       return edges_.to[id.value];
+                   });
+        }
+        // For a regular graph, we want all edges with
+        // v as an element.
+        //
+        // Return edges_.to[indx] or edges_.from[indx]
+        // depending on which vertex is not equal to v.
+        else
+        {
+            return representation_.neighbors(v)
+                   | std::views::transform([this, v](EdgeID id){
+                       return (edges_.to[id.value] == v)
+                              ? (edges_.from[id.value])
+                                : (edges_.to[id.value]);
+                   });
+        }
+    }
 
     // TODO: out_neighbors(VertexID v) returning a VertexID range
 

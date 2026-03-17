@@ -3,6 +3,8 @@
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
 
+#include <unordered_set>
+
 using namespace libproject::graphs;
 
 TEST(PropertyGraphs, AdjacencyMatrixConstruction)
@@ -291,4 +293,160 @@ TEST(PropertyGraphs, AdjacencyMatrixTranspose)
             EXPECT_TRUE(Gt.has_edge(e));
         }
     }
+}
+
+//
+// Typed test for different graph types on neighbor functions.
+//
+
+template <typename GraphT, typename EdgeDataT, typename VertexDataT>
+struct GraphConfig
+{
+    using Graph = GraphT;
+    using EdgeData = EdgeDataT;
+    using VertexData = VertexDataT;
+};
+
+// Tests for a graph type combination.
+using TestGraphs = ::testing::Types
+<
+    // Simple graph (no VertexData or EdgeData)
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
+                std::monostate,
+                std::monostate>,
+
+    // EdgeData but no VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int>,
+                int,
+                std::monostate>,
+
+    // EdgeData and VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int, int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int, int>,
+                int,
+                int>,
+
+    // VertexData but no EdgeData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::monostate, int>,
+                std::monostate,
+                int>
+>;
+
+template <typename Config>
+class PropertyGraphTest : public ::testing::Test
+{
+public:
+    using Graph = typename Config::Graph;
+    using EdgeData = typename Config::EdgeData;
+    using VertexData = typename Config::VertexData;
+
+    // static so we can access it from derived test
+    static std::vector<EdgeInput<EdgeData>> make_edges()
+    {
+        if constexpr (std::is_same_v<EdgeData, std::monostate>)
+        {
+            return std::vector<EdgeInput<EdgeData>>
+                   {
+                        {0, 1}, {1, 2}, {1, 3},
+                        {1, 6}, {2, 3}, {2, 4},
+                        {3, 5}, {3, 6}
+                   };
+        }
+        else
+        {
+            return std::vector<EdgeInput<EdgeData>>
+                   {
+                        {0, 1, EdgeData()}, {1, 2, EdgeData()},
+                        {1, 3, EdgeData()}, {1, 6, EdgeData()},
+                        {2, 3, EdgeData()}, {2, 4, EdgeData()},
+                        {3, 5, EdgeData()}, {3, 6, EdgeData()}
+                   };
+        }
+    }
+};
+
+TYPED_TEST_SUITE(PropertyGraphTest, TestGraphs);
+
+TYPED_TEST(PropertyGraphTest, Neighbors)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    std::vector<std::unordered_set<size_t>> neighboring(7);
+
+    // Construct neighboring based on is_directed
+    for (const auto & e : edges)
+    {
+        if (Graph::is_directed)
+        {
+            neighboring[e.from.value].insert(e.to.value);
+        }
+        else
+        {
+            neighboring[e.from.value].insert(e.to.value);
+            neighboring[e.to.value].insert(e.from.value);
+        }
+    }
+
+    // For each vertex, check its neighbors.
+    //
+    // We ensure each vertex is as expected and is not a duplicate.
+    for (size_t i = 0; i < graph.vertex_count(); i++)
+    {
+        std::unordered_set<size_t> seen;
+
+        for (const auto & v : graph.neighbors(i))
+        {
+            bool match = neighboring[i].contains(v.value);
+
+            if (!match)
+            {
+                FAIL() << "Unexpected vertex "
+                       << v.value
+                       << " in graph.neighbors(i)";
+            }
+
+            bool duplicate = seen.contains(v.value);
+
+            if (duplicate)
+            {
+                FAIL() << "Duplicate vertex "
+                       << v.value
+                       << " in graph.neighbors(i)";
+            }
+
+            seen.insert(v.value);
+        }
+    }
+
 }
