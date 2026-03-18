@@ -522,3 +522,75 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
         }
     }
 }
+
+TYPED_TEST(PropertyGraphTest, InNeighbors)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    // Skip undirected graphs.
+    if constexpr(!Graph::is_directed)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::make_edges();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.vertex_count(), 7);
+
+        std::vector<std::unordered_set<size_t>> in_neighboring(7);
+
+        // For each (u, v) do (neighboring[v] UNION u)
+        for (const auto & e : edges)
+        {
+            in_neighboring[e.to.value].insert(e.from.value);
+        }
+
+        // For each vertex, check its outgoing neighbors.
+        //
+        // We ensure each vertex is as expected and is not a duplicate.
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            std::unordered_set<size_t> seen;
+
+            for (const auto & v : graph.in_neighbors(i))
+            {
+                bool match = in_neighboring[i].contains(v.value);
+
+                if (!match)
+                {
+                    FAIL() << "Unexpected vertex "
+                        << v.value
+                        << " in graph.out_neighbors(i)";
+                }
+
+                bool duplicate = seen.contains(v.value);
+
+                if (duplicate)
+                {
+                    FAIL() << "Duplicate vertex "
+                        << v.value
+                        << " in graph.out_neighbors(i)";
+                }
+
+                seen.insert(v.value);
+            }
+        }
+    }
+}

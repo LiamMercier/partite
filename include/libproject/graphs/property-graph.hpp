@@ -405,6 +405,16 @@ public:
                    });
     }
 
+    // Return a range of VertexID values for each edge (u, v).
+    auto in_neighbors(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                       return edges_.from[id.value];
+                   });
+    }
+
     // TODO: out_edges(VertexID v) returning an EdgeID range
 
     // TODO: out_edge_views(VertexID v) for returning the edge views.
