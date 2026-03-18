@@ -415,7 +415,41 @@ public:
                    });
     }
 
-    // TODO: out_edges(VertexID v) returning an EdgeID range
+    // Return a range of EdgeID values.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid, so we can return this directly.
+    auto incident_edges(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return out_neighbors(v);
+        }
+        // For an undirected graph, we want all edges with
+        // v as an element.
+        //
+        // Return edges_.to[indx] or edges_.from[indx]
+        // depending on which vertex is not equal to v.
+        else
+        {
+            return representation_.neighbors(v);
+        }
+    }
+
+    // Return a range of EdgeID values for each edge (v, u).
+    auto out_edges(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v);
+    }
+
+    // Return a range of EdgeID values for each edge (u, v).
+    auto in_edges(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v);
+    }
 
     // TODO: out_edge_views(VertexID v) for returning the edge views.
 
