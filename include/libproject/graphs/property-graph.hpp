@@ -377,12 +377,9 @@ public:
         // For a digraph, we want the outgoing edges.
         if constexpr(is_directed)
         {
-            return representation_.neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                       return edges_.to[id.value];
-                   });
+            return out_neighbors(v);
         }
-        // For a regular graph, we want all edges with
+        // For an undirected graph, we want all edges with
         // v as an element.
         //
         // Return edges_.to[indx] or edges_.from[indx]
@@ -398,7 +395,15 @@ public:
         }
     }
 
-    // TODO: out_neighbors(VertexID v) returning a VertexID range
+    // Return a range of VertexID values for each edge (v, u).
+    auto out_neighbors(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                       return edges_.to[id.value];
+                   });
+    }
 
     // TODO: out_edges(VertexID v) returning an EdgeID range
 
