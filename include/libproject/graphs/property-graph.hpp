@@ -466,8 +466,8 @@ public:
         {
             return representation_.neighbors(v)
                    | std::views::transform([this](EdgeID id){
-                        return EdgeView{edges_.from[id],
-                                        edges_.to[id],
+                        return EdgeView{edges_.from[id.value],
+                                        edges_.to[id.value],
                                         id};
                    });
         }
@@ -478,8 +478,8 @@ public:
     {
         return representation_.neighbors(v)
                | std::views::transform([this](EdgeID id){
-                    return EdgeView{edges_.from[id],
-                                    edges_.to[id],
+                    return EdgeView{edges_.from[id.value],
+                                    edges_.to[id.value],
                                     id};
                });
     }
@@ -489,8 +489,8 @@ public:
     {
         return representation_.in_neighbors(v)
                | std::views::transform([this](EdgeID id){
-                   return EdgeView{edges_.from[id],
-                                   edges_.to[id],
+                   return EdgeView{edges_.from[id.value],
+                                   edges_.to[id.value],
                                    id};
                });
     }
