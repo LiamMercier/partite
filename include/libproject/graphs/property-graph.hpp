@@ -77,7 +77,6 @@ template <GraphRepresentation Representation,
 class PropertyGraph
 {
 public:
-    // TODO: do we need this?
     struct EdgeView
     {
         VertexID from;
@@ -419,7 +418,7 @@ public:
     //
     // The representation_ instance streams EdgeID values
     // that are valid, so we can return this directly.
-    auto incident_edges(VertexID v) const
+    auto edges(VertexID v) const
     {
         // For a digraph, we want the outgoing edges.
         if constexpr(is_directed)
@@ -446,7 +445,55 @@ public:
         return representation_.in_neighbors(v);
     }
 
-    // TODO: out_edge_views(VertexID v) for returning the edge views.
+    // Return a range of EdgeView values.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid, so we can return the edge views
+    // from the EdgeID values.
+    auto edge_views(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return out_edge_views(v);
+        }
+        // For an undirected graph, we want all edges with
+        // v as an element.
+        //
+        // Return edges_.to[indx] or edges_.from[indx]
+        // depending on which vertex is not equal to v.
+        else
+        {
+            return representation_.neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                        return EdgeView{edges_.from[id],
+                                        edges_.to[id],
+                                        id};
+                   });
+        }
+    }
+
+    auto out_edge_views(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v)
+               | std::views::transform([this](EdgeID id){
+                    return EdgeView{edges_.from[id],
+                                    edges_.to[id],
+                                    id};
+               });
+    }
+
+    auto in_edge_views(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v)
+               | std::views::transform([this](EdgeID id){
+                   return EdgeView{edges_.from[id],
+                                   edges_.to[id],
+                                   id};
+               });
+    }
 
     // Usage ideas
     /*
