@@ -424,13 +424,8 @@ public:
         // For a digraph, we want the outgoing edges.
         if constexpr(is_directed)
         {
-            return out_neighbors(v);
+            return out_edges(v);
         }
-        // For an undirected graph, we want all edges with
-        // v as an element.
-        //
-        // Return edges_.to[indx] or edges_.from[indx]
-        // depending on which vertex is not equal to v.
         else
         {
             return representation_.neighbors(v);

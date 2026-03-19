@@ -433,7 +433,9 @@ TYPED_TEST(PropertyGraphTest, Neighbors)
             {
                 FAIL() << "Unexpected vertex "
                        << v.value
-                       << " in graph.neighbors(i)";
+                       << " in graph.neighbors("
+                       << i
+                       << ")";
             }
 
             bool duplicate = seen.contains(v.value);
@@ -442,10 +444,19 @@ TYPED_TEST(PropertyGraphTest, Neighbors)
             {
                 FAIL() << "Duplicate vertex "
                        << v.value
-                       << " in graph.neighbors(i)";
+                       << " in graph.neighbors("
+                       << i
+                       << ")";
             }
 
             seen.insert(v.value);
+        }
+
+        if (seen.size() != neighboring[i].size())
+        {
+            FAIL() << "Missing at least one vertex in graph.neighbors("
+                    << i
+                    << ")\n";
         }
     }
 
@@ -504,8 +515,10 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
                 if (!match)
                 {
                     FAIL() << "Unexpected vertex "
-                        << v.value
-                        << " in graph.out_neighbors(i)";
+                           << v.value
+                           << " in graph.out_neighbors("
+                           << i
+                           << ")";
                 }
 
                 bool duplicate = seen.contains(v.value);
@@ -513,11 +526,20 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
                 if (duplicate)
                 {
                     FAIL() << "Duplicate vertex "
-                        << v.value
-                        << " in graph.out_neighbors(i)";
+                           << v.value
+                           << " in graph.out_neighbors("
+                           << i
+                           << ")";
                 }
 
                 seen.insert(v.value);
+            }
+
+            if (seen.size() != neighboring[i].size())
+            {
+                FAIL() << "Missing at least one vertex in graph.out_neighbors("
+                        << i
+                        << ")\n";
             }
         }
     }
@@ -577,7 +599,9 @@ TYPED_TEST(PropertyGraphTest, InNeighbors)
                 {
                     FAIL() << "Unexpected vertex "
                         << v.value
-                        << " in graph.out_neighbors(i)";
+                        << " in graph.in_neighbors("
+                        << i
+                        << ")";
                 }
 
                 bool duplicate = seen.contains(v.value);
@@ -586,10 +610,269 @@ TYPED_TEST(PropertyGraphTest, InNeighbors)
                 {
                     FAIL() << "Duplicate vertex "
                         << v.value
-                        << " in graph.out_neighbors(i)";
+                        << " in graph.in_neighbors("
+                        << i
+                        << ")";
                 }
 
                 seen.insert(v.value);
+            }
+
+            if (seen.size() != in_neighboring[i].size())
+            {
+                FAIL() << "Missing at least one vertex in graph.in_neighbors("
+                        << i
+                        << ")\n";
+            }
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, IncidentEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    std::vector<std::unordered_set<size_t>> incident(7);
+
+    // For each (u, v) with EdgeID indx, do (incident[u] UNION indx)
+    //
+    // For undirected edges, do this with incident[v] as well.
+    size_t indx = 0;
+    for (const auto & e : edges)
+    {
+        if (Graph::is_directed)
+        {
+            incident[e.from.value].insert(indx);
+            indx++;
+        }
+        else
+        {
+            incident[e.from.value].insert(indx);
+            incident[e.to.value].insert(indx);
+            indx++;
+        }
+    }
+
+    // For each vertex, check its outgoing neighbors.
+    //
+    // We ensure each vertex is as expected and is not a duplicate.
+    for (size_t i = 0; i < graph.vertex_count(); i++)
+    {
+        std::unordered_set<size_t> seen;
+
+        for (const auto & v : graph.incident_edges(i))
+        {
+            bool match = incident[i].contains(v.value);
+
+            if (!match)
+            {
+                FAIL() << "Unexpected edge "
+                        << v.value
+                        << " in graph.incident_edges("
+                        << i
+                        << ")";
+            }
+
+            bool duplicate = seen.contains(v.value);
+
+            if (duplicate)
+            {
+                FAIL() << "Duplicate edge "
+                        << v.value
+                        << " in graph.incident_edges("
+                        << i
+                        << ")";
+            }
+
+            seen.insert(v.value);
+        }
+
+        if (seen.size() != incident[i].size())
+        {
+            FAIL() << "Missing at least one edge in graph.incident_edges("
+                    << i
+                    << ")\n";
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, OutEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    // Skip undirected graphs.
+    if constexpr(!Graph::is_directed)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::make_edges();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.vertex_count(), 7);
+
+        std::vector<std::unordered_set<size_t>> out_edges(7);
+
+        // For each (u, v) with EdgeID indx, do (out_edges[u] UNION indx)
+        size_t indx = 0;
+        for (const auto & e : edges)
+        {
+            out_edges[e.from.value].insert(indx);
+            indx++;
+        }
+
+        // For each vertex, check its outgoing neighbors.
+        //
+        // We ensure each vertex is as expected and is not a duplicate.
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            std::unordered_set<size_t> seen;
+
+            for (const auto & v : graph.out_edges(i))
+            {
+                bool match = out_edges[i].contains(v.value);
+
+                if (!match)
+                {
+                    FAIL() << "Unexpected edge "
+                        << v.value
+                        << " in graph.out_edges(i)";
+                }
+
+                bool duplicate = seen.contains(v.value);
+
+                if (duplicate)
+                {
+                    FAIL() << "Duplicate edge "
+                        << v.value
+                        << " in graph.out_edges(i)";
+                }
+
+                seen.insert(v.value);
+            }
+
+            if (seen.size() != out_edges[i].size())
+            {
+                FAIL() << "Missing at least one edge in graph.out_edges("
+                       << i
+                       << ")\n";
+            }
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, InEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    // Skip undirected graphs.
+    if constexpr(!Graph::is_directed)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::make_edges();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.vertex_count(), 7);
+
+        std::vector<std::unordered_set<size_t>> in_edges(7);
+
+        // For each (u, v) with EdgeID indx, do (in_edges[v] UNION indx)
+        size_t indx = 0;
+        for (const auto & e : edges)
+        {
+            in_edges[e.to.value].insert(indx);
+            indx++;
+        }
+
+        // For each vertex, check its outgoing neighbors.
+        //
+        // We ensure each vertex is as expected and is not a duplicate.
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            std::unordered_set<size_t> seen;
+
+            for (const auto & v : graph.in_edges(i))
+            {
+                bool match = in_edges[i].contains(v.value);
+
+                if (!match)
+                {
+                    FAIL() << "Unexpected edge "
+                        << v.value
+                        << " in graph.in_edges(i)";
+                }
+
+                bool duplicate = seen.contains(v.value);
+
+                if (duplicate)
+                {
+                    FAIL() << "Duplicate edge "
+                        << v.value
+                        << " in graph.in_edges(i)";
+                }
+
+                seen.insert(v.value);
+            }
+
+            if (seen.size() != in_edges[i].size())
+            {
+                FAIL() << "Missing at least one edge in graph.in_edges("
+                       << i
+                       << ")\n";
             }
         }
     }
