@@ -505,6 +505,11 @@ public:
     // Utility functions
     //
 
+    void clear() const noexcept
+    {
+        representation_.clear();
+    }
+
     size_t vertex_count() const noexcept
     {
         return vertices_.size();
@@ -514,6 +519,10 @@ public:
     {
         return (edges_.size() - free_edges_.size());
     }
+
+    // TODO: degree(v) functions
+
+    // TODO: has_self_loops functions
 
     //
     // Transformations
