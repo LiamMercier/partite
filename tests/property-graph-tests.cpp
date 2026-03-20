@@ -1250,3 +1250,69 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
         }
     }
 }
+
+TYPED_TEST(PropertyGraphTest, GlobalEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    std::unordered_set<size_t> incident(8);
+
+    size_t indx = 0;
+    for (const auto & e : edges)
+    {
+        incident.insert(indx);
+        indx++;
+    }
+
+    // Iterate over the entire graph's edges.
+    std::unordered_set<size_t> seen;
+
+    for (const auto & e : graph.edges())
+    {
+        bool match = incident.contains(e.value);
+
+        if (!match)
+        {
+            FAIL() << "Unexpected edge "
+                    << e.value
+                    << " in graph.edges()\n";
+        }
+
+        bool duplicate = seen.contains(e.value);
+
+        if (duplicate)
+        {
+            FAIL() << "Duplicate edge "
+                    << e.value
+                    << " in graph.edges()\n";
+        }
+
+        seen.insert(e.value);
+    }
+
+    if (seen.size() != incident.size()
+        || seen.size() != 8)
+    {
+        FAIL() << "Missing at least one edge in graph.edges()\n";
+    }
+}

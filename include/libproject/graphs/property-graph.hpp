@@ -414,7 +414,7 @@ public:
                    });
     }
 
-    // Return a range of EdgeID values.
+    // Return a range of EdgeID values for the vertice neighbors.
     //
     // The representation_ instance streams EdgeID values
     // that are valid, so we can return this directly.
@@ -429,6 +429,12 @@ public:
         {
             return representation_.neighbors(v);
         }
+    }
+
+    // Iterate over every edge in the graph.
+    auto edges() const
+    {
+        return representation_.edges();
     }
 
     // Return a range of EdgeID values for each edge (v, u).
@@ -494,29 +500,6 @@ public:
                                    id};
                });
     }
-
-    // Usage ideas
-    /*
-        for (const auto & edge_id : graph.out_edges(v))
-        {
-            EdgeData & data = graph.get_edge_data(edge_id);
-            func(data)
-        }
-
-        for (const auto & ev : graph.out_edge_views(v))
-        {
-            // ev has members
-            //
-            // ev.from
-            // ev.to
-            // ev.edge_id
-        }
-
-        for (const auto & u : graph.neighbors(v))
-        {
-            visit(u)
-        }
-     */
 
     //
     // Utility functions
