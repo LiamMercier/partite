@@ -421,8 +421,6 @@ TEST(GraphRepresentations, AdjacencyMatrixDegrees)
 
         for (size_t i = 0; i < A.vertex_count(); i++)
         {
-            EXPECT_EQ(expected_deg[i], A.in_degree(i));
-            EXPECT_EQ(expected_deg[i], A.out_degree(i));
             EXPECT_EQ(expected_deg[i], A.degree(i));
         }
     }

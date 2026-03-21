@@ -408,27 +408,15 @@ public:
     }
 
     size_t in_degree(VertexID v) const noexcept
+        requires (Directed)
     {
-        if constexpr (Directed)
-        {
-            return in_deg_[v.value];
-        }
-        else
-        {
-            return degree(v);
-        }
+        return in_deg_[v.value];
     }
 
     size_t out_degree(VertexID v) const noexcept
+        requires (Directed)
     {
-        if constexpr (Directed)
-        {
-            return out_deg_[v.value];
-        }
-        else
-        {
-            return degree(v);
-        }
+        return out_deg_[v.value];
     }
 
     bool has_self_loops() const noexcept
