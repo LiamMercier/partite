@@ -1316,3 +1316,121 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
         FAIL() << "Missing at least one edge in graph.edges()\n";
     }
 }
+
+TYPED_TEST(PropertyGraphTest, VertexDegrees)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    std::vector<size_t> degrees(8);
+
+    for (const auto & e : edges)
+    {
+        degrees[e.from.value] += 1;
+        degrees[e.to.value] += 1;
+    }
+
+    // Check degree(v) for all vertices.
+
+    for (size_t v = 0; v < graph.vertex_count(); v++)
+    {
+        bool eq = (degrees[v] == graph.degree(v));
+
+        if (!eq)
+        {
+            FAIL() << "degree(v) = "
+                   << graph.degree(v)
+                   << " does not equal expected value "
+                   << degrees[v]
+                   << "\n";
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, InOutDegrees)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    // Test is only defined for digraphs.
+    if constexpr (!Graph::is_directed)
+    {
+        return;
+    }
+    else
+    {
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.vertex_count(), 7);
+
+        std::vector<size_t> in_degrees(8);
+        std::vector<size_t> out_degrees(8);
+
+        for (const auto & e : edges)
+        {
+            in_degrees[e.to.value] += 1;
+            out_degrees[e.from.value] += 1;
+        }
+
+        // Check in_degree(v) and out_degree(v) for all vertices.
+        for (size_t v = 0; v < graph.vertex_count(); v++)
+        {
+            bool in_eq = (in_degrees[v] == graph.in_degree(v));
+
+            if (!in_eq)
+            {
+                FAIL() << "in_degree(v) = "
+                    << graph.in_degree(v)
+                    << " does not equal expected value "
+                    << in_degrees[v]
+                    << "\n";
+            }
+
+            bool out_eq = (out_degrees[v] == graph.out_degree(v));
+
+            if (!out_eq)
+            {
+                FAIL() << "out_degree(v) = "
+                    << graph.out_degree(v)
+                    << " does not equal expected value "
+                    << out_degrees[v]
+                    << "\n";
+            }
+        }
+    }
+}

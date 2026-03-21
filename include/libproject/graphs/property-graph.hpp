@@ -510,6 +510,10 @@ public:
     // Utility functions
     //
 
+    // TODO: conditionally noexcept if wrapped call is noexcept
+    //
+    //       ex: noexcept(noexcept(wrapped(a, b)))
+
     size_t vertex_count() const noexcept
     {
         return vertices_.size();
@@ -520,7 +524,22 @@ public:
         return (edges_.size() - free_edges_.size());
     }
 
-    // TODO: degree(v) functions
+    size_t degree(VertexID v) const noexcept
+    {
+        return representation_.degree(v);
+    }
+
+    size_t in_degree(VertexID v) const noexcept
+        requires (is_directed)
+    {
+        return representation_.in_degree(v);
+    }
+
+    size_t out_degree(VertexID v) const noexcept
+        requires (is_directed)
+    {
+        return representation_.out_degree(v);
+    }
 
     // TODO: has_self_loops functions
 
