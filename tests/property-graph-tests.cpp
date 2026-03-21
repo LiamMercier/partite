@@ -375,6 +375,31 @@ public:
                    };
         }
     }
+
+    static std::vector<EdgeInput<EdgeData>> self_looping_graph()
+    {
+        if constexpr (std::is_same_v<EdgeData, std::monostate>)
+        {
+            return std::vector<EdgeInput<EdgeData>>
+                   {
+                        {0, 0}, {0, 1}, {1, 2}, {1, 4},
+                        {2, 2}, {2, 3}, {3, 1}, {3, 5},
+                        {4, 0}, {4, 4}, {4, 5}, {5, 6}
+                   };
+        }
+        else
+        {
+            return std::vector<EdgeInput<EdgeData>>
+                   {
+                        {0, 0, EdgeData()}, {0, 1, EdgeData()},
+                        {1, 2, EdgeData()}, {1, 4, EdgeData()},
+                        {2, 2, EdgeData()}, {2, 3, EdgeData()},
+                        {3, 1, EdgeData()}, {3, 5, EdgeData()},
+                        {4, 0, EdgeData()}, {4, 4, EdgeData()},
+                        {4, 5, EdgeData()}, {5, 6, EdgeData()}
+                   };
+        }
+    }
 };
 
 TYPED_TEST_SUITE(PropertyGraphTest, TestGraphs);
@@ -1431,6 +1456,101 @@ TYPED_TEST(PropertyGraphTest, InOutDegrees)
                     << out_degrees[v]
                     << "\n";
             }
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, SelfLoopless)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    if (graph.has_self_loops())
+    {
+        FAIL() << "has_self_loops() returned true "
+               << "for a graph with no self loops\n";
+    }
+
+    // There are no loops, check this is true for all vertices.
+    for (size_t v = 0; v < graph.vertex_count(); v++)
+    {
+        if (graph.has_self_loop(v))
+        {
+            FAIL() << "has_self_loop(v) returned true "
+                    << "for a vertex with no self loops\n";
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, SelfLoopGraph)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::self_looping_graph();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    ASSERT_EQ(graph.edge_count(), 12);
+    ASSERT_EQ(graph.vertex_count(), 7);
+
+    std::vector<bool> self_looped(graph.vertex_count());
+
+    for (const auto & e : edges)
+    {
+        if (e.from == e.to)
+        {
+            self_looped[e.from.value] = true;
+        }
+    }
+
+    if (!graph.has_self_loops())
+    {
+        FAIL() << "has_self_loops() returned false "
+               << "for a graph with self loops\n";
+    }
+
+    // There are no loops, check this is true for all vertices.
+    for (size_t v = 0; v < graph.vertex_count(); v++)
+    {
+        bool eq = (graph.has_self_loop(v) == self_looped[v]);
+        if (!eq)
+        {
+            FAIL() << "has_self_loop(v) returned "
+                   << graph.has_self_loop(v)
+                   << " for a vertex with "
+                   << (self_looped[v] ? "self loops\n" : "no self loops");
         }
     }
 }

@@ -541,7 +541,20 @@ public:
         return representation_.out_degree(v);
     }
 
-    // TODO: has_self_loops functions
+    bool has_self_loops() const noexcept
+    {
+        return representation_.has_self_loops();
+    }
+
+    bool has_self_loop(VertexID v) const noexcept
+    {
+        return representation_.has_self_loop(v);
+    }
+
+    bool is_valid_vertex(VertexID v) const noexcept
+    {
+        return representation_.is_valid_vertex(v);
+    }
 
     //
     // Transformations
