@@ -45,44 +45,6 @@ public:
     // Iteration front end
     //
 
-    auto in_neighbors(VertexID v) const
-        requires (Directed)
-    {
-        // For a digraph's incoming edges, we want all index values
-        // corresponding to column v. We can use the transformation:
-        //
-        // {0, ..., |V| - 1} -> {v, ..., v + |V| * i} where 0 <= i < |V|
-        return std::views::iota(size_t{0}, vertex_count_)
-                | std::views::transform(
-                    [this, v_0 = v.value](int indx)
-                    {
-                        return adj_[v_0 + (vertex_count_ * indx)];
-                    })
-                | std::views::filter([](const auto & e_id)
-                    {
-                        return e_id != EdgeID::empty;
-                    });
-    }
-
-    auto out_neighbors(VertexID v) const
-            requires (Directed)
-    {
-        // For a digraph's outgoing edges, we want all index values
-        // corresponding to row v. We can use the transformation:
-        //
-        // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
-        return std::views::iota(size_t{0}, vertex_count_)
-                | std::views::transform(
-                    [this, v_0 = (v.value * vertex_count_)](int indx)
-                    {
-                        return adj_[v_0 + indx];
-                    })
-                | std::views::filter([](const auto & e_id)
-                    {
-                        return e_id != EdgeID::empty;
-                    });
-    }
-
     auto neighbors(VertexID v) const
     {
         if constexpr(Directed)
@@ -121,6 +83,44 @@ public:
                     return e_id != EdgeID::empty;
                 });
         }
+    }
+
+    auto in_neighbors(VertexID v) const
+        requires (Directed)
+    {
+        // For a digraph's incoming edges, we want all index values
+        // corresponding to column v. We can use the transformation:
+        //
+        // {0, ..., |V| - 1} -> {v, ..., v + |V| * i} where 0 <= i < |V|
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::transform(
+                    [this, v_0 = v.value](int indx)
+                    {
+                        return adj_[v_0 + (vertex_count_ * indx)];
+                    })
+                | std::views::filter([](const auto & e_id)
+                    {
+                        return e_id != EdgeID::empty;
+                    });
+    }
+
+    auto out_neighbors(VertexID v) const
+            requires (Directed)
+    {
+        // For a digraph's outgoing edges, we want all index values
+        // corresponding to row v. We can use the transformation:
+        //
+        // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::transform(
+                    [this, v_0 = (v.value * vertex_count_)](int indx)
+                    {
+                        return adj_[v_0 + indx];
+                    })
+                | std::views::filter([](const auto & e_id)
+                    {
+                        return e_id != EdgeID::empty;
+                    });
     }
 
     // Iterator over every edge in the adjacency list.
@@ -395,47 +395,6 @@ public:
     // Utility functions
     //
 
-    // TODO <optimization>: consider a compute_transpose overload that
-    //                      takes a list (view?) of edges to check from
-    //                      the graph container's EdgeArrays to/from vectors.
-
-    [[nodiscard]] AdjacencyMatrix compute_transpose() const
-    {
-        if constexpr (Directed)
-        {
-            // Construct a new, empty matrix.
-            AdjacencyMatrix rev(vertex_count_);
-
-            // Go over each edge (v, u) and insert (u, v)
-            for (size_t v = 0; v < vertex_count_; v++)
-            {
-                // TODO <optimization>: we could stop early when we
-                //                      have found out_deg(v) elements.
-                for (size_t u = 0; u < vertex_count_; u++)
-                {
-                    EdgeID e_id = find_edge(VertexID(v), VertexID(u));
-
-                    if (e_id != EdgeID::empty)
-                    {
-                        rev.add_edge(u, v, e_id);
-                    }
-                }
-            }
-
-            return rev;
-        }
-        // The transpose of an undirected graph is the same graph.
-        else
-        {
-            return AdjacencyMatrix {
-                adj_,
-                vertex_count_,
-                deg_
-            };
-        }
-
-    }
-
     size_t degree(VertexID v) const noexcept
     {
         if constexpr (!Directed)
@@ -525,6 +484,51 @@ public:
     size_t size() const noexcept
     {
         return vertex_count();
+    }
+
+    //
+    // Transformations
+    //
+
+    // TODO <optimization>: consider a compute_transpose overload that
+    //                      takes a list (view?) of edges to check from
+    //                      the graph container's EdgeArrays to/from vectors.
+
+    [[nodiscard]] AdjacencyMatrix compute_transpose() const
+    {
+        if constexpr (Directed)
+        {
+            // Construct a new, empty matrix.
+            AdjacencyMatrix rev(vertex_count_);
+
+            // Go over each edge (v, u) and insert (u, v)
+            for (size_t v = 0; v < vertex_count_; v++)
+            {
+                // TODO <optimization>: we could stop early when we
+                //                      have found out_deg(v) elements.
+                for (size_t u = 0; u < vertex_count_; u++)
+                {
+                    EdgeID e_id = find_edge(VertexID(v), VertexID(u));
+
+                    if (e_id != EdgeID::empty)
+                    {
+                        rev.add_edge(u, v, e_id);
+                    }
+                }
+            }
+
+            return rev;
+        }
+        // The transpose of an undirected graph is the same graph.
+        else
+        {
+            return AdjacencyMatrix {
+                adj_,
+                vertex_count_,
+                deg_
+            };
+        }
+
     }
 
 private:

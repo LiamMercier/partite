@@ -170,6 +170,144 @@ public:
     //       empty graph to be the desired graph that performs faster?
 
     //
+    // Iteration functions
+    //
+
+    // Return a range of VertexID values.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid for us to iterate over.
+    auto neighbors(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return out_neighbors(v);
+        }
+        // For an undirected graph, we want all edges with
+        // v as an element.
+        //
+        // Return edges_.to[indx] or edges_.from[indx]
+        // depending on which vertex is not equal to v.
+        else
+        {
+            return representation_.neighbors(v)
+                   | std::views::transform([this, v](EdgeID id){
+                       return (edges_.to[id.value] == v)
+                              ? (edges_.from[id.value])
+                                : (edges_.to[id.value]);
+                   });
+        }
+    }
+
+    // Return a range of VertexID values for each edge (v, u).
+    auto out_neighbors(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                       return edges_.to[id.value];
+                   });
+    }
+
+    // Return a range of VertexID values for each edge (u, v).
+    auto in_neighbors(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                       return edges_.from[id.value];
+                   });
+    }
+
+    // Return a range of EdgeID values for the vertice neighbors.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid, so we can return this directly.
+    auto edges(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return out_edges(v);
+        }
+        else
+        {
+            return representation_.neighbors(v);
+        }
+    }
+
+    // Iterate over every edge in the graph.
+    auto edges() const
+    {
+        return representation_.edges();
+    }
+
+    // Return a range of EdgeID values for each edge (v, u).
+    auto out_edges(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v);
+    }
+
+    // Return a range of EdgeID values for each edge (u, v).
+    auto in_edges(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v);
+    }
+
+    // Return a range of EdgeView values.
+    //
+    // The representation_ instance streams EdgeID values
+    // that are valid, so we can return the edge views
+    // from the EdgeID values.
+    auto edge_views(VertexID v) const
+    {
+        // For a digraph, we want the outgoing edges.
+        if constexpr(is_directed)
+        {
+            return out_edge_views(v);
+        }
+        // For an undirected graph, we want all edges with
+        // v as an element.
+        //
+        // Return edges_.to[indx] or edges_.from[indx]
+        // depending on which vertex is not equal to v.
+        else
+        {
+            return representation_.neighbors(v)
+                   | std::views::transform([this](EdgeID id){
+                        return EdgeView{edges_.from[id.value],
+                                        edges_.to[id.value],
+                                        id};
+                   });
+        }
+    }
+
+    auto out_edge_views(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.neighbors(v)
+               | std::views::transform([this](EdgeID id){
+                    return EdgeView{edges_.from[id.value],
+                                    edges_.to[id.value],
+                                    id};
+               });
+    }
+
+    auto in_edge_views(VertexID v) const
+        requires (is_directed)
+    {
+        return representation_.in_neighbors(v)
+               | std::views::transform([this](EdgeID id){
+                   return EdgeView{edges_.from[id.value],
+                                   edges_.to[id.value],
+                                   id};
+               });
+    }
+
+    //
     // Edge operations
     //
 
@@ -325,6 +463,11 @@ public:
         return true;
     }
 
+    void clear() const noexcept
+    {
+        representation_.clear();
+    }
+
     // std::pair overloads.
 
     // By default, return the EdgeID
@@ -364,151 +507,8 @@ public:
     // TODO: maybe also provide erase_edge() for explicit immediate overwrites
 
     //
-    // Iteration functions
-    //
-
-    // Return a range of VertexID values.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid for us to iterate over.
-    auto neighbors(VertexID v) const
-    {
-        // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_neighbors(v);
-        }
-        // For an undirected graph, we want all edges with
-        // v as an element.
-        //
-        // Return edges_.to[indx] or edges_.from[indx]
-        // depending on which vertex is not equal to v.
-        else
-        {
-            return representation_.neighbors(v)
-                   | std::views::transform([this, v](EdgeID id){
-                       return (edges_.to[id.value] == v)
-                              ? (edges_.from[id.value])
-                                : (edges_.to[id.value]);
-                   });
-        }
-    }
-
-    // Return a range of VertexID values for each edge (v, u).
-    auto out_neighbors(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                       return edges_.to[id.value];
-                   });
-    }
-
-    // Return a range of VertexID values for each edge (u, v).
-    auto in_neighbors(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.in_neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                       return edges_.from[id.value];
-                   });
-    }
-
-    // Return a range of EdgeID values for the vertice neighbors.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid, so we can return this directly.
-    auto edges(VertexID v) const
-    {
-        // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_edges(v);
-        }
-        else
-        {
-            return representation_.neighbors(v);
-        }
-    }
-
-    // Iterate over every edge in the graph.
-    auto edges() const
-    {
-        return representation_.edges();
-    }
-
-    // Return a range of EdgeID values for each edge (v, u).
-    auto out_edges(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.neighbors(v);
-    }
-
-    // Return a range of EdgeID values for each edge (u, v).
-    auto in_edges(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.in_neighbors(v);
-    }
-
-    // Return a range of EdgeView values.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid, so we can return the edge views
-    // from the EdgeID values.
-    auto edge_views(VertexID v) const
-    {
-        // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_edge_views(v);
-        }
-        // For an undirected graph, we want all edges with
-        // v as an element.
-        //
-        // Return edges_.to[indx] or edges_.from[indx]
-        // depending on which vertex is not equal to v.
-        else
-        {
-            return representation_.neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                        return EdgeView{edges_.from[id.value],
-                                        edges_.to[id.value],
-                                        id};
-                   });
-        }
-    }
-
-    auto out_edge_views(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.neighbors(v)
-               | std::views::transform([this](EdgeID id){
-                    return EdgeView{edges_.from[id.value],
-                                    edges_.to[id.value],
-                                    id};
-               });
-    }
-
-    auto in_edge_views(VertexID v) const
-        requires (is_directed)
-    {
-        return representation_.in_neighbors(v)
-               | std::views::transform([this](EdgeID id){
-                   return EdgeView{edges_.from[id.value],
-                                   edges_.to[id.value],
-                                   id};
-               });
-    }
-
-    //
     // Utility functions
     //
-
-    void clear() const noexcept
-    {
-        representation_.clear();
-    }
 
     size_t vertex_count() const noexcept
     {
