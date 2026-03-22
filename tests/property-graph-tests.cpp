@@ -6,6 +6,15 @@
 #include <unordered_set>
 #include <tuple>
 
+struct PairHash
+{
+    std::size_t operator()(const std::pair<size_t, size_t> & pair) const
+    {
+        return std::hash<size_t>()(pair.first)
+               ^ std::hash<size_t>()(pair.second);
+    }
+};
+
 using namespace libproject::graphs;
 
 TEST(PropertyGraphs, AdjacencyMatrixConstruction)
@@ -289,9 +298,30 @@ TEST(PropertyGraphs, AdjacencyMatrixTranspose)
             {1, 0}, {0, 1}, {2, 0}, {2, 1}, {2, 3}
         };
 
+        std::unordered_set<std::pair<size_t, size_t>,
+                           PairHash> expected_edges_set;
+
         for (const auto & e : expected_edges)
         {
             EXPECT_TRUE(Gt.has_edge(e));
+            expected_edges_set.insert({e.first.value, e.second.value});
+        }
+
+        // Check that our edge IDs map to the transposed values.
+        for (const auto e_id : Gt.edges())
+        {
+            auto [u, v] = Gt.get_edge_pair(e_id);
+
+            bool match = expected_edges_set.contains({u.value, v.value});
+
+            if (!match)
+            {
+                FAIL() << "EdgeID mapped vertices ("
+                       << u.value
+                       << " "
+                       << v.value
+                       << ") but edge does not exist!";
+            }
         }
     }
 }
@@ -903,15 +933,6 @@ TYPED_TEST(PropertyGraphTest, InEdges)
         }
     }
 }
-
-struct PairHash
-{
-    std::size_t operator()(const std::pair<size_t, size_t> & pair) const
-    {
-        return std::hash<size_t>()(pair.first)
-               ^ std::hash<size_t>()(pair.second);
-    }
-};
 
 TYPED_TEST(PropertyGraphTest, EdgeViews)
 {

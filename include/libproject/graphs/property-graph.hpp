@@ -354,6 +354,12 @@ public:
         return representation_.find_edge(from, to);
     }
 
+    // Given an edge ID, find the vertices such that (u, v) has this ID.
+    std::pair<VertexID, VertexID> get_edge_pair(EdgeID e_id) const noexcept
+    {
+        return {edges_.from[e_id.value], edges_.to[e_id.value]};
+    }
+
     // For returning a reference to the EdgeData of an edge.
     EdgeData & get_edge_data(EdgeID e_id) noexcept
         requires (!std::is_same_v<EdgeData, std::monostate>)
@@ -615,7 +621,7 @@ public:
         return PropertyGraph {
             std::move(rev),
             vertices_,
-            edges_,
+            edges_.reverse_copy(),
             free_edges_
         };
     }
@@ -659,6 +665,21 @@ private:
             {
                 return from.size();
             }
+        }
+
+        // For returning a transpose ready copy of the array.
+        EdgeArrays reverse_copy() const
+        {
+            EdgeArrays result;
+            result.from = to;
+            result.to = from;
+
+            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            {
+                result.data = data;
+            }
+
+            return result;
         }
 
         std::vector<VertexID> from;
