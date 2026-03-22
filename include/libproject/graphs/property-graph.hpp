@@ -178,33 +178,35 @@ public:
     // The representation_ instance streams EdgeID values
     // that are valid for us to iterate over.
     auto neighbors(VertexID v) const
+        noexcept(noexcept(out_neighbors(v)))
+        requires (is_directed)
     {
-        // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_neighbors(v);
-        }
+        return out_neighbors(v);
+    }
+
+    auto neighbors(VertexID v) const
+        noexcept(noexcept(representation_.neighbors(v)))
+        requires (!is_directed)
+    {
         // For an undirected graph, we want all edges with
         // v as an element.
         //
         // Return edges_.to[indx] or edges_.from[indx]
         // depending on which vertex is not equal to v.
-        else
-        {
-            return representation_.neighbors(v)
-                   | std::views::transform([this, v](EdgeID id){
-                       return (edges_.to[id.value] == v)
-                              ? (edges_.from[id.value])
-                                : (edges_.to[id.value]);
-                   });
-        }
+        return representation_.neighbors(v)
+                | std::views::transform([this, v](EdgeID id){
+                    return (edges_.to[id.value] == v)
+                            ? (edges_.from[id.value])
+                            : (edges_.to[id.value]);
+                });
     }
 
     // Return a range of VertexID values for each edge (v, u).
     auto out_neighbors(VertexID v) const
+        noexcept(noexcept(representation_.out_neighbors(v)))
         requires (is_directed)
     {
-        return representation_.neighbors(v)
+        return representation_.out_neighbors(v)
                    | std::views::transform([this](EdgeID id){
                        return edges_.to[id.value];
                    });
@@ -212,6 +214,7 @@ public:
 
     // Return a range of VertexID values for each edge (u, v).
     auto in_neighbors(VertexID v) const
+        noexcept(noexcept(representation_.in_neighbors(v)))
         requires (is_directed)
     {
         return representation_.in_neighbors(v)
@@ -225,26 +228,30 @@ public:
     // The representation_ instance streams EdgeID values
     // that are valid, so we can return this directly.
     auto edges(VertexID v) const
+        noexcept(noexcept(out_edges(v)))
+        requires(is_directed)
     {
         // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_edges(v);
-        }
-        else
-        {
-            return representation_.neighbors(v);
-        }
+        return out_edges(v);
+    }
+
+    auto edges(VertexID v) const
+        noexcept(noexcept(representation_.neighbors(v)))
+        requires(!is_directed)
+    {
+        return representation_.neighbors(v);
     }
 
     // Iterate over every edge in the graph.
     auto edges() const
+        noexcept(noexcept(representation_.edges()))
     {
         return representation_.edges();
     }
 
     // Return a range of EdgeID values for each edge (v, u).
     auto out_edges(VertexID v) const
+        noexcept(noexcept(representation_.neighbors(v)))
         requires (is_directed)
     {
         return representation_.neighbors(v);
@@ -252,6 +259,7 @@ public:
 
     // Return a range of EdgeID values for each edge (u, v).
     auto in_edges(VertexID v) const
+        noexcept(noexcept(representation_.in_neighbors(v)))
         requires (is_directed)
     {
         return representation_.in_neighbors(v);
@@ -263,29 +271,41 @@ public:
     // that are valid, so we can return the edge views
     // from the EdgeID values.
     auto edge_views(VertexID v) const
+        noexcept(noexcept(out_edge_views(v)))
+        requires (is_directed)
     {
-        // For a digraph, we want the outgoing edges.
-        if constexpr(is_directed)
-        {
-            return out_edge_views(v);
-        }
+        return out_edge_views(v);
+    }
+
+    auto edge_views(VertexID v) const
+        noexcept(
+            noexcept(representation_.neighbors(v)) &&
+            noexcept(EdgeView{edges_.from[EdgeID{}.value],
+                              edges_.to[EdgeID{}.value],
+                              EdgeID{}})
+        )
+        requires (!is_directed)
+    {
         // For an undirected graph, we want all edges with
         // v as an element.
         //
         // Return edges_.to[indx] or edges_.from[indx]
         // depending on which vertex is not equal to v.
-        else
-        {
-            return representation_.neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                        return EdgeView{edges_.from[id.value],
-                                        edges_.to[id.value],
-                                        id};
-                   });
-        }
+        return representation_.neighbors(v)
+                | std::views::transform([this](EdgeID id){
+                    return EdgeView{edges_.from[id.value],
+                                    edges_.to[id.value],
+                                    id};
+                });
     }
 
     auto out_edge_views(VertexID v) const
+        noexcept(
+            noexcept(representation_.neighbors(v)) &&
+            noexcept(EdgeView{edges_.from[EdgeID{}.value],
+                              edges_.to[EdgeID{}.value],
+                              EdgeID{}})
+        )
         requires (is_directed)
     {
         return representation_.neighbors(v)
@@ -297,6 +317,12 @@ public:
     }
 
     auto in_edge_views(VertexID v) const
+        noexcept(
+            noexcept(representation_.in_neighbors(v)) &&
+            noexcept(EdgeView{edges_.from[EdgeID{}.value],
+                              edges_.to[EdgeID{}.value],
+                              EdgeID{}})
+        )
         requires (is_directed)
     {
         return representation_.in_neighbors(v)
@@ -313,37 +339,39 @@ public:
 
     // By default, return the EdgeID
     EdgeID find_edge(VertexID from, VertexID to) const
+        noexcept(noexcept(representation_.find_edge(from, to)))
     {
         return representation_.find_edge(from, to);
     }
 
     // For returning a reference to the EdgeData of an edge.
-    EdgeData & get_edge_data(EdgeID e_id)
+    EdgeData & get_edge_data(EdgeID e_id) noexcept
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
         return edges_.data[e_id.value];
     }
 
     // For copying the EdgeData of an edge.
-    const EdgeData & get_edge_data(EdgeID e_id) const
+    const EdgeData & get_edge_data(EdgeID e_id) const noexcept
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
         return edges_.data[e_id.value];
     }
 
-    VertexData & get_vertex_data(VertexID v_id)
+    VertexData & get_vertex_data(VertexID v_id) noexcept
         requires (!std::is_same_v<VertexData, std::monostate>)
     {
         return vertices_[v_id.value];
     }
 
-    const VertexData & get_vertex_data(VertexID v_id) const
+    const VertexData & get_vertex_data(VertexID v_id) const noexcept
         requires (!std::is_same_v<VertexData, std::monostate>)
     {
         return vertices_[v_id.value];
     }
 
     bool has_edge(VertexID from, VertexID to) const
+        noexcept(noexcept(representation_.has_edge(from, to)))
     {
         return representation_.has_edge(from, to);
     }
@@ -463,7 +491,8 @@ public:
         return true;
     }
 
-    void clear() const noexcept
+    void clear() const
+        noexcept(noexcept(representation_.clear()))
     {
         representation_.clear();
     }
@@ -472,11 +501,13 @@ public:
 
     // By default, return the EdgeID
     EdgeID find_edge(std::pair<VertexID, VertexID> edge) const
+        noexcept(noexcept(find_edge(edge.first, edge.second)))
     {
         return find_edge(edge.first, edge.second);
     }
 
     bool has_edge(std::pair<VertexID, VertexID> edge) const
+        noexcept(noexcept(has_edge(edge.first, edge.second)))
     {
         return has_edge(edge.first, edge.second);
     }
@@ -524,34 +555,40 @@ public:
         return (edges_.size() - free_edges_.size());
     }
 
-    size_t degree(VertexID v) const noexcept
+    size_t degree(VertexID v) const
+        noexcept(noexcept(representation_.degree(v)))
     {
         return representation_.degree(v);
     }
 
-    size_t in_degree(VertexID v) const noexcept
+    size_t in_degree(VertexID v) const
+        noexcept(noexcept(representation_.in_degree(v)))
         requires (is_directed)
     {
         return representation_.in_degree(v);
     }
 
-    size_t out_degree(VertexID v) const noexcept
+    size_t out_degree(VertexID v) const
+        noexcept(noexcept(representation_.out_degree(v)))
         requires (is_directed)
     {
         return representation_.out_degree(v);
     }
 
-    bool has_self_loops() const noexcept
+    bool has_self_loops() const
+        noexcept(noexcept(representation_.has_self_loops()))
     {
         return representation_.has_self_loops();
     }
 
-    bool has_self_loop(VertexID v) const noexcept
+    bool has_self_loop(VertexID v) const
+        noexcept(noexcept(representation_.has_self_loop(v)))
     {
         return representation_.has_self_loop(v);
     }
 
-    bool is_valid_vertex(VertexID v) const noexcept
+    bool is_valid_vertex(VertexID v) const
+        noexcept(noexcept(representation_.is_valid_vertex(v)))
     {
         return representation_.is_valid_vertex(v);
     }
