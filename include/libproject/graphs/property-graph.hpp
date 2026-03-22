@@ -173,6 +173,16 @@ public:
     // Iteration functions
     //
 
+    // Iterate over all vertices
+    auto vertices() const
+    {
+        return std::views::iota(size_t(0),
+                                vertex_count())
+               | std::views::transform([](size_t indx){
+                   return VertexID{indx};
+            });
+    }
+
     // Return a range of VertexID values.
     //
     // The representation_ instance streams EdgeID values
@@ -491,7 +501,7 @@ public:
         return true;
     }
 
-    void clear() const
+    void clear()
         noexcept(noexcept(representation_.clear()))
     {
         representation_.clear();

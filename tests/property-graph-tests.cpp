@@ -1554,3 +1554,33 @@ TYPED_TEST(PropertyGraphTest, SelfLoopGraph)
         }
     }
 }
+
+TYPED_TEST(PropertyGraphTest, VerticesRange)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.vertex_count(), 7);
+
+    for (const auto v : graph.vertices())
+    {
+        EXPECT_TRUE(v < 7);
+    }
+}
