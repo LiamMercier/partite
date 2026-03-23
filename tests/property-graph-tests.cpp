@@ -15,6 +15,7 @@ struct PairHash
     }
 };
 
+// TODO: redo these tests to use typed test suite
 using namespace libproject::graphs;
 
 TEST(PropertyGraphs, AdjacencyMatrixConstruction)
@@ -1604,4 +1605,47 @@ TYPED_TEST(PropertyGraphTest, VerticesRange)
     {
         EXPECT_TRUE(v < 7);
     }
+}
+
+TYPED_TEST(PropertyGraphTest, Clear)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.vertex_count(), 7);
+
+    graph.clear();
+
+    for (const auto & e : edges)
+    {
+        bool exists = graph.has_edge(e.from, e.to);
+
+        if (exists)
+        {
+            FAIL() << "Unexpected edge ("
+                   << e.from.value
+                   << " "
+                   << e.to.value
+                   << ") in graph that should be cleared!";
+        }
+    }
+
+    ASSERT_EQ(graph.edge_count(), 0);
 }

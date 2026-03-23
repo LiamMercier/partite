@@ -135,7 +135,7 @@ public:
     }
 
     // Cosntruct a graph from a list of verices and a list of edges.
-    template <std::ranges::input_range VertexRange,
+    template <std::ranges::sized_range VertexRange,
               std::ranges::input_range EdgeRange>
     PropertyGraph(VertexRange && vertex_range, EdgeRange && edge_range)
     :representation_(std::ranges::size(vertex_range)),
@@ -511,6 +511,18 @@ public:
         noexcept(noexcept(representation_.clear()))
     {
         representation_.clear();
+
+        // Also clear the stale data in PropertyGraph.
+
+        // TODO: how should we handle this? We have nothing to
+        //       set vertices or anything of the sort.
+        //
+        //       users would also probably be better making a new graph
+        //       if we are just wiping everything out.
+        // vertices_.clear();
+
+        edges_.clear();
+        free_edges_.clear();
     }
 
     // std::pair overloads.
@@ -632,6 +644,17 @@ private:
     // Internal structure-of-arrays storage.
     struct EdgeArrays
     {
+        void clear()
+        {
+            from.clear();
+            to.clear();
+
+            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            {
+                data.clear();
+            }
+        }
+
         void resize(size_t N)
         {
             from.resize(N);
