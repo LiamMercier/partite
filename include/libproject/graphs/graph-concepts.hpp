@@ -23,4 +23,15 @@ concept GraphRepresentation = requires(T rep,
     { rep.neighbors(v_id) } -> std::ranges::range;
 };
 
+// TODO: other requirements, maybe queryable
+
+template <GraphRepresentation T>
+concept EdgeModifiableRepresentation = requires(T rep,
+                                                VertexID v_id,
+                                                EdgeID e_id)
+{
+    { rep.add_edge(v_id, v_id) };
+    { rep.remove_edge(v_id, v_id) };
+};
+
 };

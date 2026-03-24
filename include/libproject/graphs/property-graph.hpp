@@ -569,10 +569,6 @@ public:
     // Utility functions
     //
 
-    // TODO: conditionally noexcept if wrapped call is noexcept
-    //
-    //       ex: noexcept(noexcept(wrapped(a, b)))
-
     size_t vertex_count() const noexcept
     {
         return vertices_.size();
@@ -644,7 +640,7 @@ private:
     // Internal structure-of-arrays storage.
     struct EdgeArrays
     {
-        void clear()
+        void clear() noexcept
         {
             from.clear();
             to.clear();
@@ -655,7 +651,7 @@ private:
             }
         }
 
-        void resize(size_t N)
+        void resize(size_t N) noexcept
         {
             from.resize(N);
             to.resize(N);
@@ -666,7 +662,7 @@ private:
             }
         }
 
-        void reserve(size_t N)
+        void reserve(size_t N) noexcept
         {
             from.reserve(N);
             to.reserve(N);
