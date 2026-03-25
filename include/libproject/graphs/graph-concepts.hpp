@@ -9,29 +9,141 @@ namespace libproject::graphs
 {
 
 template <typename T>
-concept GraphRepresentation = requires(T rep,
-                                       VertexID v_id,
-                                       EdgeID e_id)
+concept GraphRepresentation = requires(const T rep)
 {
+    // TODO: consider max_vertex_id and then delegate
+    //       vertex count to PropertyGraph
+
     // Ensure we have properly set Directed.
     { T::is_directed } -> std::convertible_to<bool>;
 
     // Ensure we can query the number of vertices
     { rep.vertex_count() } -> std::integral;
-
-    // Ensure we can iterate on neighbors.
-    { rep.neighbors(v_id) } -> std::ranges::range;
 };
 
-// TODO: other requirements, maybe queryable
+// To ensure we can construct properly.
+template <typename T>
+concept PropertyGraphConstructible = GraphRepresentation<T>
+                                     && std::constructible_from<T, size_t>;
 
-template <GraphRepresentation T>
-concept EdgeModifiableRepresentation = requires(T rep,
-                                                VertexID v_id,
-                                                EdgeID e_id)
+// Representations that allow edge lookups.
+template <typename T>
+concept EdgeQueryable = GraphRepresentation<T> &&
+                        requires(const T rep, VertexID v_id)
 {
-    { rep.add_edge(v_id, v_id) };
-    { rep.remove_edge(v_id, v_id) };
+    { rep.has_edge(v_id, v_id) } -> std::convertible_to<bool>;
+    { rep.find_edge(v_id, v_id) } -> std::same_as<EdgeID>;
+};
+
+// Representations that allow edge modifications.
+template <typename T>
+concept EdgeMutable = GraphRepresentation<T> &&
+                      requires(T rep, VertexID v_id, EdgeID e_id)
+{
+    { rep.add_edge(v_id, v_id, e_id) } -> std::convertible_to<bool>;
+    { rep.remove_edge(v_id, v_id) } -> std::same_as<EdgeID>;
+};
+
+// Representations that can be cleared.
+template <typename T>
+concept Clearable = GraphRepresentation<T> &&
+                    requires(T rep, VertexID v_id)
+{
+    { rep.clear() };
+};
+
+// Representations where neighbors(v) exists.
+template <typename T>
+concept NeighborsQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.neighbors(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.neighbors(v_id))>,
+                          EdgeID>;
+};
+
+template <typename T>
+concept OutNeighborsQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.out_neighbors(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.out_neighbors(v_id))>,
+                          EdgeID>;
+};
+
+// TODO: consider constraining to views instead of ranges.
+// For representations that allows in_neighbors(v)
+template <typename T>
+concept InNeighborsQueryable = GraphRepresentation<T> &&
+                              requires(const T rep, VertexID v_id)
+{
+    { rep.in_neighbors(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.in_neighbors(v_id))>,
+                          EdgeID>;
+};
+
+// For representations that allow degree(v)
+template <typename T>
+concept DegreeQueryable = GraphRepresentation<T> &&
+                          requires(const T rep, VertexID v_id)
+{
+    { rep.degree(v_id) } -> std::convertible_to<std::size_t>;
+};
+
+// For representations that allow out_degree(v)
+template <typename T>
+concept OutDegreeQueryable = GraphRepresentation<T> &&
+                             requires(const T rep, VertexID v_id)
+{
+    { rep.out_degree(v_id) } -> std::convertible_to<std::size_t>;
+};
+
+// For representations that allow in_degree(v)
+template <typename T>
+concept InDegreeQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.in_degree(v_id) } -> std::convertible_to<std::size_t>;
+};
+
+// Representations that expose a global edge range.
+template <typename T>
+concept GlobalEdgesQueryable = GraphRepresentation<T> &&
+                               requires(const T rep)
+{
+    { rep.edges() } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.edges())>,
+                          EdgeID>;
+};
+
+// Representations that can be transposed.
+template <typename T>
+concept Transposable = GraphRepresentation<T> &&
+                       std::movable<T> &&
+                       requires(const T rep, VertexID v_id)
+{
+    { rep.compute_transpose() } -> std::same_as<T>;
+};
+
+// Representations where self loops can be checked.
+template <typename T>
+concept SelfLoopQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.has_self_loops() } -> std::convertible_to<bool>;
+    { rep.has_self_loop(v_id) } -> std::convertible_to<bool>;
+};
+
+// Representations where a vertex can be checked to be valid.
+template <typename T>
+concept VertexValidatable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.is_valid_vertex() } -> std::convertible_to<bool>;
 };
 
 };
