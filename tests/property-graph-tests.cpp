@@ -133,17 +133,17 @@ TEST(PropertyGraphs, AdjacencyMatrixConstruction)
             EdgeID id = graph.find_edge(e.from, e.to);
             EXPECT_EQ(id, expected_id);
 
-            int & data_ref = graph.get_edge_data(id);
-            int data = graph.get_edge_data(id);
+            int & data_ref = graph.edge_data(id);
+            int data = graph.edge_data(id);
 
             EXPECT_EQ(data_ref, e.data);
             EXPECT_EQ(data, e.data);
 
-            std::string & fdata_ref = graph.get_vertex_data(e.from);
-            std::string fdata = graph.get_vertex_data(e.from);
+            std::string & fdata_ref = graph.vertex_data(e.from);
+            std::string fdata = graph.vertex_data(e.from);
 
-            std::string & tdata_ref = graph.get_vertex_data(e.to);
-            std::string tdata = graph.get_vertex_data(e.to);
+            std::string & tdata_ref = graph.vertex_data(e.to);
+            std::string tdata = graph.vertex_data(e.to);
 
             EXPECT_EQ(fdata_ref, vertices[e.from.value]);
             EXPECT_EQ(fdata, vertices[e.from.value]);
@@ -229,14 +229,14 @@ TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
                 {
                     // Find the edge data
                     EdgeID this_id = graph.find_edge(id, i);
-                    std::string & this_data = graph.get_edge_data(this_id);
+                    std::string & this_data = graph.edge_data(this_id);
 
                     // Append this character to the edges we have used
                     concat.append(this_data);
 
                     // Increase the distance of i to be one more than id
-                    int & id_int = graph.get_vertex_data(id);
-                    int & i_int = graph.get_vertex_data(i);
+                    int & id_int = graph.vertex_data(id);
+                    int & i_int = graph.vertex_data(i);
 
                     i_int = id_int + 1;
 
@@ -265,7 +265,7 @@ TEST(PropertyGraphs, AdjacencyMatrixEdgeOperations)
 
         for (size_t i = 0; i < vertices.size(); i++)
         {
-            int dist = graph.get_vertex_data(i);
+            int dist = graph.vertex_data(i);
             EXPECT_EQ(dist, expected_dists[i]);
         }
 
@@ -311,7 +311,7 @@ TEST(PropertyGraphs, AdjacencyMatrixTranspose)
         // Check that our edge IDs map to the transposed values.
         for (const auto e_id : Gt.edge_ids())
         {
-            auto [u, v] = Gt.get_edge_pair(e_id);
+            auto [u, v] = Gt.endpoints(e_id);
 
             bool match = expected_edges_set.contains({u.value, v.value});
 
@@ -737,7 +737,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
     {
         std::unordered_set<size_t> seen;
 
-        for (const auto & e : graph.edge_ids(i))
+        for (const auto & e : graph.incident_edge_ids(i))
         {
             bool match = incident[i].contains(e.value);
 
@@ -745,7 +745,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
             {
                 FAIL() << "Unexpected edge "
                         << e.value
-                        << " in graph.edge_ids("
+                        << " in graph.incident_edge_ids("
                         << i
                         << ")";
             }
@@ -756,7 +756,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
             {
                 FAIL() << "Duplicate edge "
                         << e.value
-                        << " in graph.edge_ids("
+                        << " in graph.incident_edge_ids("
                         << i
                         << ")";
             }
@@ -766,7 +766,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
 
         if (seen.size() != incident[i].size())
         {
-            FAIL() << "Missing at least one edge in graph.edge_ids("
+            FAIL() << "Missing at least one edge in graph.incident_edge_ids("
                     << i
                     << ")\n";
         }
@@ -993,7 +993,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
         std::unordered_set<std::pair<size_t, size_t>, PairHash> seen_pairs;
         std::unordered_set<size_t> seen_ids;
 
-        for (const auto & ev : graph.edges(i))
+        for (const auto & ev : graph.incident_edges(i))
         {
             bool match_pairs = edge_pairs[i].contains({ev.from.value,
                                                        ev.to.value});
@@ -1008,7 +1008,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
                         << ev.to.value
                         << " "
                         << ev.id.value
-                        << "} in graph.edges("
+                        << "} in graph.incident_edges("
                         << i
                         << ")";
             }
@@ -1022,7 +1022,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
                         << ev.from.value
                         << " "
                         << ev.to.value
-                        << "} in graph.edges("
+                        << "} in graph.incident_edges("
                         << i
                         << ")";
             }
@@ -1033,7 +1033,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
             {
                 FAIL() << "Duplicate EdgeID "
                         << ev.id.value
-                        << " in graph.edges("
+                        << " in graph.incident_edges("
                         << i
                         << ")";
             }
@@ -1046,14 +1046,14 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
 
         if (seen_pairs.size() != edge_pairs[i].size())
         {
-            FAIL() << "Missing at least one edge in graph.edges("
+            FAIL() << "Missing at least one edge in graph.incident_edges("
                     << i
                     << ")\n";
         }
 
         if (seen_ids.size() != edge_ids[i].size())
         {
-            FAIL() << "Missing at least one EdgeID in graph.edges("
+            FAIL() << "Missing at least one EdgeID in graph.incident_edges("
                     << i
                     << ")\n";
         }

@@ -143,7 +143,7 @@ template <typename T>
 concept VertexValidatable = GraphRepresentation<T> &&
                             requires(const T rep, VertexID v_id)
 {
-    { rep.is_valid_vertex() } -> std::convertible_to<bool>;
+    { rep.valid_vertex() } -> std::convertible_to<bool>;
 };
 
 };

@@ -252,7 +252,7 @@ public:
     }
 
     // View over edges as EdgeViews
-    auto edges(VertexID v) const
+    auto incident_edges(VertexID v) const
         noexcept(
             noexcept(representation_.neighbors(v)) &&
             noexcept(EdgeView{edges_.from[EdgeID{}.value],
@@ -275,7 +275,7 @@ public:
     }
 
     // View over edges as EdgeViews (outgoing for digraphs)
-    auto edges(VertexID v) const
+    auto incident_edges(VertexID v) const
         noexcept(noexcept(out_edges(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
@@ -319,7 +319,7 @@ public:
     }
 
     // View over edges as EdgeIDs
-    auto edge_ids(VertexID v) const
+    auto incident_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
         requires(!is_directed) && NeighborsQueryable<Representation>
     {
@@ -327,7 +327,7 @@ public:
     }
 
     // View over edges as EdgeIDs (outgoing for digraphs)
-    auto edge_ids(VertexID v) const
+    auto incident_edge_ids(VertexID v) const
         noexcept(noexcept(out_edge_ids(v)))
         requires(is_directed) && OutNeighborsQueryable<Representation>
     {
@@ -364,32 +364,32 @@ public:
     }
 
     // Given an edge ID, find the vertices such that (u, v) has this ID.
-    std::pair<VertexID, VertexID> get_edge_pair(EdgeID e_id) const noexcept
+    std::pair<VertexID, VertexID> endpoints(EdgeID e_id) const noexcept
     {
         return {edges_.from[e_id.value], edges_.to[e_id.value]};
     }
 
     // For returning a reference to the EdgeData of an edge.
-    EdgeData & get_edge_data(EdgeID e_id) noexcept
+    EdgeData & edge_data(EdgeID e_id) noexcept
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
         return edges_.data[e_id.value];
     }
 
     // For copying the EdgeData of an edge.
-    const EdgeData & get_edge_data(EdgeID e_id) const noexcept
+    const EdgeData & edge_data(EdgeID e_id) const noexcept
         requires (!std::is_same_v<EdgeData, std::monostate>)
     {
         return edges_.data[e_id.value];
     }
 
-    VertexData & get_vertex_data(VertexID v_id) noexcept
+    VertexData & vertex_data(VertexID v_id) noexcept
         requires (!std::is_same_v<VertexData, std::monostate>)
     {
         return vertices_[v_id.value];
     }
 
-    const VertexData & get_vertex_data(VertexID v_id) const noexcept
+    const VertexData & vertex_data(VertexID v_id) const noexcept
         requires (!std::is_same_v<VertexData, std::monostate>)
     {
         return vertices_[v_id.value];
@@ -496,7 +496,7 @@ public:
     }
 
     // Remove and return an edge's data. EdgeData must not be monostate.
-    bool try_pop_edge(VertexID from, VertexID to, EdgeData & out)
+    bool try_extract_edge(VertexID from, VertexID to, EdgeData & out)
         requires (!std::is_same_v<EdgeData, std::monostate>
                  && EdgeMutable<Representation>)
     {
@@ -573,11 +573,11 @@ public:
         return remove_edge(edge.first, edge.second);
     }
 
-    bool try_pop_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
+    bool try_extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
         requires (!std::is_same_v<EdgeData, std::monostate>)
                  && EdgeMutable<Representation>
     {
-        return try_pop_edge(edge.first, edge.second, out);
+        return try_extract_edge(edge.first, edge.second, out);
     }
 
     // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
@@ -632,11 +632,11 @@ public:
         return representation_.has_self_loop(v);
     }
 
-    bool is_valid_vertex(VertexID v) const
+    // TODO: reconsider when we add vertex mutators
+    bool valid_vertex(VertexID v) const
         noexcept(noexcept(representation_.is_valid_vertex(v)))
-        requires SelfLoopQueryable<Representation>
     {
-        return representation_.is_valid_vertex(v);
+        return representation_.valid_vertex(v);
     }
 
     //

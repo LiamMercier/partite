@@ -459,7 +459,7 @@ public:
         return has_edge(v, v);
     }
 
-    bool is_valid_vertex(VertexID v) const noexcept
+    bool valid_vertex(VertexID v) const noexcept
     {
         return v.value < vertex_count_;
     }
