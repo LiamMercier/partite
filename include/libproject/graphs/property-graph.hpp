@@ -476,7 +476,7 @@ public:
     }
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
-    [[maybe_unused]] bool remove_edge(VertexID from, VertexID to)
+    bool remove_edge(VertexID from, VertexID to)
         requires EdgeMutable<Representation>
     {
         EdgeID res = representation_.remove_edge(from, to);
@@ -548,7 +548,7 @@ public:
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
     }
 
-    [[maybe_unused]] bool remove_edge(std::pair<VertexID, VertexID> edge)
+    bool remove_edge(std::pair<VertexID, VertexID> edge)
         requires EdgeMutable<Representation>
     {
         return remove_edge(edge.first, edge.second);
@@ -614,16 +614,18 @@ public:
             {
                 (vertices_).emplace_back(std::forward<Args>(args)...);
             }
+            else
+            {
+                // Grow .size() without having data do anything.
+                vertices_.emplace_back();
+            }
 
             bool success = representation_.add_vertex(v_id);
 
             // Undo invalid modification
             if (!success)
             {
-                if constexpr (!std::is_same_v<VertexData, std::monostate>)
-                {
-                    (vertices_).pop_back();
-                }
+                (vertices_).pop_back();
 
                 return success;
             }
@@ -632,7 +634,26 @@ public:
         return true;
     }
 
-    // For removing vertices
+    // For removing vertices (lazy delete the VertexData instance).
+    void remove_vertex(VertexID v_id)
+        requires VertexMutable<Representation>
+    {
+        representation_.remove_vertex(v_id);
+        free_vertices_.push_back(v_id);
+    }
+
+    void extract_vertex(VertexID v_id, VertexData & out)
+        requires VertexMutable<Representation>
+        && (!std::is_same_v<VertexData, std::monostate>)
+    {
+        representation_.remove_vertex(v_id);
+
+        // Overwrite the vertex data.
+        out = std::move(vertices_[v_id.value]);
+        vertices_[v_id.value] = {};
+
+        free_vertices_.push_back(v_id);
+    }
 
     //
     // Utility functions
@@ -659,7 +680,7 @@ public:
 
     size_t vertex_count() const noexcept
     {
-        if constexpr (!VertexMutable<Representation>)
+        if constexpr (VertexMutable<Representation>)
         {
             return (vertices_.size() - free_vertices_.size());
         }
@@ -840,6 +861,18 @@ private:
             else
             {
                 return data_.size();
+            }
+        }
+
+        void pop_back()
+        {
+            if constexpr (std::is_same_v<VertexData, std::monostate>)
+            {
+                count_--;
+            }
+            else
+            {
+                data_.pop_back();
             }
         }
 
