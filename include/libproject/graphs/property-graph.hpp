@@ -172,11 +172,26 @@ public:
     // Iteration functions
     //
 
-    // Iterate over all vertices
+    // Iterate over all valid vertices
     auto vertices() const
+        requires (VertexMutable<Representation>)
     {
         return std::views::iota(size_t(0),
-                                vertex_count())
+                                vertices_.size())
+               | std::views::filter([this](size_t indx){
+                    return vertices_.alive(indx);
+                })
+               | std::views::transform([](size_t indx){
+                   return VertexID{indx};
+            });
+    }
+
+    // Iterate over all vertices
+    auto vertices() const
+        requires (!VertexMutable<Representation>)
+    {
+        return std::views::iota(size_t(0),
+                                vertices_.size())
                | std::views::transform([](size_t indx){
                    return VertexID{indx};
             });
@@ -601,9 +616,10 @@ public:
             }
             else
             {
-                // Grow .size() without having data do anything.
+                // Really just an increment to our size_t (data is monostate)
                 vertices_.emplace_back();
             }
+
         }
         // We need a new slot otherwise.
         else
@@ -616,7 +632,7 @@ public:
             }
             else
             {
-                // Grow .size() without having data do anything.
+                // Really just an increment to our size_t (data is monostate)
                 vertices_.emplace_back();
             }
 
@@ -639,18 +655,31 @@ public:
         requires VertexMutable<Representation>
     {
         representation_.remove_vertex(v_id);
+
+        // Set vertex as dead.
+        if constexpr (VertexMutable<Representation>)
+        {
+            vertices_.set_dead(v_id.value);
+        }
+
         free_vertices_.push_back(v_id);
     }
 
     void extract_vertex(VertexID v_id, VertexData & out)
         requires VertexMutable<Representation>
-        && (!std::is_same_v<VertexData, std::monostate>)
+                 && (!std::is_same_v<VertexData, std::monostate>)
     {
         representation_.remove_vertex(v_id);
 
         // Overwrite the vertex data.
         out = std::move(vertices_[v_id.value]);
         vertices_[v_id.value] = {};
+
+        // Set vertex as dead.
+        if constexpr (VertexMutable<Representation>)
+        {
+            vertices_.set_dead(v_id.value);
+        }
 
         free_vertices_.push_back(v_id);
     }
@@ -839,18 +868,30 @@ private:
         VertexStorage(size_t N)
             requires (std::is_same_v<VertexData, std::monostate>)
         :count_(N)
-        {}
+        {
+            if constexpr (VertexMutable<Representation>)
+            {
+                alive_vertices_.resize(N, 1);
+            }
+        }
 
         VertexStorage(size_t N)
             requires (!std::is_same_v<VertexData, std::monostate>)
         :data_(N)
-        {}
+        {
+            if constexpr (VertexMutable<Representation>)
+            {
+                alive_vertices_.resize(N, 1);
+            }
+        }
 
         template <std::ranges::sized_range VertexRange>
             requires (!std::is_same_v<VertexData, std::monostate>)
         VertexStorage(VertexRange v_range)
         :data_(std::ranges::begin(v_range), std::ranges::end(v_range))
-        {}
+        {
+            alive_vertices_.resize(std::ranges::size(v_range), 1);
+        }
 
         size_t size() const noexcept
         {
@@ -874,6 +915,11 @@ private:
             {
                 data_.pop_back();
             }
+
+            if (VertexMutable<Representation>)
+            {
+                alive_vertices_.pop_back();
+            }
         }
 
         void emplace_back()
@@ -886,6 +932,11 @@ private:
             {
                 data_.emplace_back();
             }
+
+            if (VertexMutable<Representation>)
+            {
+                alive_vertices_.emplace_back(1);
+            }
         }
 
         template <typename... Args>
@@ -894,6 +945,11 @@ private:
                       && std::constructible_from<VertexData, Args...>)
         {
             data_.emplace_back(std::forward<Args>(args)...);
+
+            if (VertexMutable<Representation>)
+            {
+                alive_vertices_.emplace_back(1);
+            }
         }
 
         VertexData & operator[](size_t i)
@@ -902,11 +958,34 @@ private:
             return data_[i];
         }
 
+        bool alive(VertexID v_id) const
+            requires (VertexMutable<Representation>)
+        {
+            return alive_vertices_[v_id.value];
+        }
+
+        void set_alive(VertexID v_id)
+            requires (VertexMutable<Representation>)
+        {
+            alive_vertices_[v_id.value] = 1;
+        }
+
+        void set_dead(VertexID v_id)
+            requires (VertexMutable<Representation>)
+        {
+            alive_vertices_[v_id.value] = 0;
+        }
+
     private:
         std::conditional_t<
             std::is_same_v<VertexData, std::monostate>,
             std::monostate,
             std::vector<VertexData>> data_;
+
+        std::conditional_t<
+            !VertexMutable<Representation>,
+            std::monostate,
+            std::vector<uint8_t>> alive_vertices_;
 
         std::conditional_t<
             std::is_same_v<VertexData, std::monostate>,
