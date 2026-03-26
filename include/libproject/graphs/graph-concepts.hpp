@@ -146,4 +146,13 @@ concept VertexValidatable = GraphRepresentation<T> &&
     { rep.valid_vertex() } -> std::convertible_to<bool>;
 };
 
+// Representations that allow vertex modifications.
+template <typename T>
+concept VertexMutable = GraphRepresentation<T> &&
+                      requires(T rep, VertexID v_id)
+{
+    { rep.add_vertex(v_id) } -> std::convertible_to<bool>;
+    { rep.remove_vertex(v_id) };
+};
+
 };

@@ -142,7 +142,7 @@ public:
     PropertyGraph(VertexRange && vertex_range, EdgeRange && edge_range)
         requires PropertyGraphConstructible<Representation>
     :representation_(std::ranges::size(vertex_range)),
-    vertices_(std::ranges::begin(vertex_range), std::ranges::end(vertex_range))
+    vertices_(vertex_range)
     {
         // First, lets reserve.
         if constexpr (std::ranges::sized_range<EdgeRange>)
@@ -404,10 +404,10 @@ public:
 
     template<typename... Args>
     bool add_edge(VertexID from, VertexID to, Args&&... args)
-        requires (std::is_same_v<EdgeData, std::monostate>
+        requires ((std::is_same_v<EdgeData, std::monostate>
                   && sizeof...(Args) == 0) ||
                  (!std::is_same_v<EdgeData, std::monostate>
-                  && std::constructible_from<EdgeData, Args...>)
+                  && std::constructible_from<EdgeData, Args...>))
                  && EdgeMutable<Representation>
     {
         EdgeID e_id;
@@ -520,25 +520,6 @@ public:
         return true;
     }
 
-    void clear()
-        noexcept(noexcept(representation_.clear()))
-        requires Clearable<Representation>
-    {
-        representation_.clear();
-
-        // Also clear the stale data in PropertyGraph.
-
-        // TODO: how should we handle this? We have nothing to
-        //       set vertices or anything of the sort.
-        //
-        //       users would also probably be better making a new graph
-        //       if we are just wiping everything out.
-        // vertices_.clear();
-
-        edges_.clear();
-        free_edges_.clear();
-    }
-
     // std::pair overloads.
 
     // By default, return the EdgeID
@@ -558,10 +539,10 @@ public:
 
     template<typename... Args>
     bool add_edge(std::pair<VertexID, VertexID> edge, Args&&... args)
-        requires (std::is_same_v<EdgeData, std::monostate>
+        requires ((std::is_same_v<EdgeData, std::monostate>
                   && sizeof...(Args) == 0) ||
                  (!std::is_same_v<EdgeData, std::monostate>
-                  && std::constructible_from<EdgeData, Args...>)
+                  && std::constructible_from<EdgeData, Args...>))
                  && EdgeMutable<Representation>
     {
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
@@ -585,12 +566,107 @@ public:
     // TODO: maybe also provide erase_edge() for explicit immediate overwrites
 
     //
+    // Vertex opertions
+    //
+
+    // For adding vertices
+    template<typename... Args>
+    bool add_vertex(Args&&... args)
+        requires ((std::is_same_v<VertexData, std::monostate>
+                  && sizeof...(Args) == 0) ||
+                 (!std::is_same_v<VertexData, std::monostate>
+                  && std::constructible_from<VertexData, Args...>))
+                 && VertexMutable<Representation>
+    {
+        VertexID v_id;
+
+        // If we have deleted a vertex in the past, use the old slot
+        if (!free_vertices_.empty())
+        {
+            v_id = free_vertices_.back();
+            free_vertices_.pop_back();
+
+            bool success = representation_.add_vertex(v_id);
+
+            // Handle failure.
+            if (!success)
+            {
+                free_vertices_.push_back(v_id);
+                return success;
+            }
+
+            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            {
+                vertices_[v_id.value] = VertexData{std::forward<Args>(args)...};
+            }
+            else
+            {
+                // Grow .size() without having data do anything.
+                vertices_.emplace_back();
+            }
+        }
+        // We need a new slot otherwise.
+        else
+        {
+            v_id = vertices_.size();
+
+            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            {
+                (vertices_).emplace_back(std::forward<Args>(args)...);
+            }
+
+            bool success = representation_.add_vertex(v_id);
+
+            // Undo invalid modification
+            if (!success)
+            {
+                if constexpr (!std::is_same_v<VertexData, std::monostate>)
+                {
+                    (vertices_).pop_back();
+                }
+
+                return success;
+            }
+        }
+
+        return true;
+    }
+
+    // For removing vertices
+
+    //
     // Utility functions
     //
 
+    void clear()
+        noexcept(noexcept(representation_.clear()))
+        requires Clearable<Representation>
+    {
+        representation_.clear();
+
+        // Also clear the stale data in PropertyGraph.
+
+        // TODO: how should we handle this? We have nothing to
+        //       set vertices or anything of the sort.
+        //
+        //       users would also probably be better making a new graph
+        //       if we are just wiping everything out.
+        // vertices_.clear();
+
+        edges_.clear();
+        free_edges_.clear();
+    }
+
     size_t vertex_count() const noexcept
     {
-        return vertices_.size();
+        if constexpr (!VertexMutable<Representation>)
+        {
+            return (vertices_.size() - free_vertices_.size());
+        }
+        else
+        {
+            return vertices_.size();
+        }
     }
 
     size_t edge_count() const noexcept
@@ -734,9 +810,80 @@ private:
             std::vector<EdgeData>> data;
     };
 
+    struct VertexStorage
+    {
+    public:
+        VertexStorage() = default;
+
+        VertexStorage(size_t N)
+            requires (std::is_same_v<VertexData, std::monostate>)
+        :count_(N)
+        {}
+
+        VertexStorage(size_t N)
+            requires (!std::is_same_v<VertexData, std::monostate>)
+        :data_(N)
+        {}
+
+        template <std::ranges::sized_range VertexRange>
+            requires (!std::is_same_v<VertexData, std::monostate>)
+        VertexStorage(VertexRange v_range)
+        :data_(std::ranges::begin(v_range), std::ranges::end(v_range))
+        {}
+
+        size_t size() const noexcept
+        {
+            if constexpr (std::is_same_v<VertexData, std::monostate>)
+            {
+                return count_;
+            }
+            else
+            {
+                return data_.size();
+            }
+        }
+
+        void emplace_back()
+        {
+            if constexpr (std::is_same_v<VertexData, std::monostate>)
+            {
+                count_++;
+            }
+            else
+            {
+                data_.emplace_back();
+            }
+        }
+
+        template <typename... Args>
+        void emplace_back(Args&&... args)
+            requires (!std::is_same_v<VertexData, std::monostate>
+                      && std::constructible_from<VertexData, Args...>)
+        {
+            data_.emplace_back(std::forward<Args>(args)...);
+        }
+
+        VertexData & operator[](size_t i)
+            requires (!std::is_same_v<VertexData, std::monostate>)
+        {
+            return data_[i];
+        }
+
+    private:
+        std::conditional_t<
+            std::is_same_v<VertexData, std::monostate>,
+            std::monostate,
+            std::vector<VertexData>> data_;
+
+        std::conditional_t<
+            std::is_same_v<VertexData, std::monostate>,
+            std::size_t,
+            std::monostate> count_;
+    };
+
     // Internal constructor for returning a copy of the graph.
     PropertyGraph(Representation rep,
-                  std::vector<VertexData> v,
+                  VertexStorage v,
                   EdgeArrays e,
                   std::vector<EdgeID> free)
     :representation_(std::move(rep)),
@@ -748,12 +895,21 @@ private:
 
 private:
     Representation representation_;
-    std::vector<VertexData> vertices_;
 
-    // stores {from, to, data} entries.
+    VertexStorage vertices_;
     EdgeArrays edges_;
+
+    // index values into vertices_ where we have previously deleted an element.
+    std::conditional_t<
+            !VertexMutable<Representation>,
+            std::monostate,
+            std::vector<VertexID>> free_vertices_;
+
     // index values into edges_ where we have previously deleted an element.
-    std::vector<EdgeID> free_edges_;
+    std::conditional_t<
+            !EdgeMutable<Representation>,
+            std::monostate,
+            std::vector<EdgeID>> free_edges_;
 };
 
 };
