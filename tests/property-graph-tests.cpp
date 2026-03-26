@@ -309,7 +309,7 @@ TEST(PropertyGraphs, AdjacencyMatrixTranspose)
         }
 
         // Check that our edge IDs map to the transposed values.
-        for (const auto e_id : Gt.edges())
+        for (const auto e_id : Gt.edge_ids())
         {
             auto [u, v] = Gt.get_edge_pair(e_id);
 
@@ -737,7 +737,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
     {
         std::unordered_set<size_t> seen;
 
-        for (const auto & e : graph.edges(i))
+        for (const auto & e : graph.edge_ids(i))
         {
             bool match = incident[i].contains(e.value);
 
@@ -745,7 +745,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
             {
                 FAIL() << "Unexpected edge "
                         << e.value
-                        << " in graph.incident_edges("
+                        << " in graph.edge_ids("
                         << i
                         << ")";
             }
@@ -756,7 +756,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
             {
                 FAIL() << "Duplicate edge "
                         << e.value
-                        << " in graph.incident_edges("
+                        << " in graph.edge_ids("
                         << i
                         << ")";
             }
@@ -766,7 +766,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
 
         if (seen.size() != incident[i].size())
         {
-            FAIL() << "Missing at least one edge in graph.incident_edges("
+            FAIL() << "Missing at least one edge in graph.edge_ids("
                     << i
                     << ")\n";
         }
@@ -821,7 +821,7 @@ TYPED_TEST(PropertyGraphTest, OutEdges)
         {
             std::unordered_set<size_t> seen;
 
-            for (const auto & e : graph.out_edges(i))
+            for (const auto & e : graph.out_edge_ids(i))
             {
                 bool match = out_edges[i].contains(e.value);
 
@@ -829,7 +829,7 @@ TYPED_TEST(PropertyGraphTest, OutEdges)
                 {
                     FAIL() << "Unexpected edge "
                         << e.value
-                        << " in graph.out_edges(i)";
+                        << " in graph.out_edge_ids(i)";
                 }
 
                 bool duplicate = seen.contains(e.value);
@@ -838,7 +838,7 @@ TYPED_TEST(PropertyGraphTest, OutEdges)
                 {
                     FAIL() << "Duplicate edge "
                         << e.value
-                        << " in graph.out_edges(i)";
+                        << " in graph.out_edge_ids(i)";
                 }
 
                 seen.insert(e.value);
@@ -846,7 +846,7 @@ TYPED_TEST(PropertyGraphTest, OutEdges)
 
             if (seen.size() != out_edges[i].size())
             {
-                FAIL() << "Missing at least one edge in graph.out_edges("
+                FAIL() << "Missing at least one edge in graph.out_edge_ids("
                        << i
                        << ")\n";
             }
@@ -902,7 +902,7 @@ TYPED_TEST(PropertyGraphTest, InEdges)
         {
             std::unordered_set<size_t> seen;
 
-            for (const auto & e : graph.in_edges(i))
+            for (const auto & e : graph.in_edge_ids(i))
             {
                 bool match = in_edges[i].contains(e.value);
 
@@ -910,7 +910,7 @@ TYPED_TEST(PropertyGraphTest, InEdges)
                 {
                     FAIL() << "Unexpected edge "
                         << e.value
-                        << " in graph.in_edges(i)";
+                        << " in graph.in_edge_ids(i)";
                 }
 
                 bool duplicate = seen.contains(e.value);
@@ -919,7 +919,7 @@ TYPED_TEST(PropertyGraphTest, InEdges)
                 {
                     FAIL() << "Duplicate edge "
                         << e.value
-                        << " in graph.in_edges(i)";
+                        << " in graph.in_edge_ids(i)";
                 }
 
                 seen.insert(e.value);
@@ -927,7 +927,7 @@ TYPED_TEST(PropertyGraphTest, InEdges)
 
             if (seen.size() != in_edges[i].size())
             {
-                FAIL() << "Missing at least one edge in graph.in_edges("
+                FAIL() << "Missing at least one edge in graph.in_edge_ids("
                        << i
                        << ")\n";
             }
@@ -993,7 +993,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
         std::unordered_set<std::pair<size_t, size_t>, PairHash> seen_pairs;
         std::unordered_set<size_t> seen_ids;
 
-        for (const auto & ev : graph.edge_views(i))
+        for (const auto & ev : graph.edges(i))
         {
             bool match_pairs = edge_pairs[i].contains({ev.from.value,
                                                        ev.to.value});
@@ -1008,7 +1008,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
                         << ev.to.value
                         << " "
                         << ev.id.value
-                        << "} in graph.edge_views("
+                        << "} in graph.edges("
                         << i
                         << ")";
             }
@@ -1022,7 +1022,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
                         << ev.from.value
                         << " "
                         << ev.to.value
-                        << "} in graph.edge_views("
+                        << "} in graph.edges("
                         << i
                         << ")";
             }
@@ -1033,7 +1033,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
             {
                 FAIL() << "Duplicate EdgeID "
                         << ev.id.value
-                        << " in graph.edge_views("
+                        << " in graph.edges("
                         << i
                         << ")";
             }
@@ -1046,14 +1046,14 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
 
         if (seen_pairs.size() != edge_pairs[i].size())
         {
-            FAIL() << "Missing at least one edge in graph.edge_views("
+            FAIL() << "Missing at least one edge in graph.edges("
                     << i
                     << ")\n";
         }
 
         if (seen_ids.size() != edge_ids[i].size())
         {
-            FAIL() << "Missing at least one EdgeID in graph.edge_views("
+            FAIL() << "Missing at least one EdgeID in graph.edges("
                     << i
                     << ")\n";
         }
@@ -1111,7 +1111,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
             std::unordered_set<std::pair<size_t, size_t>, PairHash> seen_pairs;
             std::unordered_set<size_t> seen_ids;
 
-            for (const auto & ev : graph.out_edge_views(i))
+            for (const auto & ev : graph.out_edges(i))
             {
                 bool match_pairs = edge_pairs[i].contains({ev.from.value,
                                                            ev.to.value});
@@ -1126,7 +1126,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
                             << ev.to.value
                             << " "
                             << ev.id.value
-                            << "} in graph.edge_views("
+                            << "} in graph.out_edges("
                             << i
                             << ")";
                 }
@@ -1140,7 +1140,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
                             << ev.from.value
                             << " "
                             << ev.to.value
-                            << "} in graph.edge_views("
+                            << "} in graph.out_edges("
                             << i
                             << ")";
                 }
@@ -1151,7 +1151,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
                 {
                     FAIL() << "Duplicate EdgeID "
                             << ev.id.value
-                            << " in graph.edge_views("
+                            << " in graph.out_edges("
                             << i
                             << ")";
                 }
@@ -1164,14 +1164,14 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
 
             if (seen_pairs.size() != edge_pairs[i].size())
             {
-                FAIL() << "Missing at least one edge in graph.edge_views("
+                FAIL() << "Missing at least one edge in graph.out_edges("
                         << i
                         << ")\n";
             }
 
             if (seen_ids.size() != edge_ids[i].size())
             {
-                FAIL() << "Missing at least one EdgeID in graph.edge_views("
+                FAIL() << "Missing at least one EdgeID in graph.out_edges("
                         << i
                         << ")\n";
             }
@@ -1230,7 +1230,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
             std::unordered_set<std::pair<size_t, size_t>, PairHash> seen_pairs;
             std::unordered_set<size_t> seen_ids;
 
-            for (const auto & ev : graph.in_edge_views(i))
+            for (const auto & ev : graph.in_edges(i))
             {
                 bool match_pairs = edge_pairs[i].contains({ev.from.value,
                                                            ev.to.value});
@@ -1245,7 +1245,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
                             << ev.to.value
                             << " "
                             << ev.id.value
-                            << "} in graph.edge_views("
+                            << "} in graph.in_edges("
                             << i
                             << ")";
                 }
@@ -1259,7 +1259,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
                             << ev.from.value
                             << " "
                             << ev.to.value
-                            << "} in graph.edge_views("
+                            << "} in graph.in_edges("
                             << i
                             << ")";
                 }
@@ -1270,7 +1270,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
                 {
                     FAIL() << "Duplicate EdgeID "
                             << ev.id.value
-                            << " in graph.edge_views("
+                            << " in graph.in_edges("
                             << i
                             << ")";
                 }
@@ -1283,14 +1283,14 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
 
             if (seen_pairs.size() != edge_pairs[i].size())
             {
-                FAIL() << "Missing at least one edge in graph.edge_views("
+                FAIL() << "Missing at least one edge in graph.in_edges("
                         << i
                         << ")\n";
             }
 
             if (seen_ids.size() != edge_ids[i].size())
             {
-                FAIL() << "Missing at least one EdgeID in graph.edge_views("
+                FAIL() << "Missing at least one EdgeID in graph.in_edges("
                         << i
                         << ")\n";
             }
@@ -1298,7 +1298,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
     }
 }
 
-TYPED_TEST(PropertyGraphTest, GlobalEdges)
+TYPED_TEST(PropertyGraphTest, GlobalEdgeIDs)
 {
     using Graph = typename TestFixture::Graph;
     using EdgeData = typename TestFixture::EdgeData;
@@ -1331,27 +1331,27 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
         indx++;
     }
 
-    // Iterate over the entire graph's edges.
+    // Iterate over the entire graph's edge IDs.
     std::unordered_set<size_t> seen;
 
-    for (const auto & e : graph.edges())
+    for (const auto & e : graph.edge_ids())
     {
         bool match = incident.contains(e.value);
 
         if (!match)
         {
-            FAIL() << "Unexpected edge "
+            FAIL() << "Unexpected edge ID "
                     << e.value
-                    << " in graph.edges()\n";
+                    << " in graph.edge_ids()\n";
         }
 
         bool duplicate = seen.contains(e.value);
 
         if (duplicate)
         {
-            FAIL() << "Duplicate edge "
+            FAIL() << "Duplicate edge ID "
                     << e.value
-                    << " in graph.edges()\n";
+                    << " in graph.edge_ids()\n";
         }
 
         seen.insert(e.value);
@@ -1359,6 +1359,99 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
 
     if (seen.size() != incident.size()
         || seen.size() != 8)
+    {
+        FAIL() << "Missing at least one edge ID in graph.edge_ids()\n";
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, GlobalEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.vertex_count(), 7);
+
+    std::unordered_set<std::pair<size_t, size_t>, PairHash> edge_pairs(8);
+    std::unordered_set<size_t> edge_ids(8);
+
+    size_t indx = 0;
+    for (const auto & e : edges)
+    {
+        edge_pairs.insert({e.from.value, e.to.value});
+        edge_ids.insert(indx);
+        indx++;
+    }
+
+    // Iterate over the entire graph's edges.
+    std::unordered_set<std::pair<size_t, size_t>, PairHash> seen_edges;
+    std::unordered_set<size_t> seen_ids;
+
+    for (const auto & e : graph.edges())
+    {
+        bool match = edge_pairs.contains({e.from.value, e.to.value});
+
+        if (!match)
+        {
+            FAIL() << "Unexpected edge ("
+                   << e.from.value
+                   << " "
+                   << e.to.value
+                   << ") in graph.edges()\n";
+        }
+
+        bool duplicate = seen_edges.contains({e.from.value, e.to.value});
+
+        if (duplicate)
+        {
+            FAIL() << "Duplicate edge ("
+                   << e.from.value
+                   << " "
+                   << e.to.value
+                   << ") in graph.edges()\n";
+        }
+
+        bool match_id = edge_ids.contains(e.id.value);
+
+        if (!match_id)
+        {
+            FAIL() << "Unexpected edge ID "
+                   << e.id.value
+                   << " in graph.edges()\n";
+        }
+
+        bool duplicate_id = seen_ids.contains(e.id.value);
+
+        if (duplicate_id)
+        {
+            FAIL() << "Duplicate edge ID "
+                   << e.id.value
+                   << " in graph.edges()\n";
+        }
+
+        seen_edges.insert({e.from.value, e.to.value});
+        seen_ids.insert(e.id.value);
+    }
+
+    if (seen_edges.size() != edge_pairs.size()
+        || seen_edges.size() != edges.size()
+        || seen_ids.size() != edges.size())
     {
         FAIL() << "Missing at least one edge in graph.edges()\n";
     }

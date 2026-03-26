@@ -168,10 +168,6 @@ public:
         }
     }
 
-    // TODO <feature>: some sort of from_edges(|V|, edges) that assumes
-    //       graph is empty? Or, some other way of transforming an
-    //       empty graph to be the desired graph that performs faster?
-
     //
     // Iteration functions
     //
@@ -186,21 +182,28 @@ public:
             });
     }
 
-    // TODO: lets consider neighbors<direction> for generic code without
-    //       built in assumptions that neighbors(v) = out_neighbors(v)
-    //       in a digraph.
-
-    // Return a range of VertexID values.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid for us to iterate over.
-    auto neighbors(VertexID v) const
-        noexcept(noexcept(out_neighbors(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+    // View over every edge in the graph.
+    auto edges() const
+        noexcept(noexcept(representation_.edges()))
+        requires (GlobalEdgesQueryable<Representation>)
     {
-        return out_neighbors(v);
+        return representation_.edges()
+               | std::views::transform([this](EdgeID id){
+                   return EdgeView{edges_.from[id.value],
+                                   edges_.to[id.value],
+                                   id};
+               });
     }
 
+    // View over every edge ID in the graph.
+    auto edge_ids() const
+        noexcept(noexcept(representation_.edges()))
+        requires (GlobalEdgesQueryable<Representation>)
+    {
+        return representation_.edges();
+    }
+
+    // View over neighboring VertexID values.
     auto neighbors(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
         requires (!is_directed) && NeighborsQueryable<Representation>
@@ -218,7 +221,15 @@ public:
                 });
     }
 
-    // Return a range of VertexID values for each edge (v, u).
+    // View over neighboring VertexID values (outgoing in a digraph).
+    auto neighbors(VertexID v) const
+        noexcept(noexcept(out_neighbors(v)))
+        requires (is_directed) && OutNeighborsQueryable<Representation>
+    {
+        return out_neighbors(v);
+    }
+
+    // View over outgoing VertexID values for each edge (v, u).
     auto out_neighbors(VertexID v) const
         noexcept(noexcept(representation_.out_neighbors(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
@@ -229,7 +240,7 @@ public:
                    });
     }
 
-    // Return a range of VertexID values for each edge (u, v).
+    // View over incoming VertexID values for each edge (u, v).
     auto in_neighbors(VertexID v) const
         noexcept(noexcept(representation_.in_neighbors(v)))
         requires (is_directed) && InNeighborsQueryable<Representation>
@@ -240,67 +251,8 @@ public:
                    });
     }
 
-    // Return a range of EdgeID values for the vertice neighbors.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid, so we can return this directly.
+    // View over edges as EdgeViews
     auto edges(VertexID v) const
-        noexcept(noexcept(out_edges(v)))
-        requires(is_directed) && OutNeighborsQueryable<Representation>
-    {
-        // For a digraph, we want the outgoing edges.
-        return out_edges(v);
-    }
-
-    // TODO: should we maybe expose edge views as edges and this as edge_ids
-
-    // TODO: solve consistency issues between
-    //       out_X calling neighbors vs out_neighbors (IRL diagram)
-
-    auto edges(VertexID v) const
-        noexcept(noexcept(representation_.neighbors(v)))
-        requires(!is_directed) && NeighborsQueryable<Representation>
-    {
-        return representation_.neighbors(v);
-    }
-
-    // Iterate over every edge in the graph.
-    auto edges() const
-        noexcept(noexcept(representation_.edges()))
-        requires (GlobalEdgesQueryable<Representation>)
-    {
-        return representation_.edges();
-    }
-
-    // Return a range of EdgeID values for each edge (v, u).
-    auto out_edges(VertexID v) const
-        noexcept(noexcept(representation_.neighbors(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
-    {
-        return representation_.neighbors(v);
-    }
-
-    // Return a range of EdgeID values for each edge (u, v).
-    auto in_edges(VertexID v) const
-        noexcept(noexcept(representation_.in_neighbors(v)))
-        requires (is_directed) && InNeighborsQueryable<Representation>
-    {
-        return representation_.in_neighbors(v);
-    }
-
-    // Return a range of EdgeView values.
-    //
-    // The representation_ instance streams EdgeID values
-    // that are valid, so we can return the edge views
-    // from the EdgeID values.
-    auto edge_views(VertexID v) const
-        noexcept(noexcept(out_edge_views(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
-    {
-        return out_edge_views(v);
-    }
-
-    auto edge_views(VertexID v) const
         noexcept(
             noexcept(representation_.neighbors(v)) &&
             noexcept(EdgeView{edges_.from[EdgeID{}.value],
@@ -322,7 +274,16 @@ public:
                 });
     }
 
-    auto out_edge_views(VertexID v) const
+    // View over edges as EdgeViews (outgoing for digraphs)
+    auto edges(VertexID v) const
+        noexcept(noexcept(out_edges(v)))
+        requires (is_directed) && OutNeighborsQueryable<Representation>
+    {
+        return out_edges(v);
+    }
+
+    // View over outgoing edges as EdgeViews
+    auto out_edges(VertexID v) const
         noexcept(
             noexcept(representation_.neighbors(v)) &&
             noexcept(EdgeView{edges_.from[EdgeID{}.value],
@@ -339,7 +300,8 @@ public:
                });
     }
 
-    auto in_edge_views(VertexID v) const
+    // View over incoming edges as EdgeViews
+    auto in_edges(VertexID v) const
         noexcept(
             noexcept(representation_.in_neighbors(v)) &&
             noexcept(EdgeView{edges_.from[EdgeID{}.value],
@@ -354,6 +316,39 @@ public:
                                    edges_.to[id.value],
                                    id};
                });
+    }
+
+    // View over edges as EdgeIDs
+    auto edge_ids(VertexID v) const
+        noexcept(noexcept(representation_.neighbors(v)))
+        requires(!is_directed) && NeighborsQueryable<Representation>
+    {
+        return representation_.neighbors(v);
+    }
+
+    // View over edges as EdgeIDs (outgoing for digraphs)
+    auto edge_ids(VertexID v) const
+        noexcept(noexcept(out_edge_ids(v)))
+        requires(is_directed) && OutNeighborsQueryable<Representation>
+    {
+        // For a digraph, we want the outgoing edges.
+        return out_edge_ids(v);
+    }
+
+    // View over outgoing edges as EdgeIDs
+    auto out_edge_ids(VertexID v) const
+        noexcept(noexcept(representation_.neighbors(v)))
+        requires (is_directed) && OutNeighborsQueryable<Representation>
+    {
+        return representation_.out_neighbors(v);
+    }
+
+    // View over incoming edges as EdgeIDs
+    auto in_edge_ids(VertexID v) const
+        noexcept(noexcept(representation_.in_neighbors(v)))
+        requires (is_directed) && InNeighborsQueryable<Representation>
+    {
+        return representation_.in_neighbors(v);
     }
 
     //
