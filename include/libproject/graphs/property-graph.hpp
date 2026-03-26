@@ -86,6 +86,7 @@ public:
 
 public:
     static constexpr bool is_directed = Representation::is_directed;
+    // TODO: use this instead of constantly writing the concept out.
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
 
     // Empty graph constructor
@@ -411,6 +412,16 @@ public:
         return vertices_[v_id.value];
     }
 
+    VertexID source(EdgeID e_id) const noexcept
+    {
+        return edges_.from[e_id.value];
+    }
+
+    VertexID target(EdgeID e_id) const noexcept
+    {
+        return edges_.to[e_id.value];
+    }
+
     bool has_edge(VertexID from, VertexID to) const
         noexcept(noexcept(representation_.has_edge(from, to)))
         requires EdgeQueryable<Representation>
@@ -536,7 +547,7 @@ public:
         return true;
     }
 
-    // std::pair overloads.
+    // std::pair and EdgeID overloads.
 
     // By default, return the EdgeID
     EdgeID find_edge(std::pair<VertexID, VertexID> edge) const
@@ -575,6 +586,23 @@ public:
                  && EdgeMutable<Representation>
     {
         return try_extract_edge(edge.first, edge.second, out);
+    }
+
+    // Remove edge using EdgeID
+    bool remove_edge(EdgeID e_id)
+        requires EdgeMutable<Representation>
+    {
+        return remove_edge(edges_.from[e_id.value], edges_.to[e_id.value]);
+    }
+
+    // Extract edge using EdgeID
+    bool try_extract_edge(EdgeID e_id, EdgeData & out)
+        requires (!std::is_same_v<EdgeData, std::monostate>)
+                 && EdgeMutable<Representation>
+    {
+        return try_extract_edge(edges_.from[e_id.value],
+                                edges_.to[e_id.value],
+                                out);
     }
 
     // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
@@ -686,27 +714,8 @@ public:
     }
 
     //
-    // Utility functions
+    // Graph features
     //
-
-    void clear()
-        noexcept(noexcept(representation_.clear()))
-        requires Clearable<Representation>
-    {
-        representation_.clear();
-
-        // Also clear the stale data in PropertyGraph.
-
-        // TODO: how should we handle this? We have nothing to
-        //       set vertices or anything of the sort.
-        //
-        //       users would also probably be better making a new graph
-        //       if we are just wiping everything out.
-        // vertices_.clear();
-
-        edges_.clear();
-        free_edges_.clear();
-    }
 
     size_t vertex_count() const noexcept
     {
@@ -746,6 +755,33 @@ public:
         return representation_.out_degree(v);
     }
 
+    //
+    // Utility functions
+    //
+
+    void clear()
+        noexcept(noexcept(representation_.clear()))
+        requires Clearable<Representation>
+    {
+        representation_.clear();
+
+        // Also clear the stale data in PropertyGraph.
+        vertices_.clear();
+        edges_.clear();
+        free_edges_.clear();
+    }
+
+    void clear_edges()
+        noexcept(noexcept(representation_.clear()))
+        requires Clearable<Representation>
+    {
+        representation_.clear();
+
+        // Also clear the stale data in PropertyGraph.
+        edges_.clear();
+        free_edges_.clear();
+    }
+
     bool has_self_loops() const
         noexcept(noexcept(representation_.has_self_loops()))
     {
@@ -764,6 +800,21 @@ public:
         noexcept(noexcept(representation_.is_valid_vertex(v)))
     {
         return representation_.valid_vertex(v);
+    }
+
+    bool valid_edge_id(EdgeID e_id) const
+    {
+        return (e_id < edges_.size());
+    }
+
+    void reserve_vertices(size_t N)
+    {
+        vertices_.reserve(N);
+    }
+
+    void reserve_edges(size_t N)
+    {
+        edges_.reserve(N);
     }
 
     //
@@ -812,7 +863,7 @@ private:
             }
         }
 
-        void reserve(size_t N) noexcept
+        void reserve(size_t N)
         {
             from.reserve(N);
             to.reserve(N);
@@ -909,6 +960,36 @@ private:
             }
         }
 
+        void reserve(size_t N)
+        {
+            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            {
+                data_.reserve(N);
+            }
+
+            if constexpr (VertexMutable<Representation>)
+            {
+                alive_vertices_.reserve(N);
+            }
+        }
+
+        void clear() noexcept
+        {
+            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            {
+                data_.clear();
+            }
+            else
+            {
+                count_ = 0;
+            }
+
+            if constexpr (VertexMutable<Representation>)
+            {
+                alive_vertices_.clear();
+            }
+        }
+
         void pop_back()
         {
             if constexpr (std::is_same_v<VertexData, std::monostate>)
@@ -920,7 +1001,7 @@ private:
                 data_.pop_back();
             }
 
-            if (VertexMutable<Representation>)
+            if constexpr (VertexMutable<Representation>)
             {
                 alive_vertices_.pop_back();
             }
@@ -937,7 +1018,7 @@ private:
                 data_.emplace_back();
             }
 
-            if (VertexMutable<Representation>)
+            if constexpr (VertexMutable<Representation>)
             {
                 alive_vertices_.emplace_back(1);
             }
@@ -950,7 +1031,7 @@ private:
         {
             data_.emplace_back(std::forward<Args>(args)...);
 
-            if (VertexMutable<Representation>)
+            if constexpr (VertexMutable<Representation>)
             {
                 alive_vertices_.emplace_back(1);
             }

@@ -147,6 +147,7 @@ concept VertexValidatable = GraphRepresentation<T> &&
 };
 
 // Representations that allow vertex modifications.
+// TODO: perhaps split into remove and add
 template <typename T>
 concept VertexMutable = GraphRepresentation<T> &&
                       requires(T rep, VertexID v_id)
