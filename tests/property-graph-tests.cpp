@@ -1742,3 +1742,103 @@ TYPED_TEST(PropertyGraphTest, Clear)
 
     ASSERT_EQ(graph.edge_count(), 0);
 }
+
+TYPED_TEST(PropertyGraphTest, VertexModification)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    if constexpr (!Graph::vertices_mutable)
+    {
+        return;
+    }
+    else
+    {
+
+        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.vertex_count(), 7);
+
+        // Add some vertices
+        if constexpr (!std::is_same_v<VertexData, std::monostate>)
+        {
+            // We have vertices with IDs 0 through 9, and
+            // ID 7 maps to int 7, ID 8 maps to 8, ID 9 maps to 9.
+            graph.add_vertex(7);
+            graph.add_vertex(8);
+            graph.add_vertex(9);
+        }
+        else
+        {
+            graph.add_vertex();
+            graph.add_vertex();
+            graph.add_vertex();
+        }
+
+        ASSERT_EQ(graph.vertex_count(), 10);
+
+        graph.remove_vertex(7);
+
+        ASSERT_EQ(graph.vertex_count(), 9);
+
+        // Skip undirected graphs.
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            int value = 0;
+            graph.extract_vertex(8, value);
+
+            ASSERT_EQ(value, 8);
+            ASSERT_EQ(graph.vertex_count(), 8);
+        }
+        else
+        {
+            graph.remove_vertex(8);
+            ASSERT_EQ(graph.vertex_count(), 8);
+        }
+
+        // Count how many times we see each VertexData value.
+        //
+        // We expect to have {0, 0, 0, 0, 0, 0, 0, X, X, 9}
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::unordered_map<size_t, size_t> counts;
+
+            for (const auto & v : graph.vertices())
+            {
+                const VertexData & data = graph.vertex_data(v);
+                std::cout << data << "\n";
+                counts[data] += 1;
+            }
+
+            ASSERT_EQ(counts[0], 7);
+            ASSERT_EQ(counts[9], 1);
+
+            ASSERT_EQ(counts[7], 0);
+            ASSERT_EQ(counts[8], 0);
+
+            // Directly assert each element is correct as well.
+            for (size_t i = 0; i < 7; i++)
+            {
+                ASSERT_EQ(graph.vertex_data(i), 0);
+            }
+
+            ASSERT_EQ(graph.vertex_data(9), 9);
+        }
+
+    }
+}

@@ -86,6 +86,7 @@ public:
 
 public:
     static constexpr bool is_directed = Representation::is_directed;
+    static constexpr bool vertices_mutable = VertexMutable<Representation>;
 
     // Empty graph constructor
     PropertyGraph(size_t num_vertices)
@@ -191,7 +192,7 @@ public:
         requires (!VertexMutable<Representation>)
     {
         return std::views::iota(size_t(0),
-                                vertices_.size())
+                                vertex_count())
                | std::views::transform([](size_t indx){
                    return VertexID{indx};
             });
@@ -890,7 +891,10 @@ private:
         VertexStorage(VertexRange v_range)
         :data_(std::ranges::begin(v_range), std::ranges::end(v_range))
         {
-            alive_vertices_.resize(std::ranges::size(v_range), 1);
+            if constexpr (VertexMutable<Representation>)
+            {
+                alive_vertices_.resize(std::ranges::size(v_range), 1);
+            }
         }
 
         size_t size() const noexcept
