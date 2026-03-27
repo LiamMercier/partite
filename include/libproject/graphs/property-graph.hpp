@@ -550,7 +550,7 @@ public:
 
         if constexpr (has_edge_data)
         {
-            edges_.data[res.value] = {};
+            auto temp = std::move(edges_.data[res.value]);
         }
 
         edges_.from[res.value] = VertexID::empty;
@@ -575,10 +575,8 @@ public:
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
 
-        // Overwrite with default data.
         out = std::move(edges_.data[res.value]);
 
-        edges_.data[res.value] = {};
         edges_.from[res.value] = VertexID::empty;
         edges_.to[res.value] = VertexID::empty;
 
@@ -596,17 +594,13 @@ public:
             return {};
         }
 
-        auto data = std::move(edge_data(res));
-
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
 
-        // Overwrite with default value.
-        edges_.data[res.value] = {};
         edges_.from[res.value] = VertexID::empty;
         edges_.to[res.value] = VertexID::empty;
 
-        return {data};
+        return { std::move(edge_data(res)) };
     }
 
     //
@@ -774,7 +768,6 @@ public:
 
         // Overwrite the vertex data.
         out = std::move(vertices_[v_id.value]);
-        vertices_[v_id.value] = {};
 
         vertices_.set_dead(v_id.value);
 
