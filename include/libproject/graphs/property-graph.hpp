@@ -74,6 +74,9 @@ public:
 
 
 // TODO: debug mode asserts
+//
+// TODO: reconsider noexcept for certain functions that allocate
+//       so users can catch bad alloc if they want.
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
           typename VertexData = std::monostate>
@@ -531,8 +534,35 @@ public:
         return true;
     }
 
-    // Remove and return an edge's data. EdgeData must not be monostate.
-    bool try_extract_edge(VertexID from, VertexID to, EdgeData & out)
+    // Remove an edge and overwrite instead of lazy deletion.
+    bool erase_edge(VertexID from, VertexID to)
+        requires edges_mutable
+    {
+        EdgeID res = representation_.remove_edge(from, to);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        if constexpr (has_edge_data)
+        {
+            edges_.data[res.value] = {};
+        }
+
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return true;
+    }
+
+    // Remove an edge and move its data.
+    //
+    // Returns false if the edge doesn't exist.
+    bool extract_edge(VertexID from, VertexID to, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
         EdgeID res = representation_.remove_edge(from, to);
@@ -555,9 +585,34 @@ public:
         return true;
     }
 
-    // std::pair and EdgeID overloads.
+    // Remove an edge and return the edge's data if it exists.
+    std::optional<EdgeData> extract_edge(VertexID from, VertexID to)
+        requires (has_edge_data && edges_mutable)
+    {
+        EdgeID res = representation_.remove_edge(from, to);
 
-    // By default, return the EdgeID
+        if (res == EdgeID::empty)
+        {
+            return {};
+        }
+
+        auto data = std::move(edge_data(res));
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        // Overwrite with default value.
+        edges_.data[res.value] = {};
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return {data};
+    }
+
+    //
+    // std::pair and EdgeID overloads.
+    //
+
     EdgeID find_edge(std::pair<VertexID, VertexID> edge) const
         noexcept(noexcept(find_edge(edge.first, edge.second)))
         requires EdgeQueryable<Representation>
@@ -588,30 +643,51 @@ public:
         return remove_edge(edge.first, edge.second);
     }
 
-    bool try_extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
+    bool erase_edge(std::pair<VertexID, VertexID> edge)
+        requires edges_mutable
+    {
+        return erase_edge(edge.first, edge.second);
+    }
+
+    bool extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
-        return try_extract_edge(edge.first, edge.second, out);
+        return extract_edge(edge.first, edge.second, out);
+    }
+
+    std::optional<EdgeData> extract_edge(std::pair<VertexID, VertexID> edge)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge(edge.first, edge.second);
     }
 
     // Remove edge using EdgeID
-    // TODO <chore>: re-write these sorts of calls to source, target
     bool remove_edge(EdgeID e_id)
         requires edges_mutable
     {
         return remove_edge(source(e_id), target(e_id));
     }
 
-    // Extract edge using EdgeID
-    bool try_extract_edge(EdgeID e_id, EdgeData & out)
-        requires (has_edge_data && edges_mutable)
+    bool erase_edge(EdgeID e_id)
+        requires edges_mutable
     {
-        return try_extract_edge(source(e_id), target(e_id), out);
+        return erase_edge(source(e_id), target(e_id));
     }
 
-    // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
-    //
-    // TODO: maybe also provide erase_edge() for explicit immediate overwrites
+    // Extract edge using EdgeID
+    bool extract_edge(EdgeID e_id, EdgeData & out)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge(source(e_id), target(e_id), out);
+    }
+
+    std::optional<EdgeData> extract_edge(EdgeID e_id)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge(source(e_id), target(e_id));
+    }
+
+    // TODO: safe variants for removal
 
     //
     // Vertex opertions
@@ -794,7 +870,7 @@ public:
         return representation_.valid_vertex(v);
     }
 
-    bool valid_edge_id(EdgeID e_id) const
+    bool valid_edge_id(EdgeID e_id) const noexcept
     {
         return (e_id < edges_.size());
     }

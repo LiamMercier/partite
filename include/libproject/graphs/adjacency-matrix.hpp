@@ -210,17 +210,6 @@ public:
         // Prevent double counting degrees.
         if (adj_[index] != EdgeID::empty)
         {
-            libproject_assert(false,
-                              "AdjacencyMatrix::add_edge: tried to "
-                              "overwrite edge ("
-                              + std::to_string(from.value)
-                              + " "
-                              + std::to_string(to.value)
-                              +") [EdgeID "
-                              + std::to_string(adj_[index].value)
-                              + "] to be [EdgeID "
-                              + std::to_string(edge_id.value)
-                              + "]");
             return adj_[index];
         }
 

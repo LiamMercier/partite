@@ -1842,3 +1842,91 @@ TYPED_TEST(PropertyGraphTest, VertexModification)
 
     }
 }
+
+TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    if constexpr (!Graph::edges_mutable || !Graph::has_edge_data)
+    {
+        return;
+    }
+    else
+    {
+        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.vertex_count(), 7);
+
+        // add some edges
+        graph.add_edge(0, 2, 8);
+
+        // Test failed add
+        auto res = graph.add_edge(0, 2, 9);
+        ASSERT_EQ(res.first, EdgeID{8});
+        ASSERT_FALSE(res.second);
+
+        graph.add_edge(0, 3, 9);
+        graph.add_edge(0, 4, 10);
+        graph.add_edge(0, 5, 11);
+
+        ASSERT_EQ(graph.edge_count(), 12);
+
+        // Extract a real edge, we expect to get int(8)
+        {
+            std::optional<EdgeData> edata = graph.extract_edge(0, 2);
+            ASSERT_TRUE(edata);
+            ASSERT_EQ(*edata, 8);
+        }
+
+        // Now try to extract again, we should not get an edge back.
+        {
+            std::optional<EdgeData> edata = graph.extract_edge(0, 2);
+            ASSERT_FALSE(edata);
+
+            EdgeData e_data;
+            bool success = graph.extract_edge(0, 2, e_data);
+            ASSERT_FALSE(success);
+        }
+
+        // Extract another real edge using the ID
+        {
+            EdgeData e_data;
+            bool success = graph.extract_edge(EdgeID{9}, e_data);
+            ASSERT_TRUE(success);
+        }
+
+        // Try erasing
+        {
+            bool success = graph.erase_edge(0, 4);
+            ASSERT_TRUE(success);
+
+            success = graph.erase_edge(EdgeID{11});
+            ASSERT_TRUE(success);
+        }
+
+        // Test that all of these edges do not exist.
+        {
+            for (size_t i = 2; i < 5; i++)
+            {
+                ASSERT_FALSE(graph.has_edge(0, i));
+            }
+        }
+
+    }
+}
