@@ -90,6 +90,7 @@ public:
 public:
     static constexpr bool is_directed = Representation::is_directed;
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
+    static constexpr bool edges_mutable = EdgeMutable<Representation>;
 
     // Check if EdgeData or VertexData is std::monostate
     static constexpr bool has_edge_data = HasData<EdgeData>;
@@ -443,8 +444,7 @@ public:
     std::pair<EdgeID, bool> add_edge(VertexID from, VertexID to, Args&&... args)
         requires ((!has_edge_data && sizeof...(Args) == 0) ||
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
-                 &&
-                 EdgeMutable<Representation>
+                 && edges_mutable
     {
         EdgeID e_id;
 
@@ -513,7 +513,7 @@ public:
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
     bool remove_edge(VertexID from, VertexID to)
-        requires EdgeMutable<Representation>
+        requires edges_mutable
     {
         EdgeID res = representation_.remove_edge(from, to);
 
@@ -533,7 +533,7 @@ public:
 
     // Remove and return an edge's data. EdgeData must not be monostate.
     bool try_extract_edge(VertexID from, VertexID to, EdgeData & out)
-        requires (has_edge_data && EdgeMutable<Representation>)
+        requires (has_edge_data && edges_mutable)
     {
         EdgeID res = representation_.remove_edge(from, to);
 
@@ -577,19 +577,19 @@ public:
                                      Args&&... args)
         requires ((!has_edge_data && sizeof...(Args) == 0) ||
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
-                 && EdgeMutable<Representation>
+                 && edges_mutable
     {
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
     }
 
     bool remove_edge(std::pair<VertexID, VertexID> edge)
-        requires EdgeMutable<Representation>
+        requires edges_mutable
     {
         return remove_edge(edge.first, edge.second);
     }
 
     bool try_extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
-        requires (has_edge_data && EdgeMutable<Representation>)
+        requires (has_edge_data && edges_mutable)
     {
         return try_extract_edge(edge.first, edge.second, out);
     }
@@ -597,14 +597,14 @@ public:
     // Remove edge using EdgeID
     // TODO <chore>: re-write these sorts of calls to source, target
     bool remove_edge(EdgeID e_id)
-        requires EdgeMutable<Representation>
+        requires edges_mutable
     {
         return remove_edge(edges_.from[e_id.value], edges_.to[e_id.value]);
     }
 
     // Extract edge using EdgeID
     bool try_extract_edge(EdgeID e_id, EdgeData & out)
-        requires (has_edge_data && EdgeMutable<Representation>)
+        requires (has_edge_data && edges_mutable)
     {
         return try_extract_edge(edges_.from[e_id.value],
                                 edges_.to[e_id.value],
@@ -1100,15 +1100,15 @@ private:
 
     // index values into vertices_ where we have previously deleted an element.
     std::conditional_t<
-            !vertices_mutable,
-            std::monostate,
-            std::vector<VertexID>> free_vertices_;
+            vertices_mutable,
+            std::vector<VertexID>,
+            std::monostate> free_vertices_;
 
     // index values into edges_ where we have previously deleted an element.
     std::conditional_t<
-            !EdgeMutable<Representation>,
-            std::monostate,
-            std::vector<EdgeID>> free_edges_;
+            edges_mutable,
+            std::vector<EdgeID>,
+            std::monostate> free_edges_;
 };
 
 };
