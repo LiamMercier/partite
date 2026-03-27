@@ -213,8 +213,8 @@ public:
     {
         return representation_.edges()
                | std::views::transform([this](EdgeID id){
-                   return EdgeView{edges_.from[id.value],
-                                   edges_.to[id.value],
+                   return EdgeView{source(id),
+                                   target(id),
                                    id};
                });
     }
@@ -239,9 +239,9 @@ public:
         // depending on which vertex is not equal to v.
         return representation_.neighbors(v)
                 | std::views::transform([this, v](EdgeID id){
-                    return (edges_.to[id.value] == v)
-                            ? (edges_.from[id.value])
-                            : (edges_.to[id.value]);
+                    return (target(id) == v)
+                            ? (source(id))
+                            : (target(id));
                 });
     }
 
@@ -260,7 +260,7 @@ public:
     {
         return representation_.out_neighbors(v)
                    | std::views::transform([this](EdgeID id){
-                       return edges_.to[id.value];
+                       return target(id);
                    });
     }
 
@@ -271,7 +271,7 @@ public:
     {
         return representation_.in_neighbors(v)
                    | std::views::transform([this](EdgeID id){
-                       return edges_.from[id.value];
+                       return source(id);
                    });
     }
 
@@ -279,8 +279,8 @@ public:
     auto incident_edges(VertexID v) const
         noexcept(
             noexcept(representation_.neighbors(v)) &&
-            noexcept(EdgeView{edges_.from[EdgeID{}.value],
-                              edges_.to[EdgeID{}.value],
+            noexcept(EdgeView{source(EdgeID{}),
+                              target(EdgeID{}),
                               EdgeID{}})
         )
         requires (!is_directed) && NeighborsQueryable<Representation>
@@ -292,8 +292,8 @@ public:
         // depending on which vertex is not equal to v.
         return representation_.neighbors(v)
                 | std::views::transform([this](EdgeID id){
-                    return EdgeView{edges_.from[id.value],
-                                    edges_.to[id.value],
+                    return EdgeView{source(id),
+                                    target(id),
                                     id};
                 });
     }
@@ -310,16 +310,16 @@ public:
     auto out_edges(VertexID v) const
         noexcept(
             noexcept(representation_.neighbors(v)) &&
-            noexcept(EdgeView{edges_.from[EdgeID{}.value],
-                              edges_.to[EdgeID{}.value],
+            noexcept(EdgeView{source(EdgeID{}),
+                              target(EdgeID{}),
                               EdgeID{}})
         )
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
         return representation_.out_neighbors(v)
                | std::views::transform([this](EdgeID id){
-                    return EdgeView{edges_.from[id.value],
-                                    edges_.to[id.value],
+                    return EdgeView{source(id),
+                                    target(id),
                                     id};
                });
     }
@@ -328,17 +328,17 @@ public:
     auto in_edges(VertexID v) const
         noexcept(
             noexcept(representation_.in_neighbors(v)) &&
-            noexcept(EdgeView{edges_.from[EdgeID{}.value],
-                              edges_.to[EdgeID{}.value],
+            noexcept(EdgeView{source(EdgeID{}),
+                              target(EdgeID{}),
                               EdgeID{}})
         )
         requires (is_directed) && InNeighborsQueryable<Representation>
     {
         return representation_.in_neighbors(v)
                | std::views::transform([this](EdgeID id){
-                   return EdgeView{edges_.from[id.value],
-                                   edges_.to[id.value],
-                                   id};
+                    return EdgeView{source(id),
+                                    target(id),
+                                    id};
                });
     }
 
@@ -390,7 +390,7 @@ public:
     // Given an edge ID, find the vertices such that (u, v) has this ID.
     std::pair<VertexID, VertexID> endpoints(EdgeID e_id) const noexcept
     {
-        return {edges_.from[e_id.value], edges_.to[e_id.value]};
+        return {source(e_id), target(e_id)};
     }
 
     // For returning a reference to the EdgeData of an edge.
@@ -599,16 +599,14 @@ public:
     bool remove_edge(EdgeID e_id)
         requires edges_mutable
     {
-        return remove_edge(edges_.from[e_id.value], edges_.to[e_id.value]);
+        return remove_edge(source(e_id), target(e_id));
     }
 
     // Extract edge using EdgeID
     bool try_extract_edge(EdgeID e_id, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
-        return try_extract_edge(edges_.from[e_id.value],
-                                edges_.to[e_id.value],
-                                out);
+        return try_extract_edge(source(e_id), target(e_id), out);
     }
 
     // TODO: maybe give overload like std::optional<EdgeData> pop_edge(...)
