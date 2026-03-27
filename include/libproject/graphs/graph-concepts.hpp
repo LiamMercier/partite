@@ -40,7 +40,7 @@ template <typename T>
 concept EdgeMutable = GraphRepresentation<T> &&
                       requires(T rep, VertexID v_id, EdgeID e_id)
 {
-    { rep.add_edge(v_id, v_id, e_id) } -> std::convertible_to<bool>;
+    { rep.add_edge(v_id, v_id, e_id) } -> std::same_as<EdgeID>;
     { rep.remove_edge(v_id, v_id) } -> std::same_as<EdgeID>;
 };
 

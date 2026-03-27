@@ -186,9 +186,13 @@ public:
         return has_edge(edge.first, edge.second);
     }
 
-    [[maybe_unused]] bool add_edge(VertexID from,
-                                   VertexID to,
-                                   EdgeID edge_id) noexcept
+    // Add an edge to the adjacency matrix.
+    //
+    // On success, return the EdgeID we supplied.
+    // On failure, return the EdgeID of the already existing edge.
+    EdgeID add_edge(VertexID from,
+                    VertexID to,
+                    EdgeID edge_id) noexcept
     {
         size_t index = compute_index(from, to);
 
@@ -217,7 +221,7 @@ public:
                               + "] to be [EdgeID "
                               + std::to_string(edge_id.value)
                               + "]");
-            return false;
+            return adj_[index];
         }
 
         adj_[index] = edge_id;
@@ -261,11 +265,11 @@ public:
             out_deg_[from.value] += 1;
         }
 
-        return true;
+        return adj_[index];
     }
 
-    [[maybe_unused]] bool add_edge(std::pair<VertexID, VertexID> edge,
-                                   EdgeID edge_id) noexcept
+    [[maybe_unused]] EdgeID add_edge(std::pair<VertexID, VertexID> edge,
+                                     EdgeID edge_id) noexcept
     {
         return add_edge(edge.first, edge.second, edge_id);
     }

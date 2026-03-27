@@ -171,10 +171,10 @@ public:
     }
 
     //
-    // Iteration functions
+    // View functions
     //
 
-    // Iterate over all valid vertices
+    // View over all valid vertex IDs
     auto vertices() const
         requires (VertexMutable<Representation>)
     {
@@ -188,7 +188,7 @@ public:
             });
     }
 
-    // Iterate over all vertices
+    // View over all vertex IDs
     auto vertices() const
         requires (!VertexMutable<Representation>)
     {
@@ -429,8 +429,12 @@ public:
         return representation_.has_edge(from, to);
     }
 
+    // Add an edge to the graph.
+    //
+    // On success, return the new EdgeID as {new_id, true}
+    // On failure, return the old EdgeID as {old_id, false}
     template<typename... Args>
-    bool add_edge(VertexID from, VertexID to, Args&&... args)
+    std::pair<EdgeID, bool> add_edge(VertexID from, VertexID to, Args&&... args)
         requires ((std::is_same_v<EdgeData, std::monostate>
                   && sizeof...(Args) == 0) ||
                  (!std::is_same_v<EdgeData, std::monostate>
@@ -445,13 +449,13 @@ public:
             e_id = free_edges_.back();
             free_edges_.pop_back();
 
-            bool success = representation_.add_edge(from, to, e_id);
+            EdgeID rep_edge = representation_.add_edge(from, to, e_id);
 
-            // Undo bad modifications.
-            if (!success)
+            // If an edge already existed, stop now.
+            if (rep_edge != e_id)
             {
                 free_edges_.push_back(e_id);
-                return success;
+                return {rep_edge, false};
             }
 
             if constexpr (!std::is_same_v<EdgeData, std::monostate>)
@@ -483,10 +487,10 @@ public:
             (edges_.from).push_back(from);
             (edges_.to).push_back(to);
 
-            bool success = representation_.add_edge(from, to, e_id);
+            EdgeID rep_edge = representation_.add_edge(from, to, e_id);
 
-            // Undo invalid modifications.
-            if (!success)
+            // If an edge already existed, stop now.
+            if (rep_edge != e_id)
             {
                 if constexpr (!std::is_same_v<EdgeData, std::monostate>)
                 {
@@ -495,11 +499,11 @@ public:
 
                 (edges_.from).pop_back();
                 (edges_.to).pop_back();
-                return success;
+                return {rep_edge, false};
             }
         }
 
-        return true;
+        return {e_id, true};
     }
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
@@ -565,7 +569,8 @@ public:
     }
 
     template<typename... Args>
-    bool add_edge(std::pair<VertexID, VertexID> edge, Args&&... args)
+    std::pair<EdgeID, bool> add_edge(std::pair<VertexID, VertexID> edge,
+                                     Args&&... args)
         requires ((std::is_same_v<EdgeData, std::monostate>
                   && sizeof...(Args) == 0) ||
                  (!std::is_same_v<EdgeData, std::monostate>
@@ -589,6 +594,7 @@ public:
     }
 
     // Remove edge using EdgeID
+    // TODO <chore>: re-write these sorts of calls to source, target
     bool remove_edge(EdgeID e_id)
         requires EdgeMutable<Representation>
     {
@@ -615,7 +621,7 @@ public:
 
     // For adding vertices
     template<typename... Args>
-    bool add_vertex(Args&&... args)
+    VertexID add_vertex(Args&&... args)
         requires ((std::is_same_v<VertexData, std::monostate>
                   && sizeof...(Args) == 0) ||
                  (!std::is_same_v<VertexData, std::monostate>
@@ -636,7 +642,7 @@ public:
             if (!success)
             {
                 free_vertices_.push_back(v_id);
-                return success;
+                return VertexID::empty;
             }
 
             if constexpr (!std::is_same_v<VertexData, std::monostate>)
@@ -672,11 +678,11 @@ public:
             {
                 (vertices_).pop_back();
 
-                return success;
+                return VertexID::empty;
             }
         }
 
-        return true;
+        return v_id;
     }
 
     // For removing vertices (lazy delete the VertexData instance).
@@ -816,6 +822,14 @@ public:
     {
         edges_.reserve(N);
     }
+
+    // TODO <feature>: We really need functions for compressing the
+    //                 edges_ and vertices_ members that the user can
+    //                 call to shrink the vectors, otherwise we might
+    //                 have a case where N slots are stored but M << N
+    //                 are actually alive, wasting space and time.
+    //
+    //                 perhaps garbage_collect() or compress() is a good name?
 
     //
     // Transformations
