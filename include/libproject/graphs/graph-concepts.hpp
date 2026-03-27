@@ -21,6 +21,10 @@ concept GraphRepresentation = requires(const T rep)
     { rep.vertex_count() } -> std::integral;
 };
 
+// Check if EdgeData or VertexData is monostate.
+template <typename T>
+concept HasData = !std::is_same_v<T, std::monostate>;
+
 // To ensure we can construct properly.
 template <typename T>
 concept PropertyGraphConstructible = GraphRepresentation<T>

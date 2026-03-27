@@ -8,13 +8,14 @@
 namespace libproject::graphs
 {
 
+
 template <typename EdgeData = std::monostate>
 struct EdgeInput
 {
     // Construct an EdgeInput from something like
     // {VertexID, VertexID}
     EdgeInput(VertexID f, VertexID t)
-        requires (std::is_same_v<EdgeData, std::monostate>)
+        requires (!HasData<EdgeData>)
     :from(f),
     to(t)
     {}
@@ -22,7 +23,7 @@ struct EdgeInput
     // Construct an EdgeInput from something like
     // {VertexID, VertexID}
     EdgeInput(VertexID f, VertexID t, EdgeData d)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+        requires (HasData<EdgeData>)
     :from(f),
     to(t),
     data(std::move(d))
@@ -33,6 +34,7 @@ struct EdgeInput
     //
     // Example: {{0, 1}, "edge value"}
     EdgeInput(std::pair<VertexID, VertexID> verts, EdgeData e)
+        requires (HasData<EdgeData>)
     :from(verts.first),
     to(verts.second),
     data(std::move(e))
@@ -42,7 +44,7 @@ struct EdgeInput
     // Construct an EdgeInput from something like
     // {VertexID, VertexID, EdgeData}
     EdgeInput(std::tuple<VertexID, VertexID, EdgeData> edge)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+        requires (HasData<EdgeData>)
     :from(std::get<0>(edge)),
     to(std::get<1>(edge)),
     data(std::get<2>(edge))
@@ -70,6 +72,7 @@ public:
     VertexID to;
 };
 
+
 // TODO: debug mode asserts
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
@@ -86,8 +89,11 @@ public:
 
 public:
     static constexpr bool is_directed = Representation::is_directed;
-    // TODO: use this instead of constantly writing the concept out.
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
+
+    // Check if EdgeData or VertexData is std::monostate
+    static constexpr bool has_edge_data = HasData<EdgeData>;
+    static constexpr bool has_vertex_data = HasData<VertexData>;
 
     // Empty graph constructor
     PropertyGraph(size_t num_vertices)
@@ -125,7 +131,7 @@ public:
 
         for (auto && item : edge_range)
         {
-            if constexpr (std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (!has_edge_data)
             {
                 const auto & [from, to] = item;
                 add_edge(from, to);
@@ -157,7 +163,7 @@ public:
         //       vertices out of the range size given.
         for (auto && item : edge_range)
         {
-            if constexpr (std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (!has_edge_data)
             {
                 const auto & [from, to] = item;
                 add_edge(from, to);
@@ -176,7 +182,7 @@ public:
 
     // View over all valid vertex IDs
     auto vertices() const
-        requires (VertexMutable<Representation>)
+        requires (vertices_mutable)
     {
         return std::views::iota(size_t(0),
                                 vertices_.size())
@@ -190,7 +196,7 @@ public:
 
     // View over all vertex IDs
     auto vertices() const
-        requires (!VertexMutable<Representation>)
+        requires (!vertices_mutable)
     {
         return std::views::iota(size_t(0),
                                 vertex_count())
@@ -388,26 +394,26 @@ public:
 
     // For returning a reference to the EdgeData of an edge.
     EdgeData & edge_data(EdgeID e_id) noexcept
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+        requires (has_edge_data)
     {
         return edges_.data[e_id.value];
     }
 
     // For copying the EdgeData of an edge.
     const EdgeData & edge_data(EdgeID e_id) const noexcept
-        requires (!std::is_same_v<EdgeData, std::monostate>)
+        requires (has_edge_data)
     {
         return edges_.data[e_id.value];
     }
 
     VertexData & vertex_data(VertexID v_id) noexcept
-        requires (!std::is_same_v<VertexData, std::monostate>)
+        requires (has_vertex_data)
     {
         return vertices_[v_id.value];
     }
 
     const VertexData & vertex_data(VertexID v_id) const noexcept
-        requires (!std::is_same_v<VertexData, std::monostate>)
+        requires (has_vertex_data)
     {
         return vertices_[v_id.value];
     }
@@ -435,11 +441,10 @@ public:
     // On failure, return the old EdgeID as {old_id, false}
     template<typename... Args>
     std::pair<EdgeID, bool> add_edge(VertexID from, VertexID to, Args&&... args)
-        requires ((std::is_same_v<EdgeData, std::monostate>
-                  && sizeof...(Args) == 0) ||
-                 (!std::is_same_v<EdgeData, std::monostate>
-                  && std::constructible_from<EdgeData, Args...>))
-                 && EdgeMutable<Representation>
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                  (has_edge_data && std::constructible_from<EdgeData, Args...>))
+                 &&
+                 EdgeMutable<Representation>
     {
         EdgeID e_id;
 
@@ -458,7 +463,7 @@ public:
                 return {rep_edge, false};
             }
 
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 edges_.data[e_id.value] = EdgeData{std::forward<Args>(args)...};
             }
@@ -479,7 +484,7 @@ public:
             //
             // TODO <feautre>: function the user can call to check that
             //                 each array is of equal size so they can be fixed.
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 (edges_.data).emplace_back(std::forward<Args>(args)...);
             }
@@ -492,7 +497,7 @@ public:
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
             {
-                if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+                if constexpr (has_edge_data)
                 {
                     (edges_.data).pop_back();
                 }
@@ -528,8 +533,7 @@ public:
 
     // Remove and return an edge's data. EdgeData must not be monostate.
     bool try_extract_edge(VertexID from, VertexID to, EdgeData & out)
-        requires (!std::is_same_v<EdgeData, std::monostate>
-                 && EdgeMutable<Representation>)
+        requires (has_edge_data && EdgeMutable<Representation>)
     {
         EdgeID res = representation_.remove_edge(from, to);
 
@@ -571,10 +575,8 @@ public:
     template<typename... Args>
     std::pair<EdgeID, bool> add_edge(std::pair<VertexID, VertexID> edge,
                                      Args&&... args)
-        requires ((std::is_same_v<EdgeData, std::monostate>
-                  && sizeof...(Args) == 0) ||
-                 (!std::is_same_v<EdgeData, std::monostate>
-                  && std::constructible_from<EdgeData, Args...>))
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                  (has_edge_data && std::constructible_from<EdgeData, Args...>))
                  && EdgeMutable<Representation>
     {
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
@@ -587,8 +589,7 @@ public:
     }
 
     bool try_extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
-                 && EdgeMutable<Representation>
+        requires (has_edge_data && EdgeMutable<Representation>)
     {
         return try_extract_edge(edge.first, edge.second, out);
     }
@@ -603,8 +604,7 @@ public:
 
     // Extract edge using EdgeID
     bool try_extract_edge(EdgeID e_id, EdgeData & out)
-        requires (!std::is_same_v<EdgeData, std::monostate>)
-                 && EdgeMutable<Representation>
+        requires (has_edge_data && EdgeMutable<Representation>)
     {
         return try_extract_edge(edges_.from[e_id.value],
                                 edges_.to[e_id.value],
@@ -622,11 +622,10 @@ public:
     // For adding vertices
     template<typename... Args>
     VertexID add_vertex(Args&&... args)
-        requires ((std::is_same_v<VertexData, std::monostate>
-                  && sizeof...(Args) == 0) ||
-                 (!std::is_same_v<VertexData, std::monostate>
-                  && std::constructible_from<VertexData, Args...>))
-                 && VertexMutable<Representation>
+        requires ((!has_vertex_data && sizeof...(Args) == 0) ||
+                  (has_vertex_data
+                   && std::constructible_from<VertexData, Args...>))
+                 && vertices_mutable
     {
         VertexID v_id;
 
@@ -645,7 +644,7 @@ public:
                 return VertexID::empty;
             }
 
-            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            if constexpr (has_vertex_data)
             {
                 vertices_[v_id.value] = VertexData{std::forward<Args>(args)...};
             }
@@ -661,7 +660,7 @@ public:
         {
             v_id = vertices_.size();
 
-            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            if constexpr (has_vertex_data)
             {
                 (vertices_).emplace_back(std::forward<Args>(args)...);
             }
@@ -687,22 +686,15 @@ public:
 
     // For removing vertices (lazy delete the VertexData instance).
     void remove_vertex(VertexID v_id)
-        requires VertexMutable<Representation>
+        requires vertices_mutable
     {
         representation_.remove_vertex(v_id);
-
-        // Set vertex as dead.
-        if constexpr (VertexMutable<Representation>)
-        {
-            vertices_.set_dead(v_id.value);
-        }
-
+        vertices_.set_dead(v_id.value);
         free_vertices_.push_back(v_id);
     }
 
     void extract_vertex(VertexID v_id, VertexData & out)
-        requires VertexMutable<Representation>
-                 && (!std::is_same_v<VertexData, std::monostate>)
+        requires (vertices_mutable && has_vertex_data)
     {
         representation_.remove_vertex(v_id);
 
@@ -710,11 +702,7 @@ public:
         out = std::move(vertices_[v_id.value]);
         vertices_[v_id.value] = {};
 
-        // Set vertex as dead.
-        if constexpr (VertexMutable<Representation>)
-        {
-            vertices_.set_dead(v_id.value);
-        }
+        vertices_.set_dead(v_id.value);
 
         free_vertices_.push_back(v_id);
     }
@@ -725,7 +713,7 @@ public:
 
     size_t vertex_count() const noexcept
     {
-        if constexpr (VertexMutable<Representation>)
+        if constexpr (vertices_mutable)
         {
             return (vertices_.size() - free_vertices_.size());
         }
@@ -860,7 +848,7 @@ private:
             from.clear();
             to.clear();
 
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 data.clear();
             }
@@ -871,7 +859,7 @@ private:
             from.resize(N);
             to.resize(N);
 
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 data.resize(N);
             }
@@ -882,7 +870,7 @@ private:
             from.reserve(N);
             to.reserve(N);
 
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 data.reserve(N);
             }
@@ -891,7 +879,7 @@ private:
         // TODO: debug build asserts that these all line up
         size_t size() const noexcept
         {
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 return data.size();
             }
@@ -908,7 +896,7 @@ private:
             result.from = to;
             result.to = from;
 
-            if constexpr (!std::is_same_v<EdgeData, std::monostate>)
+            if constexpr (has_edge_data)
             {
                 result.data = data;
             }
@@ -921,9 +909,9 @@ private:
 
         // Define "std::vector<EdgeData> data" if not monostate.
         std::conditional_t<
-            std::is_same_v<EdgeData, std::monostate>,
-            std::monostate,
-            std::vector<EdgeData>> data;
+            has_edge_data,
+            std::vector<EdgeData>,
+            std::monostate> data;
     };
 
     struct VertexStorage
@@ -932,31 +920,31 @@ private:
         VertexStorage() = default;
 
         VertexStorage(size_t N)
-            requires (std::is_same_v<VertexData, std::monostate>)
+            requires (!has_vertex_data)
         :count_(N)
         {
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.resize(N, 1);
             }
         }
 
         VertexStorage(size_t N)
-            requires (!std::is_same_v<VertexData, std::monostate>)
+            requires (has_vertex_data)
         :data_(N)
         {
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.resize(N, 1);
             }
         }
 
         template <std::ranges::sized_range VertexRange>
-            requires (!std::is_same_v<VertexData, std::monostate>)
+            requires (has_vertex_data)
         VertexStorage(VertexRange v_range)
         :data_(std::ranges::begin(v_range), std::ranges::end(v_range))
         {
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.resize(std::ranges::size(v_range), 1);
             }
@@ -964,24 +952,24 @@ private:
 
         size_t size() const noexcept
         {
-            if constexpr (std::is_same_v<VertexData, std::monostate>)
+            if constexpr (has_vertex_data)
             {
-                return count_;
+                return data_.size();
             }
             else
             {
-                return data_.size();
+                return count_;
             }
         }
 
         void reserve(size_t N)
         {
-            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            if constexpr (has_vertex_data)
             {
                 data_.reserve(N);
             }
 
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.reserve(N);
             }
@@ -989,7 +977,7 @@ private:
 
         void clear() noexcept
         {
-            if constexpr (!std::is_same_v<VertexData, std::monostate>)
+            if constexpr (has_vertex_data)
             {
                 data_.clear();
             }
@@ -998,7 +986,7 @@ private:
                 count_ = 0;
             }
 
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.clear();
             }
@@ -1006,16 +994,16 @@ private:
 
         void pop_back()
         {
-            if constexpr (std::is_same_v<VertexData, std::monostate>)
-            {
-                count_--;
-            }
-            else
+            if constexpr (has_vertex_data)
             {
                 data_.pop_back();
             }
+            else
+            {
+                count_--;
+            }
 
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.pop_back();
             }
@@ -1023,16 +1011,16 @@ private:
 
         void emplace_back()
         {
-            if constexpr (std::is_same_v<VertexData, std::monostate>)
-            {
-                count_++;
-            }
-            else
+            if constexpr (has_vertex_data)
             {
                 data_.emplace_back();
             }
+            else
+            {
+                count_++;
+            }
 
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.emplace_back(1);
             }
@@ -1040,56 +1028,56 @@ private:
 
         template <typename... Args>
         void emplace_back(Args&&... args)
-            requires (!std::is_same_v<VertexData, std::monostate>
+            requires (has_vertex_data
                       && std::constructible_from<VertexData, Args...>)
         {
             data_.emplace_back(std::forward<Args>(args)...);
 
-            if constexpr (VertexMutable<Representation>)
+            if constexpr (vertices_mutable)
             {
                 alive_vertices_.emplace_back(1);
             }
         }
 
         VertexData & operator[](size_t i)
-            requires (!std::is_same_v<VertexData, std::monostate>)
+            requires (has_vertex_data)
         {
             return data_[i];
         }
 
         bool alive(VertexID v_id) const
-            requires (VertexMutable<Representation>)
+            requires (vertices_mutable)
         {
             return alive_vertices_[v_id.value];
         }
 
         void set_alive(VertexID v_id)
-            requires (VertexMutable<Representation>)
+            requires (vertices_mutable)
         {
             alive_vertices_[v_id.value] = 1;
         }
 
         void set_dead(VertexID v_id)
-            requires (VertexMutable<Representation>)
+            requires (vertices_mutable)
         {
             alive_vertices_[v_id.value] = 0;
         }
 
     private:
         std::conditional_t<
-            std::is_same_v<VertexData, std::monostate>,
-            std::monostate,
-            std::vector<VertexData>> data_;
+            has_vertex_data,
+            std::vector<VertexData>,
+            std::monostate> data_;
 
         std::conditional_t<
-            !VertexMutable<Representation>,
-            std::monostate,
-            std::vector<uint8_t>> alive_vertices_;
+            vertices_mutable,
+            std::vector<uint8_t>,
+            std::monostate> alive_vertices_;
 
         std::conditional_t<
-            std::is_same_v<VertexData, std::monostate>,
-            std::size_t,
-            std::monostate> count_;
+            has_vertex_data,
+            std::monostate,
+            std::size_t> count_;
     };
 
     // Internal constructor for returning a copy of the graph.
@@ -1112,7 +1100,7 @@ private:
 
     // index values into vertices_ where we have previously deleted an element.
     std::conditional_t<
-            !VertexMutable<Representation>,
+            !vertices_mutable,
             std::monostate,
             std::vector<VertexID>> free_vertices_;
 
