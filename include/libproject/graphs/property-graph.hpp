@@ -718,10 +718,15 @@ public:
             }
             else
             {
-                // Really just an increment to our size_t (data is monostate)
-                vertices_.emplace_back();
+                // Increment to our size_t (data is monostate)
+                vertices_.increment_counter();
             }
 
+            // Set vertex as alive.
+            if constexpr (vertices_mutable)
+            {
+                vertices_.set_alive(v_id);
+            }
         }
         // We need a new slot otherwise.
         else
@@ -856,10 +861,17 @@ public:
         return representation_.has_self_loop(v);
     }
 
-    // TODO: reconsider when we add vertex mutators
     bool valid_vertex(VertexID v) const
         noexcept(noexcept(representation_.is_valid_vertex(v)))
     {
+        // If vertices are able to be mutated, we must validate that
+        // the vertex is alive.
+        if constexpr (vertices_mutable)
+        {
+            return (representation_.valid_vertex(v)
+                    && vertices_.alive(v));
+        }
+
         return representation_.valid_vertex(v);
     }
 
@@ -1091,6 +1103,12 @@ private:
             {
                 alive_vertices_.emplace_back(1);
             }
+        }
+
+        void increment_counter()
+            requires (vertices_mutable && !has_vertex_data)
+        {
+            count_++;
         }
 
         template <typename... Args>
