@@ -475,6 +475,17 @@ public:
     //                      takes a list (view?) of edges to check from
     //                      the graph container's EdgeArrays to/from vectors.
 
+    // TODO <optimization>: How we compute the transpose should depend on
+    //                      the out degree of this node. If out_deg_ is
+    //                      much smaller than vertex_count_ (some percentage)
+    //                      then we should break after out_deg_ elements.
+    //
+    //                      At the same time, this adds branching to our loop
+    //                      which means it is harder for the compiler to
+    //                      do loop unrolling or autovectorization. So, we
+    //                      should really measure at what percentage we
+    //                      want to do early stopping vs just doing a
+    //                      simple vectorized loop over all values.
     [[nodiscard]] AdjacencyMatrix compute_transpose() const
     {
         if constexpr (Directed)
@@ -485,8 +496,6 @@ public:
             // Go over each edge (v, u) and insert (u, v)
             for (size_t v = 0; v < vertex_count_; v++)
             {
-                // TODO <optimization>: we could stop early when we
-                //                      have found out_deg(v) elements.
                 for (size_t u = 0; u < vertex_count_; u++)
                 {
                     EdgeID e_id = find_edge(VertexID(v), VertexID(u));

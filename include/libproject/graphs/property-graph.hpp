@@ -76,6 +76,8 @@ public:
 // TODO <optimization>: reconsider noexcept for certain functions
 //                      that allocate so users can catch bad alloc
 //                      if they want.
+
+// TODO <feature>: standardize assert debug strings for user clarity
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
           typename VertexData = std::monostate>
@@ -1149,6 +1151,32 @@ public:
     // Utility functions
     //
 
+    // Return const or non-const VertexData based on lvalue
+    VertexData & operator[](VertexID v)
+        requires (has_vertex_data)
+    {
+        return vertex_data(v);
+    }
+
+    const VertexData & operator[](VertexID v) const
+        requires (has_vertex_data)
+    {
+        return vertex_data(v);
+    }
+
+    // Return const or non-const EdgeData based on lvalue
+    EdgeData & operator[](EdgeID e)
+        requires (has_edge_data)
+    {
+        return edge_data(e);
+    }
+
+    const EdgeData & operator[](EdgeID e) const
+        requires (has_edge_data)
+    {
+        return edge_data(e);
+    }
+
     void clear()
         noexcept(noexcept(representation_.clear()))
         requires Clearable<Representation>
@@ -1170,6 +1198,12 @@ public:
         // Also clear the stale data in PropertyGraph.
         edges_.clear();
         free_edges_.clear();
+    }
+
+    void clear_vertices()
+        noexcept(noexcept(vertices_.clear()))
+    {
+        vertices_.clear();
     }
 
     bool has_self_loops() const
@@ -1504,6 +1538,20 @@ private:
         }
 
         VertexData & operator[](size_t i)
+            requires (has_vertex_data)
+        {
+            libproject_assert(i < data_.size(),
+                              "PropertyGraph::VertexStorage::operator[]"
+                              " called on index "
+                              + std::to_string(i)
+                              + " but data_ array has size "
+                              + std::to_string(data_.size())
+                              + " (likely a library error)");
+
+            return data_[i];
+        }
+
+        const VertexData & operator[](size_t i) const
             requires (has_vertex_data)
         {
             libproject_assert(i < data_.size(),

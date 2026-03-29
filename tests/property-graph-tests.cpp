@@ -1929,3 +1929,94 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
 
     }
 }
+
+TYPED_TEST(PropertyGraphTest, Accessors)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::make_edges();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    const Graph cgraph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.vertex_count(), 7);
+
+    int N = 100;
+
+    // non-const graphs
+    {
+        for (const auto & v : graph.vertices())
+        {
+            if constexpr (Graph::has_vertex_data)
+            {
+                VertexData & data = graph[v];
+                ASSERT_EQ(data, 0);
+                data = N;
+
+                const VertexData & cdata = graph[v];
+                ASSERT_EQ(cdata, N);
+            }
+        }
+
+        for (const auto & e : graph.edge_ids())
+        {
+            if constexpr (Graph::has_edge_data)
+            {
+                EdgeData & data = graph[e];
+                ASSERT_EQ(data, 0);
+                data = N;
+
+                const EdgeData & cdata = graph[e];
+                ASSERT_EQ(cdata, N);
+            }
+        }
+    }
+
+    // const graphs
+    {
+        for (const auto & v : cgraph.vertices())
+        {
+            if constexpr (Graph::has_vertex_data)
+            {
+                const VertexData & cdata = cgraph[v];
+                ASSERT_EQ(cdata, 0);
+            }
+        }
+
+        for (const auto & e : cgraph.edge_ids())
+        {
+            if constexpr (Graph::has_edge_data)
+            {
+                const EdgeData & cdata = cgraph[e];
+                ASSERT_EQ(cdata, 0);
+            }
+        }
+    }
+
+}
