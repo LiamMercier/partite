@@ -1728,7 +1728,7 @@ TYPED_TEST(PropertyGraphTest, Clear)
 
     for (const auto & e : edges)
     {
-        bool exists = graph.has_edge(e.from, e.to);
+        bool exists = graph.has_edge_safe(e.from, e.to);
 
         if (exists)
         {
@@ -1821,7 +1821,6 @@ TYPED_TEST(PropertyGraphTest, VertexModification)
             for (const auto & v : graph.vertices())
             {
                 const VertexData & data = graph.vertex_data(v);
-                std::cout << data << "\n";
                 counts[data] += 1;
             }
 

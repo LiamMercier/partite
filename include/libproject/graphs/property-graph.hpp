@@ -2,6 +2,7 @@
 
 #include <variant>
 
+#include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
 
@@ -72,11 +73,9 @@ public:
     VertexID to;
 };
 
-
-// TODO: debug mode asserts
-//
-// TODO: reconsider noexcept for certain functions that allocate
-//       so users can catch bad alloc if they want.
+// TODO <optimization>: reconsider noexcept for certain functions
+//                      that allocate so users can catch bad alloc
+//                      if they want.
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
           typename VertexData = std::monostate>
@@ -138,11 +137,35 @@ public:
             if constexpr (!has_edge_data)
             {
                 const auto & [from, to] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph range based "
+                                  "constructor tried to add edge ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + ") but vertices_ holds "
+                                  + std::to_string(vertices_.size())
+                                  + " vertices");
+
                 add_edge(from, to);
             }
             else
             {
                 auto && [from, to, data] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph range based "
+                                  "constructor tried to add edge ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + ") but vertices_ holds "
+                                  + std::to_string(vertices_.size())
+                                  + " vertices");
+
                 add_edge(from, to, std::forward<decltype(data)>(data));
             }
         }
@@ -163,18 +186,40 @@ public:
             edges_.reserve(expected_edges);
         }
 
-        // TODO: write a debug build assert that edges do not reference
-        //       vertices out of the range size given.
         for (auto && item : edge_range)
         {
             if constexpr (!has_edge_data)
             {
                 const auto & [from, to] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph range based "
+                                  "constructor tried to add edge ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + ") but vertices_ holds "
+                                  + std::to_string(vertices_.size())
+                                  + " vertices");
+
                 add_edge(from, to);
             }
             else
             {
                 auto && [from, to, data] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph range based "
+                                  "constructor tried to add edge ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + ") but vertices_ holds "
+                                  + std::to_string(vertices_.size())
+                                  + " vertices");
+
                 add_edge(from, to, std::forward<decltype(data)>(data));
             }
         }
@@ -235,6 +280,11 @@ public:
         noexcept(noexcept(representation_.neighbors(v)))
         requires (!is_directed) && NeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::neighbors "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         // For an undirected graph, we want all edges with
         // v as an element.
         //
@@ -253,6 +303,11 @@ public:
         noexcept(noexcept(out_neighbors(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::neighbors "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return out_neighbors(v);
     }
 
@@ -261,6 +316,11 @@ public:
         noexcept(noexcept(representation_.out_neighbors(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::out_neighbors "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.out_neighbors(v)
                    | std::views::transform([this](EdgeID id){
                        return target(id);
@@ -272,6 +332,11 @@ public:
         noexcept(noexcept(representation_.in_neighbors(v)))
         requires (is_directed) && InNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::in_neighbors "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.in_neighbors(v)
                    | std::views::transform([this](EdgeID id){
                        return source(id);
@@ -288,6 +353,11 @@ public:
         )
         requires (!is_directed) && NeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::incident_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         // For an undirected graph, we want all edges with
         // v as an element.
         //
@@ -306,6 +376,11 @@ public:
         noexcept(noexcept(out_edges(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::incident_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return out_edges(v);
     }
 
@@ -319,6 +394,11 @@ public:
         )
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::out_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.out_neighbors(v)
                | std::views::transform([this](EdgeID id){
                     return EdgeView{source(id),
@@ -337,6 +417,11 @@ public:
         )
         requires (is_directed) && InNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::in_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.in_neighbors(v)
                | std::views::transform([this](EdgeID id){
                     return EdgeView{source(id),
@@ -350,6 +435,11 @@ public:
         noexcept(noexcept(representation_.neighbors(v)))
         requires(!is_directed) && NeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::incident_edge_ids "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.neighbors(v);
     }
 
@@ -358,6 +448,11 @@ public:
         noexcept(noexcept(out_edge_ids(v)))
         requires(is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::incident_edge_ids "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         // For a digraph, we want the outgoing edges.
         return out_edge_ids(v);
     }
@@ -367,6 +462,11 @@ public:
         noexcept(noexcept(representation_.neighbors(v)))
         requires (is_directed) && OutNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::out_edge_ids "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.out_neighbors(v);
     }
 
@@ -375,6 +475,11 @@ public:
         noexcept(noexcept(representation_.in_neighbors(v)))
         requires (is_directed) && InNeighborsQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::in_edge_ids "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
         return representation_.in_neighbors(v);
     }
 
@@ -387,12 +492,38 @@ public:
         noexcept(noexcept(representation_.find_edge(from, to)))
         requires EdgeQueryable<Representation>
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::find_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::find_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         return representation_.find_edge(from, to);
     }
 
     // Given an edge ID, find the vertices such that (u, v) has this ID.
     std::pair<VertexID, VertexID> endpoints(EdgeID e_id) const noexcept
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::endpoints "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
+        libproject_assert(valid_vertex(source(e_id))
+                          && valid_vertex(target(e_id)),
+                          "PropertyGraph::endpoints "
+                          "returned invalid VertexID on valid EdgeID {"
+                          + std::to_string(source(e_id).value)
+                          + " "
+                          + std::to_string(target(e_id).value)
+                          + "}");
+
         return {source(e_id), target(e_id)};
     }
 
@@ -400,6 +531,11 @@ public:
     EdgeData & edge_data(EdgeID e_id) noexcept
         requires (has_edge_data)
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::edge_data "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
         return edges_.data[e_id.value];
     }
 
@@ -407,28 +543,63 @@ public:
     const EdgeData & edge_data(EdgeID e_id) const noexcept
         requires (has_edge_data)
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::edge_data "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
         return edges_.data[e_id.value];
     }
 
     VertexData & vertex_data(VertexID v_id) noexcept
         requires (has_vertex_data)
     {
+        libproject_assert(valid_vertex(v_id),
+                          "PropertyGraph::vertex_data "
+                          "called on invalid VertexID "
+                          + std::to_string(v_id.value));
+
         return vertices_[v_id.value];
     }
 
     const VertexData & vertex_data(VertexID v_id) const noexcept
         requires (has_vertex_data)
     {
+        libproject_assert(valid_vertex(v_id),
+                          "PropertyGraph::vertex_data "
+                          "called on invalid VertexID "
+                          + std::to_string(v_id.value));
+
         return vertices_[v_id.value];
     }
 
     VertexID source(EdgeID e_id) const noexcept
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::source "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
+        libproject_assert(valid_vertex(edges_.from[e_id.value]),
+                          "PropertyGraph::source "
+                          "returning VertexID::empty on valid EdgeID! "
+                          + std::to_string(edges_.from[e_id.value].value));
+
         return edges_.from[e_id.value];
     }
 
     VertexID target(EdgeID e_id) const noexcept
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::target "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
+        libproject_assert(valid_vertex(edges_.to[e_id.value]),
+                          "PropertyGraph::target "
+                          "returning VertexID::empty on valid EdgeID! "
+                          + std::to_string(edges_.to[e_id.value].value));
+
         return edges_.to[e_id.value];
     }
 
@@ -436,6 +607,18 @@ public:
         noexcept(noexcept(representation_.has_edge(from, to)))
         requires EdgeQueryable<Representation>
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::has_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::has_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         return representation_.has_edge(from, to);
     }
 
@@ -449,6 +632,18 @@ public:
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
                  && edges_mutable
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::add_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::add_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         EdgeID e_id;
 
         // If we have deleted an edge in the past, use the old slot.
@@ -465,6 +660,13 @@ public:
                 free_edges_.push_back(e_id);
                 return {rep_edge, false};
             }
+
+            libproject_assert(valid_edge(e_id),
+                              "PropertyGraph::add_edge "
+                              "tried to modify edges_ through EdgeID "
+                              + std::to_string(e_id.value)
+                              + " which was invalid "
+                              "(likely a library error)");
 
             if constexpr (has_edge_data)
             {
@@ -500,6 +702,13 @@ public:
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
             {
+                libproject_assert(valid_edge(e_id),
+                                  "PropertyGraph::add_edge "
+                                  "tried to modify edges_ through EdgeID "
+                                  + std::to_string(e_id.value)
+                                  + " which was invalid "
+                                  "(likely a library error)");
+
                 if constexpr (has_edge_data)
                 {
                     (edges_.data).pop_back();
@@ -518,12 +727,29 @@ public:
     bool remove_edge(VertexID from, VertexID to)
         requires edges_mutable
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::remove_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::remove_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         EdgeID res = representation_.remove_edge(from, to);
 
         if (res == EdgeID::empty)
         {
             return false;
         }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::remove_edge "
+                          "tried to save/access empty edge "
+                          "(likely a library error)");
 
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
@@ -538,12 +764,29 @@ public:
     bool erase_edge(VertexID from, VertexID to)
         requires edges_mutable
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::erase_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::erase_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         EdgeID res = representation_.remove_edge(from, to);
 
         if (res == EdgeID::empty)
         {
             return false;
         }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::erase_edge "
+                          "tried to save/access empty edge "
+                          "(likely a library error)");
 
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
@@ -565,12 +808,29 @@ public:
     bool extract_edge(VertexID from, VertexID to, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::extract_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::extract_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         EdgeID res = representation_.remove_edge(from, to);
 
         if (res == EdgeID::empty)
         {
             return false;
         }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::extract_edge "
+                          "tried to save/access empty edge "
+                          "(likely a library error)");
 
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
@@ -587,12 +847,29 @@ public:
     std::optional<EdgeData> extract_edge(VertexID from, VertexID to)
         requires (has_edge_data && edges_mutable)
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::extract_edge "
+                          "called on VertexID from: "
+                          + std::to_string(from.value)
+                          + " which was invalid");
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::extract_edge "
+                          "called on VertexID to: "
+                          + std::to_string(to.value)
+                          + " which was invalid");
+
         EdgeID res = representation_.remove_edge(from, to);
 
         if (res == EdgeID::empty)
         {
             return {};
         }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::extract_edge "
+                          "tried to save/access empty edge "
+                          "(likely a library error)");
 
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
@@ -659,12 +936,24 @@ public:
     bool remove_edge(EdgeID e_id)
         requires edges_mutable
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::remove_edge "
+                          "called on EdgeID "
+                          + std::to_string(e_id.value)
+                          + " out of range");
+
         return remove_edge(source(e_id), target(e_id));
     }
 
     bool erase_edge(EdgeID e_id)
         requires edges_mutable
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::erase_edge "
+                          "called on EdgeID "
+                          + std::to_string(e_id.value)
+                          + " out of range");
+
         return erase_edge(source(e_id), target(e_id));
     }
 
@@ -672,16 +961,26 @@ public:
     bool extract_edge(EdgeID e_id, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::extract_edge "
+                          "called on EdgeID "
+                          + std::to_string(e_id.value)
+                          + " out of range");
+
         return extract_edge(source(e_id), target(e_id), out);
     }
 
     std::optional<EdgeData> extract_edge(EdgeID e_id)
         requires (has_edge_data && edges_mutable)
     {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::extract_edge "
+                          "called on EdgeID "
+                          + std::to_string(e_id.value)
+                          + " out of range");
+
         return extract_edge(source(e_id), target(e_id));
     }
-
-    // TODO: safe variants for removal
 
     //
     // Vertex opertions
@@ -761,6 +1060,11 @@ public:
     void remove_vertex(VertexID v_id)
         requires vertices_mutable
     {
+        libproject_assert(valid_vertex(v_id),
+                          "PropertyGraph::remove_vertex "
+                          "called on invalid VertexID "
+                          + std::to_string(v_id.value));
+
         representation_.remove_vertex(v_id);
         vertices_.set_dead(v_id.value);
         free_vertices_.push_back(v_id);
@@ -769,10 +1073,15 @@ public:
     void extract_vertex(VertexID v_id, VertexData & out)
         requires (vertices_mutable && has_vertex_data)
     {
-        representation_.remove_vertex(v_id);
+        libproject_assert(valid_vertex(v_id),
+                          "PropertyGraph::extract_vertex "
+                          "called on invalid VertexID "
+                          + std::to_string(v_id.value));
 
         // Overwrite the vertex data.
         out = std::move(vertices_[v_id.value]);
+
+        representation_.remove_vertex(v_id);
 
         vertices_.set_dead(v_id.value);
 
@@ -804,6 +1113,11 @@ public:
         noexcept(noexcept(representation_.degree(v)))
         requires DegreeQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::degree "
+                          "called on invalid VertexID "
+                          + std::to_string(v.value));
+
         return representation_.degree(v);
     }
 
@@ -811,6 +1125,11 @@ public:
         noexcept(noexcept(representation_.in_degree(v)))
         requires (is_directed) && InDegreeQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::in_degree "
+                          "called on invalid VertexID "
+                          + std::to_string(v.value));
+
         return representation_.in_degree(v);
     }
 
@@ -818,6 +1137,11 @@ public:
         noexcept(noexcept(representation_.out_degree(v)))
         requires (is_directed) && OutDegreeQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::out_degree "
+                          "called on invalid VertexID "
+                          + std::to_string(v.value));
+
         return representation_.out_degree(v);
     }
 
@@ -858,24 +1182,28 @@ public:
         noexcept(noexcept(representation_.has_self_loop(v)))
         requires SelfLoopQueryable<Representation>
     {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::has_self_loop "
+                          "called on invalid VertexID "
+                          + std::to_string(v.value));
+
         return representation_.has_self_loop(v);
     }
 
     bool valid_vertex(VertexID v) const
-        noexcept(noexcept(representation_.is_valid_vertex(v)))
+        noexcept(noexcept(representation_.valid_vertex(v)))
     {
         // If vertices are able to be mutated, we must validate that
         // the vertex is alive.
         if constexpr (vertices_mutable)
         {
-            return (representation_.valid_vertex(v)
-                    && vertices_.alive(v));
+            return representation_.valid_vertex(v) && vertices_.alive(v);
         }
 
         return representation_.valid_vertex(v);
     }
 
-    bool valid_edge_id(EdgeID e_id) const noexcept
+    bool valid_edge(EdgeID e_id) const noexcept
     {
         return (e_id < edges_.size());
     }
@@ -916,7 +1244,25 @@ public:
         };
     }
 
-    // TODO: transpose view
+    // TODO <feature>: transpose view
+
+    //
+    // Safe functions and wrappers
+    //
+
+    // TODO <feature>: safe variants for all relevant functions
+
+    bool has_edge_safe(VertexID from, VertexID to) const
+        noexcept(noexcept(has_edge(from, to)))
+        requires EdgeQueryable<Representation>
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return false;
+        }
+
+        return has_edge(from, to);
+    }
 
 private:
     // Internal structure-of-arrays storage.
@@ -955,15 +1301,38 @@ private:
             }
         }
 
-        // TODO: debug build asserts that these all line up
         size_t size() const noexcept
         {
             if constexpr (has_edge_data)
             {
+                libproject_assert(from.size() == to.size(),
+                                  "PropertyGraph::EdgeArrays::size "
+                                  "called but vectors from and to "
+                                  "differ in size! \n from size: "
+                                  + std::to_string(from.size())
+                                  + " to size: "
+                                  + std::to_string(to.size()));
+
+                libproject_assert(data.size() == from.size(),
+                                  "PropertyGraph::EdgeArrays::size "
+                                  "called but vectors from and data "
+                                  "differ in size! \n from size: "
+                                  + std::to_string(from.size())
+                                  + " data size: "
+                                  + std::to_string(data.size()));
+
                 return data.size();
             }
             else
             {
+                libproject_assert(from.size() == to.size(),
+                                  "PropertyGraph::EdgeArrays::size "
+                                  "called but vectors from and to "
+                                  "differ in size! \n from size: "
+                                  + std::to_string(from.size())
+                                  + " to size: "
+                                  + std::to_string(to.size()));
+
                 return from.size();
             }
         }
@@ -1075,6 +1444,11 @@ private:
         {
             if constexpr (has_vertex_data)
             {
+                libproject_assert(data_.size() > 0,
+                                  "PropertyGraph::VertexStorage::pop_back "
+                                  "called but data_ vector is "
+                                  "empty (likely a library error)");
+
                 data_.pop_back();
             }
             else
@@ -1084,6 +1458,11 @@ private:
 
             if constexpr (vertices_mutable)
             {
+                libproject_assert(alive_vertices_.size() > 0,
+                                  "PropertyGraph::VertexStorage::pop_back "
+                                  "called but alive_vertices_ vector is "
+                                  "empty (likely a library error)");
+
                 alive_vertices_.pop_back();
             }
         }
@@ -1105,7 +1484,7 @@ private:
             }
         }
 
-        void increment_counter()
+        void increment_counter() noexcept
             requires (vertices_mutable && !has_vertex_data)
         {
             count_++;
@@ -1127,24 +1506,50 @@ private:
         VertexData & operator[](size_t i)
             requires (has_vertex_data)
         {
+            libproject_assert(i < data_.size(),
+                              "PropertyGraph::VertexStorage::operator[]"
+                              " called on index "
+                              + std::to_string(i)
+                              + " but data_ array has size "
+                              + std::to_string(data_.size())
+                              + " (likely a library error)");
+
             return data_[i];
         }
 
         bool alive(VertexID v_id) const
             requires (vertices_mutable)
         {
+            libproject_assert(v_id.value < alive_vertices_.size(),
+                              "PropertyGraph::alive called using VertexID "
+                              + std::to_string(v_id.value)
+                              + " but alive_vertices_ array has size "
+                              + std::to_string(alive_vertices_.size()));
+
             return alive_vertices_[v_id.value];
         }
 
         void set_alive(VertexID v_id)
             requires (vertices_mutable)
         {
+            libproject_assert(v_id.value < alive_vertices_.size(),
+                              "PropertyGraph::set_alive called using VertexID "
+                              + std::to_string(v_id.value)
+                              + " but alive_vertices_ array has size "
+                              + std::to_string(alive_vertices_.size()));
+
             alive_vertices_[v_id.value] = 1;
         }
 
         void set_dead(VertexID v_id)
             requires (vertices_mutable)
         {
+            libproject_assert(v_id.value < alive_vertices_.size(),
+                              "PropertyGraph::set_dead called using VertexID "
+                              + std::to_string(v_id.value)
+                              + " but alive_vertices_ array has size "
+                              + std::to_string(alive_vertices_.size()));
+
             alive_vertices_[v_id.value] = 0;
         }
 
