@@ -15,7 +15,7 @@ concept GraphRepresentation = requires(const T rep)
     //       vertex count to PropertyGraph
 
     // Ensure we have properly set Directed.
-    { T::is_directed } -> std::convertible_to<bool>;
+    { T::directed } -> std::convertible_to<bool>;
 
     // Ensure we can query the number of vertices
     { rep.vertex_count() } -> std::integral;

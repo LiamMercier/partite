@@ -461,10 +461,10 @@ TYPED_TEST(PropertyGraphTest, Neighbors)
 
     std::vector<std::unordered_set<size_t>> neighboring(7);
 
-    // Construct neighboring based on is_directed
+    // Construct neighboring based on directed
     for (const auto & e : edges)
     {
-        if (Graph::is_directed)
+        if (Graph::directed)
         {
             neighboring[e.from.value].insert(e.to.value);
         }
@@ -526,7 +526,7 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
         return;
     }
@@ -609,7 +609,7 @@ TYPED_TEST(PropertyGraphTest, InNeighbors)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
         return;
     }
@@ -717,7 +717,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdges)
     size_t indx = 0;
     for (const auto & e : edges)
     {
-        if (Graph::is_directed)
+        if (Graph::directed)
         {
             incident[e.from.value].insert(indx);
             indx++;
@@ -780,7 +780,7 @@ TYPED_TEST(PropertyGraphTest, OutEdges)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
         return;
     }
@@ -861,7 +861,7 @@ TYPED_TEST(PropertyGraphTest, InEdges)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
         return;
     }
@@ -968,7 +968,7 @@ TYPED_TEST(PropertyGraphTest, EdgeViews)
     size_t indx = 0;
     for (const auto & e : edges)
     {
-        if (Graph::is_directed)
+        if (Graph::directed)
         {
             edge_pairs[e.from.value].insert({e.from.value, e.to.value});
             edge_ids[e.from.value].insert(indx);
@@ -1067,7 +1067,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
 
     }
@@ -1186,7 +1186,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
     using VertexData = typename TestFixture::VertexData;
 
     // Skip undirected graphs.
-    if constexpr(!Graph::is_directed)
+    if constexpr(!Graph::directed)
     {
 
     }
@@ -1515,7 +1515,7 @@ TYPED_TEST(PropertyGraphTest, InOutDegrees)
     auto edges = TestFixture::make_edges();
 
     // Test is only defined for digraphs.
-    if constexpr (!Graph::is_directed)
+    if constexpr (!Graph::directed)
     {
         return;
     }

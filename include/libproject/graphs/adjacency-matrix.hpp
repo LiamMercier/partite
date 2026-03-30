@@ -15,13 +15,13 @@ template <bool Directed>
 class AdjacencyMatrix
 {
 public:
-    static constexpr bool is_directed = Directed;
+    static constexpr bool directed = Directed;
 
     // Create an AdjacencyMatrix with all zero edges.
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
     {
-        if constexpr (Directed)
+        if constexpr (directed)
         {
             adj_.resize(vertex_count_ * vertex_count_,
                         EdgeID::empty);
@@ -47,7 +47,7 @@ public:
 
     auto neighbors(VertexID v) const
     {
-        if constexpr(Directed)
+        if constexpr(directed)
         {
             return out_neighbors(v);
         }
@@ -86,7 +86,7 @@ public:
     }
 
     auto in_neighbors(VertexID v) const
-        requires (Directed)
+        requires (directed)
     {
         // For a digraph's incoming edges, we want all index values
         // corresponding to column v. We can use the transformation:
@@ -105,7 +105,7 @@ public:
     }
 
     auto out_neighbors(VertexID v) const
-            requires (Directed)
+            requires (directed)
     {
         // For a digraph's outgoing edges, we want all index values
         // corresponding to row v. We can use the transformation:
@@ -215,7 +215,7 @@ public:
 
         adj_[index] = edge_id;
 
-        if constexpr (!Directed)
+        if constexpr (!directed)
         {
             libproject_assert(from.value < deg_.size(),
                               "AdjacencyMatrix::add_edge: index "
@@ -288,7 +288,7 @@ public:
 
         adj_[index] = EdgeID::empty;
 
-        if constexpr (!Directed)
+        if constexpr (!directed)
         {
             libproject_assert(from.value < deg_.size(),
                               "AdjacencyMatrix::remove_edge: index "
@@ -346,7 +346,7 @@ public:
         }
 
         // Set degree to zero for all vertices.
-        if constexpr (!Directed)
+        if constexpr (!directed)
         {
             libproject_assert(deg_.size() == vertex_count_,
                               "AdjacencyMatrix::clear: degree list size "
@@ -390,7 +390,7 @@ public:
 
     size_t degree(VertexID v) const noexcept
     {
-        if constexpr (!Directed)
+        if constexpr (!directed)
         {
             return deg_[v.value];
         }
@@ -401,20 +401,20 @@ public:
     }
 
     size_t in_degree(VertexID v) const noexcept
-        requires (Directed)
+        requires (directed)
     {
         return in_deg_[v.value];
     }
 
     size_t out_degree(VertexID v) const noexcept
-        requires (Directed)
+        requires (directed)
     {
         return out_deg_[v.value];
     }
 
     bool has_self_loops() const noexcept
     {
-        if constexpr (Directed)
+        if constexpr (directed)
         {
             size_t index = 0;
 
@@ -488,7 +488,7 @@ public:
     //                      simple vectorized loop over all values.
     [[nodiscard]] AdjacencyMatrix compute_transpose() const
     {
-        if constexpr (Directed)
+        if constexpr (directed)
         {
             // Construct a new, empty matrix.
             AdjacencyMatrix rev(vertex_count_);
@@ -524,7 +524,7 @@ public:
 private:
     size_t compute_index(VertexID from, VertexID to) const noexcept
     {
-        if constexpr (Directed)
+        if constexpr (directed)
         {
             return from.value * vertex_count_ + to.value;
         }
@@ -705,7 +705,7 @@ private:
     AdjacencyMatrix(std::vector<EdgeID> adj,
                     size_t v_count,
                     std::vector<size_t> deg)
-        requires (!Directed)
+        requires (!directed)
     :adj_(std::move(adj)),
     vertex_count_(v_count),
     deg_(std::move(deg))
@@ -725,9 +725,9 @@ private:
     // Mapping from VertexID -> size_t (vertex degree)
     //
     // For undirected graphs, we only need one vector. Two for digraphs.
-    std::conditional_t<!Directed, std::vector<size_t>, std::monostate> deg_;
-    std::conditional_t<Directed, std::vector<size_t>, std::monostate> in_deg_;
-    std::conditional_t<Directed, std::vector<size_t>, std::monostate> out_deg_;
+    std::conditional_t<!directed, std::vector<size_t>, std::monostate> deg_;
+    std::conditional_t<directed, std::vector<size_t>, std::monostate> in_deg_;
+    std::conditional_t<directed, std::vector<size_t>, std::monostate> out_deg_;
 };
 
 };

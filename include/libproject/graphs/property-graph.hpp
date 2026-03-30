@@ -77,6 +77,16 @@ public:
 //                      that allocate so users can catch bad alloc
 //                      if they want.
 
+// TODO <optimization>: We can add a new template parameter
+//                      "bool mutable = true" so users can decide
+//                      to override the Representation being mutable
+//                      without forcing regular users to add a new
+//                      template argument to their declaration
+//
+//                      simply take && of vertices/edges mutable constexpr
+//
+//                      we can also use some enum MutabilityPolicy as well
+
 // TODO <feature>: standardize assert debug strings for user clarity
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
@@ -92,7 +102,7 @@ public:
     };
 
 public:
-    static constexpr bool is_directed = Representation::is_directed;
+    static constexpr bool directed = Representation::directed;
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
     static constexpr bool edges_mutable = EdgeMutable<Representation>;
 
@@ -280,7 +290,7 @@ public:
     // View over neighboring VertexID values.
     auto neighbors(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
-        requires (!is_directed) && NeighborsQueryable<Representation>
+        requires (!directed) && NeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::neighbors "
@@ -303,7 +313,7 @@ public:
     // View over neighboring VertexID values (outgoing in a digraph).
     auto neighbors(VertexID v) const
         noexcept(noexcept(out_neighbors(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+        requires (directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::neighbors "
@@ -316,7 +326,7 @@ public:
     // View over outgoing VertexID values for each edge (v, u).
     auto out_neighbors(VertexID v) const
         noexcept(noexcept(representation_.out_neighbors(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+        requires (directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_neighbors "
@@ -332,7 +342,7 @@ public:
     // View over incoming VertexID values for each edge (u, v).
     auto in_neighbors(VertexID v) const
         noexcept(noexcept(representation_.in_neighbors(v)))
-        requires (is_directed) && InNeighborsQueryable<Representation>
+        requires (directed) && InNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_neighbors "
@@ -353,7 +363,7 @@ public:
                               target(EdgeID{}),
                               EdgeID{}})
         )
-        requires (!is_directed) && NeighborsQueryable<Representation>
+        requires (!directed) && NeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges "
@@ -376,7 +386,7 @@ public:
     // View over edges as EdgeViews (outgoing for digraphs)
     auto incident_edges(VertexID v) const
         noexcept(noexcept(out_edges(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+        requires (directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges "
@@ -394,7 +404,7 @@ public:
                               target(EdgeID{}),
                               EdgeID{}})
         )
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+        requires (directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_edges "
@@ -417,7 +427,7 @@ public:
                               target(EdgeID{}),
                               EdgeID{}})
         )
-        requires (is_directed) && InNeighborsQueryable<Representation>
+        requires (directed) && InNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_edges "
@@ -435,7 +445,7 @@ public:
     // View over edges as EdgeIDs
     auto incident_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
-        requires(!is_directed) && NeighborsQueryable<Representation>
+        requires(!directed) && NeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids "
@@ -448,7 +458,7 @@ public:
     // View over edges as EdgeIDs (outgoing for digraphs)
     auto incident_edge_ids(VertexID v) const
         noexcept(noexcept(out_edge_ids(v)))
-        requires(is_directed) && OutNeighborsQueryable<Representation>
+        requires(directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids "
@@ -462,7 +472,7 @@ public:
     // View over outgoing edges as EdgeIDs
     auto out_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
-        requires (is_directed) && OutNeighborsQueryable<Representation>
+        requires (directed) && OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_edge_ids "
@@ -475,7 +485,7 @@ public:
     // View over incoming edges as EdgeIDs
     auto in_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.in_neighbors(v)))
-        requires (is_directed) && InNeighborsQueryable<Representation>
+        requires (directed) && InNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_edge_ids "
@@ -1125,7 +1135,7 @@ public:
 
     size_t in_degree(VertexID v) const
         noexcept(noexcept(representation_.in_degree(v)))
-        requires (is_directed) && InDegreeQueryable<Representation>
+        requires (directed) && InDegreeQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_degree "
@@ -1137,7 +1147,7 @@ public:
 
     size_t out_degree(VertexID v) const
         noexcept(noexcept(representation_.out_degree(v)))
-        requires (is_directed) && OutDegreeQueryable<Representation>
+        requires (directed) && OutDegreeQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_degree "
