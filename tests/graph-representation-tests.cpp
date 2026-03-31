@@ -2,6 +2,7 @@
 
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
+#include <libproject/graphs/adjacency-list.hpp>
 
 #include <unordered_map>
 #include <unordered_set>
@@ -734,4 +735,52 @@ TEST(GraphRepresentations, AdjacencyMatrixTranspose)
 
 }
 
+using TestRepresentations = ::testing::Types
+<
+    AdjacencyMatrix<true>,
+    AdjacencyMatrix<false>,
+    AdjacencyList<true>,
+    AdjacencyList<false>
+>;
 
+template <typename Rep>
+class RepresentationCore : public ::testing::Test
+{
+public:
+    using Representation = Rep;
+
+    static std::vector<std::pair<VertexID, VertexID>> get_edges()
+    {
+        return {
+            {0, 1}, {0, 2}, {0, 3},
+            {1, 4},
+            {2, 1}, {2, 3}, {2, 4},
+            {3, 4}
+        };
+    }
+};
+
+TYPED_TEST_SUITE(RepresentationCore, TestRepresentations);
+
+TYPED_TEST(RepresentationCore, Construction)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    Representation rep = [&]() -> Representation
+    {
+        return Representation(edges.size());
+    }();
+
+    size_t i = 0;
+    for (const auto & e : edges)
+    {
+        rep.add_edge(e.first, e.second, i);
+        i++;
+    }
+
+    for (const auto & e : edges)
+    {
+        ASSERT_TRUE(rep.has_edge(e.first, e.second));
+    }
+}

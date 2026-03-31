@@ -110,6 +110,9 @@ public:
     static constexpr bool has_edge_data = HasData<EdgeData>;
     static constexpr bool has_vertex_data = HasData<VertexData>;
 
+    // TODO: should we maybe have representations expose "is_multigraph"
+    //       and keep this as a generic container?
+
     // Empty graph constructor
     PropertyGraph(size_t num_vertices)
         requires PropertyGraphConstructible<Representation>
@@ -1307,6 +1310,8 @@ public:
 
         return has_edge(from, to);
     }
+
+    // TODO: add_edge_unique
 
 private:
     // Internal structure-of-arrays storage.
