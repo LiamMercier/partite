@@ -33,6 +33,36 @@ public:
     // Edge operations
     //
 
+    EdgeID find_edge(VertexID from, VertexID to) const noexcept
+        requires (directed)
+    {
+        // Look through the adjacency list for a pair with "to"
+        for (const auto & [v, e_id] : out_edges_[from.value])
+        {
+            if (v == to)
+            {
+                return e_id;
+            }
+        }
+
+        return EdgeID::empty;
+    }
+
+    EdgeID find_edge(VertexID from, VertexID to) const noexcept
+        requires (!directed)
+    {
+        // Look through the adjacency list for a pair with "to"
+        for (const auto & [v, e_id] : adj_[from.value])
+        {
+            if (v == to)
+            {
+                return e_id;
+            }
+        }
+
+        return EdgeID::empty;
+    }
+
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (directed)
     {
@@ -65,8 +95,8 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (directed)
     {
-        out_edges_[from.value].push_back({to, edge_id});
-        in_edges_[to.value].push_back({from, edge_id});
+        out_list(from).push_back({to, edge_id});
+        in_list(to).push_back({from, edge_id});
         return edge_id;
     }
 
@@ -74,26 +104,142 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (!directed)
     {
-        adj_[from.value].push_back({to, edge_id});
-        adj_[to.value].push_back({from, edge_id});
+        adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
         return edge_id;
     }
 
-    // TODO: implement when find_edge is implemented.
+    // Ensure the edge being added is unique
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (directed)
     {
-        out_edges_[from.value].push_back({to, edge_id});
-        in_edges_[to.value].push_back({from, edge_id});
+        // Return an edge if it already exists.
+        EdgeID lookup = find_edge(from, to);
+        if (lookup != EdgeID::empty)
+        {
+            return lookup;
+        }
+
+        out_list(from).push_back({to, edge_id});
+        in_list(to).push_back({from, edge_id});
         return edge_id;
     }
 
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (!directed)
     {
-        adj_[from.value].push_back({to, edge_id});
-        adj_[to.value].push_back({from, edge_id});
+        // Return an edge if it already exists.
+        EdgeID lookup = find_edge(from, to);
+        if (lookup != EdgeID::empty)
+        {
+            return lookup;
+        }
+
+        adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
         return edge_id;
+    }
+
+    // For a digraph we find "to" in out_edges_[from]
+    // and find "from" in in_edges_[to]
+    EdgeID remove_edge(VertexID from, VertexID to) noexcept
+        requires (directed)
+    {
+        EdgeID e_id = EdgeID::empty;
+        auto & out_edges = out_list(from);
+
+        for (size_t i = 0; i < out_edges.size(); i++)
+        {
+            if (out_edges[i].first == to)
+            {
+                e_id = out_edges[i].second;
+                out_edges[i] = std::move(out_edges.back());
+                out_edges.pop_back();
+                break;
+            }
+        }
+
+        auto & in_edges = in_list(to);
+
+        for (size_t i = 0; i < in_edges.size(); i++)
+        {
+            if (in_edges[i].first == from)
+            {
+                in_edges[i] = std::move(in_edges.back());
+                in_edges.pop_back();
+                break;
+            }
+        }
+
+        return e_id;
+    }
+
+    EdgeID remove_edge(VertexID from, VertexID to) noexcept
+        requires (!directed)
+    {
+        EdgeID e_id = EdgeID::empty;
+        auto & from_adj = adj_list(from);
+        auto & to_adj = adj_list(to);
+
+        for (size_t i = 0; i < from_adj.size(); i++)
+        {
+            if (from_adj[i].first == to)
+            {
+                e_id = from_adj[i].second;
+                from_adj[i] = std::move(from_adj.back());
+                from_adj.pop_back();
+                break;
+            }
+        }
+
+        for (size_t i = 0; i < to_adj.size(); i++)
+        {
+            if (to_adj[i].first == from)
+            {
+                to_adj[i] = std::move(to_adj.back());
+                to_adj.pop_back();
+                break;
+            }
+        }
+
+        return e_id;
+    }
+
+private:
+    auto & out_list(VertexID v)
+        requires (directed)
+    {
+        return out_edges_[v.value];
+    }
+
+    const auto & out_list(VertexID v) const
+        requires (directed)
+    {
+        return out_edges_[v.value];
+    }
+
+    auto & in_list(VertexID v)
+        requires (directed)
+    {
+        return in_edges_[v.value];
+    }
+
+    const auto & in_list(VertexID v) const
+        requires (directed)
+    {
+        return in_edges_[v.value];
+    }
+
+    auto & adj_list(VertexID v)
+        requires (!directed)
+    {
+        return adj_[v.value];
+    }
+
+    const auto & adj_list(VertexID v) const
+        requires (!directed)
+    {
+        return adj_[v.value];
     }
 
 private:

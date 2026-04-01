@@ -9,6 +9,7 @@
 #define GRAPH_EDGE_ID_TYPE uint32_t
 #endif
 
+// TODO: make this more strict (prevent VertexID <-> EdgeID conversions)
 namespace libproject::graphs
 {
     struct VertexID

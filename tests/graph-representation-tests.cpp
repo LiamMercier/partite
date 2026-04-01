@@ -762,7 +762,7 @@ public:
 
 TYPED_TEST_SUITE(RepresentationCore, TestRepresentations);
 
-TYPED_TEST(RepresentationCore, Construction)
+TYPED_TEST(RepresentationCore, EdgeOperations)
 {
     using Representation = typename TestFixture::Representation;
     auto edges = TestFixture::get_edges();
@@ -783,4 +783,21 @@ TYPED_TEST(RepresentationCore, Construction)
     {
         ASSERT_TRUE(rep.has_edge(e.first, e.second));
     }
+
+    {
+        auto edge_pair = edges[0];
+        ASSERT_EQ(rep.find_edge(edge_pair.first, edge_pair.second), 0);
+    }
+
+    auto edge_pair = edges.back();
+    edges.pop_back();
+    rep.remove_edge(edge_pair.first, edge_pair.second);
+
+    for (const auto & e : edges)
+    {
+        ASSERT_TRUE(rep.has_edge(e.first, e.second));
+    }
+
+    ASSERT_FALSE(rep.has_edge(edge_pair.first, edge_pair.second));
+    ASSERT_EQ(rep.find_edge(edge_pair.first, edge_pair.second), EdgeID::empty);
 }
