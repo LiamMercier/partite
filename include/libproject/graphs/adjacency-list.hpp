@@ -30,7 +30,7 @@ public:
     }
 
     //
-    // Edge operations
+    // Edge Operations
     //
 
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
@@ -203,6 +203,37 @@ public:
         }
 
         return e_id;
+    }
+
+    //
+    // Vertex Operations
+    //
+
+    // Expand the list, otherwise do nothing (list already exists).
+    bool add_vertex(VertexID v)
+        requires (directed)
+    {
+        libproject_assert(v.value <= out_edges_.size(),
+                          "AdjacencyList::add_vertex was called "
+                          "on VertexID "
+                          + std::to_string(v.value)
+                          + " which was expected to be <= "
+                          + std::to_string(out_edges_.size())
+                          + " (likely a library error)");
+
+        if (v.value == out_edges_.size())
+        {
+            out_edges_.emplace_back();
+            in_edges_.emplace_back();
+        }
+
+        return true;
+    }
+
+    void remove_vertex(VertexID v)
+        requires (directed)
+    {
+
     }
 
 private:

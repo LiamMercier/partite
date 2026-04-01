@@ -758,6 +758,8 @@ public:
             {3, 4}
         };
     }
+
+    size_t v_count = 5;
 };
 
 TYPED_TEST_SUITE(RepresentationCore, TestRepresentations);
@@ -769,7 +771,7 @@ TYPED_TEST(RepresentationCore, EdgeOperations)
 
     Representation rep = [&]() -> Representation
     {
-        return Representation(edges.size());
+        return Representation(TestFixture::v_count);
     }();
 
     size_t i = 0;
@@ -800,4 +802,55 @@ TYPED_TEST(RepresentationCore, EdgeOperations)
 
     ASSERT_FALSE(rep.has_edge(edge_pair.first, edge_pair.second));
     ASSERT_EQ(rep.find_edge(edge_pair.first, edge_pair.second), EdgeID::empty);
+}
+
+TYPED_TEST(RepresentationCore, VertexOperations)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    if constexpr (!VertexMutable<Representation>)
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        // Add some vertices
+        rep.add_vertex((TestFixture::v_count + 1));
+        rep.add_vertex((TestFixture::v_count + 2));
+        rep.add_vertex((TestFixture::v_count + 3));
+        rep.add_vertex((TestFixture::v_count + 4));
+
+        // Add some edges
+        rep.add_edge(0, 8);
+        rep.add_edge(1, 5);
+        rep.add_edge(1, 7);
+        rep.add_edge(8, 7);
+        rep.add_edge(7, 6);
+        rep.add_edge(6, 5);
+
+        edges.push_back({0, 8});
+        edges.push_back({1, 5});
+        edges.push_back({1, 7});
+        edges.push_back({8, 7});
+        edges.push_back({7, 6});
+        edges.push_back({6, 5});
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+    }
 }
