@@ -852,5 +852,28 @@ TYPED_TEST(RepresentationCore, VertexOperations)
         {
             ASSERT_TRUE(rep.has_edge(e.first, e.second));
         }
+
+        // Remove node 6
+        rep.remove_vertex(6);
+
+        // Add the vertex back, any (u, 6) or (6, u) should be gone.
+        rep.add_vertex(6);
+
+        std::vector<std::pair<VertexID, VertexID>> bad_edges = {
+            {7, 6}, {6, 5}
+        };
+
+        edges.pop_back();
+        edges.pop_back();
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        for (const auto & e : bad_edges)
+        {
+            ASSERT_FALSE(rep.has_edge(e.first, e.second));
+        }
     }
 }

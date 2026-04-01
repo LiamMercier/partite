@@ -230,10 +230,104 @@ public:
         return true;
     }
 
+    bool add_vertex(VertexID v)
+        requires (!directed)
+    {
+        libproject_assert(v.value <= adj_.size(),
+                          "AdjacencyList::add_vertex was called "
+                          "on VertexID "
+                          + std::to_string(v.value)
+                          + " which was expected to be <= "
+                          + std::to_string(adj_.size())
+                          + " (likely a library error)");
+
+        if (v.value == adj_.size())
+        {
+            adj_.emplace_back();
+        }
+
+        return true;
+    }
+
+    // In a digraph, we insert (u, v) as out[u] = v, in[v] = u
+    // so we need to go over the in and out lists.
+    //
+    // for u : out_list(v)
+    //     for a : in_list(u)
+    //         if (a == v)
+    //             remove a
+    //
+    // for u : in_list(v)
+    //     for a : out_list(u)
+    //         if (a == v)
+    //             remove a
+    //
+    // clear in_list(v) and out_list(v)
     void remove_vertex(VertexID v)
         requires (directed)
     {
+        for (const auto & [u, _] : out_list(v))
+        {
+            auto & in = in_list(u.first);
 
+            for (size_t i = 0; i < in.size(); i++)
+            {
+                // If we found a match, swap and pop.
+                if (in[i].first == v)
+                {
+                    std::swap(in[i], in.back());
+                    in.pop_back();
+                    break;
+                }
+            }
+        }
+
+        for (const auto & [u, _] : in_list(v))
+        {
+            auto & out = out_list(u.first);
+
+            for (size_t i = 0; i < out.size(); i++)
+            {
+                // If we found a match, swap and pop.
+                if (out[i].first == v)
+                {
+                    std::swap(out[i], out.back());
+                    out.pop_back();
+                    break;
+                }
+            }
+        }
+
+        out_list(v).clear();
+        in_list(v).clear();
+    }
+
+    // The undirected graph case is easier.
+    //
+    // For u : adj_list(v)
+    //     remove v from adj_list(u)
+    //
+    // clear adj_list(v)
+    void remove_vertex(VertexID v)
+        requires (!directed)
+    {
+        for (const auto & [u, _] : adj_list(v))
+        {
+            auto & u_list = adj_list(u);
+
+            for (size_t i = 0; i < u_list.size(); i++)
+            {
+                // swap and pop
+                if (u_list[i].first == v)
+                {
+                    std::swap(u_list[i], u_list.back());
+                    u_list.pop_back();
+                    break;
+                }
+            }
+        }
+
+        adj_list(v).clear();
     }
 
 private:
