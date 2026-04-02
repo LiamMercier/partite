@@ -916,3 +916,61 @@ TYPED_TEST(RepresentationCore, Clear)
         }
     }
 }
+
+TYPED_TEST(RepresentationCore, Degree)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    // If we cannot call degree and cannot call both
+    // in_degree and out_degree
+    if constexpr (!DegreeQueryable<Representation>
+                  && !(OutDegreeQueryable<Representation>
+                       && InDegreeQueryable<Representation>))
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        std::vector<size_t> in(TestFixture::v_count);
+        std::vector<size_t> out(TestFixture::v_count);
+
+        // Compute the degree of each vertex.
+        for (const auto & e : edges)
+        {
+            in[e.second.value] += 1;
+            out[e.first.value] += 1;
+        }
+
+        for (size_t i = 0; i < TestFixture::v_count; i++)
+        {
+            if constexpr (!Representation::directed)
+            {
+                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+            }
+            else
+            {
+                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+                ASSERT_EQ(rep.in_degree(i), in[i]);
+                ASSERT_EQ(rep.out_degree(i), out[i]);
+            }
+        }
+    }
+}

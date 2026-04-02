@@ -39,6 +39,18 @@ public:
     }
 
     //
+    // Ranges front end
+    //
+
+    // TODO: neighbors(v) const
+
+    // TODO: in_neighbors(v) const
+
+    // TODO: out_neighbors(v) const
+
+    // TODO: edges() const
+
+    //
     // Edge Operations
     //
 
@@ -430,8 +442,6 @@ public:
     {
         return out_edges_[v.value].size();
     }
-
-    // For in_deg and out_deg we simply return list size, already accounts for self looping nature.
 
     // TODO: has_self_loops()
 
