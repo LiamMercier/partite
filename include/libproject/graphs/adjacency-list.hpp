@@ -364,6 +364,28 @@ public:
         adj_list(v).clear();
     }
 
+    //
+    // Utility
+    //
+
+    // TODO: clear()
+
+    // TODO: degree(VertexID v), in_degree, out_degree
+
+    // TODO: has_self_loops()
+
+    // TODO: has_self_loop(VertexID v)
+
+    // TODO: valid_vertex(VertexID v)
+
+    // TODO: vertex_count()
+
+    //
+    // Transformations
+    //
+
+    // TODO: compute_transpose()
+
 private:
     auto & out_list(VertexID v)
         requires (directed)

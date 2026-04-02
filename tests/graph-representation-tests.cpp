@@ -14,9 +14,9 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
     {
         AdjacencyMatrix<true> A(5);
 
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
-            for (int j = 0; j < A.size(); j++)
+            for (int j = 0; j < A.vertex_count(); j++)
             {
                 // There should be no valid edges
                 EXPECT_FALSE(A.has_edge(i, j));
@@ -28,13 +28,13 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
         }
 
         // Test removing edges
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
             // There should be a valid edge
             EXPECT_TRUE(A.has_edge(i, i));
             EXPECT_EQ(A.find_edge(i, i), 0);
 
-            for (int j = 0; j < A.size(); j++)
+            for (int j = 0; j < A.vertex_count(); j++)
             {
                 A.remove_edge(i, j);
             }
@@ -47,9 +47,9 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
     {
         AdjacencyMatrix<false> A(5);
 
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
-            for (int j = 0; j < A.size(); j++)
+            for (int j = 0; j < A.vertex_count(); j++)
             {
                 // There should be no valid edges
                 EXPECT_FALSE(A.has_edge(i, j));
@@ -61,13 +61,13 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
         }
 
         // Test removing edges
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
             // There should be a valid edge
             EXPECT_TRUE(A.has_edge(i, i));
             EXPECT_EQ(A.find_edge(i, i), 0);
 
-            for (int j = 0; j < A.size(); j++)
+            for (int j = 0; j < A.vertex_count(); j++)
             {
                 A.remove_edge(i, j);
             }
@@ -190,7 +190,7 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
     {
         AdjacencyMatrix<false> A(5);
 
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
             auto res = A.neighbors(i);
 
@@ -205,7 +205,7 @@ TEST(GraphRepresentations, AdjacencyMatrixNeighbors)
     {
         AdjacencyMatrix<true> A(5);
 
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
             auto res = A.neighbors(i);
 
@@ -274,7 +274,7 @@ TEST(GraphRepresentations, AdjacencyMatrixInwardNeighbors)
     {
         AdjacencyMatrix<true> A(5);
 
-        for (int i = 0; i < A.size(); i++)
+        for (int i = 0; i < A.vertex_count(); i++)
         {
             auto res = A.neighbors(i);
 
@@ -549,15 +549,15 @@ TEST(GraphRepresentations, AdjacencyMatrixClear)
         A.clear();
 
         // Ensure all degrees are zero
-        for (size_t i = 0; i < A.size(); i++)
+        for (size_t i = 0; i < A.vertex_count(); i++)
         {
             EXPECT_EQ(A.degree(i), 0);
         }
 
         // Ensure each edge is empty
-        for (size_t i = 0; i < A.size(); i++)
+        for (size_t i = 0; i < A.vertex_count(); i++)
         {
-            for (size_t j = 0; j < A.size(); j++)
+            for (size_t j = 0; j < A.vertex_count(); j++)
             {
                 EXPECT_FALSE(A.has_edge(i, j));
             }
@@ -581,15 +581,15 @@ TEST(GraphRepresentations, AdjacencyMatrixClear)
         A.clear();
 
         // Ensure all degrees are zero
-        for (size_t i = 0; i < A.size(); i++)
+        for (size_t i = 0; i < A.vertex_count(); i++)
         {
             EXPECT_EQ(A.degree(i), 0);
         }
 
         // Ensure each edge is empty
-        for (size_t i = 0; i < A.size(); i++)
+        for (size_t i = 0; i < A.vertex_count(); i++)
         {
-            for (size_t j = 0; j < A.size(); j++)
+            for (size_t j = 0; j < A.vertex_count(); j++)
             {
                 EXPECT_FALSE(A.has_edge(i, j));
             }

@@ -462,11 +462,6 @@ public:
         return vertex_count_;
     }
 
-    size_t size() const noexcept
-    {
-        return vertex_count();
-    }
-
     //
     // Transformations
     //
