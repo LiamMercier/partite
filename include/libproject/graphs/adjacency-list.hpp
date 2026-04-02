@@ -15,6 +15,8 @@ namespace libproject::graphs
 //                      graphs are going to be sparse and large.
 
 // TODO: asserts
+
+// AdjacencyList class for simple graphs.
 template <bool Directed>
 class AdjacencyList
 {
@@ -136,7 +138,14 @@ public:
                           + ")");
 
         adj_list(from).push_back({to, edge_id});
-        adj_list(to).push_back({from, edge_id});
+
+        // Do not insert self loops twice, otherwise
+        // neighbors(v) will return the same value twice.
+        if (to != from)
+        {
+            adj_list(to).push_back({from, edge_id});
+        }
+
         return edge_id;
     }
 
@@ -167,7 +176,14 @@ public:
         }
 
         adj_list(from).push_back({to, edge_id});
-        adj_list(to).push_back({from, edge_id});
+
+        // Do not insert self loops twice, otherwise
+        // neighbors(v) will return the same value twice.
+        if (to != from)
+        {
+            adj_list(to).push_back({from, edge_id});
+        }
+
         return edge_id;
     }
 
@@ -392,6 +408,8 @@ public:
     }
 
     // TODO: degree(VertexID v), in_degree, out_degree
+
+    // For in_deg and out_deg we simply return list size, already accounts for self looping nature.
 
     // TODO: has_self_loops()
 
