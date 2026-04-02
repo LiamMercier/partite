@@ -7,6 +7,13 @@
 namespace libproject::graphs
 {
 
+// TODO <optimization>: this class really needs a way to
+//                      allocate using a memory pool.
+//
+//                      Otherwise, the inner vectors are
+//                      all fragmented, very bad since most
+//                      graphs are going to be sparse and large.
+
 // TODO: asserts
 template <bool Directed>
 class AdjacencyList
@@ -95,6 +102,18 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (directed)
     {
+        libproject_assert(find_edge(from, to) == EdgeID::empty,
+                          "AdjacencyList::add_edge inserted "
+                          "duplicate edge ("
+                          + std::to_string(from.value)
+                          + " "
+                          + std::to_string(to.value)
+                          + ") with ID "
+                          + std::to_string(edge_id.value)
+                          + " (existing edge has ID "
+                          + std::to_string(find_edge(from, to).value)
+                          + ")");
+
         out_list(from).push_back({to, edge_id});
         in_list(to).push_back({from, edge_id});
         return edge_id;
@@ -104,6 +123,18 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (!directed)
     {
+        libproject_assert(find_edge(from, to) == EdgeID::empty,
+                          "AdjacencyList::add_edge inserted "
+                          "duplicate edge ("
+                          + std::to_string(from.value)
+                          + " "
+                          + std::to_string(to.value)
+                          + ") with ID "
+                          + std::to_string(edge_id.value)
+                          + " (existing edge has ID "
+                          + std::to_string(find_edge(from, to).value)
+                          + ")");
+
         adj_list(from).push_back({to, edge_id});
         adj_list(to).push_back({from, edge_id});
         return edge_id;
@@ -263,6 +294,9 @@ public:
     //             remove a
     //
     // clear in_list(v) and out_list(v)
+    //
+    // Therefore on average this runs in
+    // Theta(deg(v) * average_degree) time (see docs/design).
     void remove_vertex(VertexID v)
         requires (directed)
     {
