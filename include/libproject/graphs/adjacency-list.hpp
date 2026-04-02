@@ -407,7 +407,29 @@ public:
         }
     }
 
-    // TODO: degree(VertexID v), in_degree, out_degree
+    size_t degree(VertexID v) const
+        requires (directed)
+    {
+        return in_degree(v) + out_degree(v);
+    }
+
+    size_t degree(VertexID v) const
+        requires (!directed)
+    {
+        return deg_[v.value];
+    }
+
+    size_t in_degree(VertexID v) const
+        requires (directed)
+    {
+        return in_edges_[v.value].size();
+    }
+
+    size_t out_degree(VertexID v) const
+        requires (directed)
+    {
+        return out_edges_[v.value].size();
+    }
 
     // For in_deg and out_deg we simply return list size, already accounts for self looping nature.
 
@@ -480,6 +502,11 @@ private:
         !directed,
         std::vector<std::vector<std::pair<VertexID, EdgeID>>>,
         std::monostate> adj_;
+
+    // For undirected graphs we must store the degree.
+    std::conditional_t<!directed,
+                       std::vector<size_t>,
+                       std::monostate> deg_;
 };
 
 };
