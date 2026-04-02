@@ -368,7 +368,28 @@ public:
     // Utility
     //
 
-    // TODO: clear()
+    void clear()
+        requires (directed)
+    {
+        for (auto & list : out_edges_)
+        {
+            list.clear();
+        }
+
+        for (auto & list : in_edges_)
+        {
+            list.clear();
+        }
+    }
+
+    void clear()
+        requires (!directed)
+    {
+        for (auto & list : adj_)
+        {
+            list.clear();
+        }
+    }
 
     // TODO: degree(VertexID v), in_degree, out_degree
 

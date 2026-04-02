@@ -743,6 +743,8 @@ using TestRepresentations = ::testing::Types
     AdjacencyList<false>
 >;
 
+// TODO: make another test suite with each permutation
+//       for some |V| = N
 template <typename Rep>
 class RepresentationCore : public ::testing::Test
 {
@@ -872,6 +874,43 @@ TYPED_TEST(RepresentationCore, VertexOperations)
         }
 
         for (const auto & e : bad_edges)
+        {
+            ASSERT_FALSE(rep.has_edge(e.first, e.second));
+        }
+    }
+}
+
+TYPED_TEST(RepresentationCore, Clear)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    if constexpr (!Clearable<Representation>)
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        rep.clear();
+
+        for (const auto & e : edges)
         {
             ASSERT_FALSE(rep.has_edge(e.first, e.second));
         }
