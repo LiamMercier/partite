@@ -130,6 +130,12 @@ public:
 
         out_list(from).push_back({to, edge_id});
         in_list(to).push_back({from, edge_id});
+
+        if (to == from)
+        {
+            num_self_loops_ += 1;
+        }
+
         return edge_id;
     }
 
@@ -157,6 +163,12 @@ public:
         {
             adj_list(to).push_back({from, edge_id});
         }
+        else
+        {
+            // Count this self loop and record in our array.
+            num_self_loops_ += 1;
+            self_loop_[from.value] = 1;
+        }
 
         return edge_id;
     }
@@ -174,6 +186,12 @@ public:
 
         out_list(from).push_back({to, edge_id});
         in_list(to).push_back({from, edge_id});
+
+        if (to == from)
+        {
+            num_self_loops_ += 1;
+        }
+
         return edge_id;
     }
 
@@ -194,6 +212,12 @@ public:
         if (to != from)
         {
             adj_list(to).push_back({from, edge_id});
+        }
+        else
+        {
+            // Count this self loop and record in our array.
+            num_self_loops_ += 1;
+            self_loop_[from.value] = 1;
         }
 
         return edge_id;
@@ -230,6 +254,17 @@ public:
             }
         }
 
+        if (from == to && e_id != EdgeID::empty)
+        {
+            num_self_loops_ -= 1;
+
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_edge underflow was "
+                              "detected for num_self_loops_ (likely a"
+                              " library error)");
+        }
+
         return e_id;
     }
 
@@ -251,14 +286,28 @@ public:
             }
         }
 
-        for (size_t i = 0; i < to_adj.size(); i++)
+        if (from != to)
         {
-            if (to_adj[i].first == from)
+            for (size_t i = 0; i < to_adj.size(); i++)
             {
-                to_adj[i] = std::move(to_adj.back());
-                to_adj.pop_back();
-                break;
+                if (to_adj[i].first == from)
+                {
+                    to_adj[i] = std::move(to_adj.back());
+                    to_adj.pop_back();
+                    break;
+                }
             }
+        }
+        else if (e_id != EdgeID::empty)
+        {
+            self_loop_[from.value] = 0;
+            num_self_loops_ -= 1;
+
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_edge underflow was "
+                              "detected for num_self_loops_ (likely a"
+                              " library error)");
         }
 
         return e_id;
@@ -428,7 +477,9 @@ public:
     size_t degree(VertexID v) const
         requires (!directed)
     {
-        return deg_[v.value];
+        // A self loop adds 1 to the degree that our adjacency list
+        // would not be able to account for.
+        return adj_[v.value].size() + self_loop_[v.value];
     }
 
     size_t in_degree(VertexID v) const
@@ -443,9 +494,38 @@ public:
         return out_edges_[v.value].size();
     }
 
-    // TODO: has_self_loops()
+    bool has_self_loops() const
+    {
+        return num_self_loops_ > 0;
+    }
 
-    // TODO: has_self_loop(VertexID v)
+    size_t num_self_loops() const
+    {
+        return num_self_loops_;
+    }
+
+    // Search the list in Theta(deg(v)) averate time.
+    bool has_self_loop(VertexID v) const
+        requires (directed)
+    {
+        for (const auto & u : out_list(v))
+        {
+            if (u.first == v)
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    // Use the lookup table, we already have to store this
+    // information for our degree checks.
+    bool has_self_loop(VertexID v) const
+        requires (!directed)
+    {
+        return self_loop_[v.value];
+    }
 
     // TODO: valid_vertex(VertexID v)
 
@@ -513,10 +593,17 @@ private:
         std::vector<std::vector<std::pair<VertexID, EdgeID>>>,
         std::monostate> adj_;
 
-    // For undirected graphs we must store the degree.
+    // State storage for self loops in an undirected graph.
+    //
+    // We can either store this or the degree, and this is cheaper
+    // while also reducing our cost for has_self_loop(v)
     std::conditional_t<!directed,
-                       std::vector<size_t>,
-                       std::monostate> deg_;
+                       std::vector<uint8_t>,
+                       std::monostate> self_loop_;
+
+    // We need to count this on add and remove, or we are forced
+    // to do Theta(V) average time iteration when it is requested.
+    size_t num_self_loops_{0};
 };
 
 };

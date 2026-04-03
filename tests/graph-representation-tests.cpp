@@ -972,5 +972,37 @@ TYPED_TEST(RepresentationCore, Degree)
                 ASSERT_EQ(rep.out_degree(i), out[i]);
             }
         }
+
+        // Remove two edges.
+        {
+            auto & e = edges.back();
+            edges.pop_back();
+            in[e.second.value] -= 1;
+            out[e.first.value] -= 1;
+            rep.remove_edge(e.first, e.second);
+        }
+
+        {
+            auto & e = edges.back();
+            edges.pop_back();
+            in[e.second.value] -= 1;
+            out[e.first.value] -= 1;
+            rep.remove_edge(e.first, e.second);
+        }
+
+        // Check degrees again.
+        for (size_t i = 0; i < TestFixture::v_count; i++)
+        {
+            if constexpr (!Representation::directed)
+            {
+                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+            }
+            else
+            {
+                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+                ASSERT_EQ(rep.in_degree(i), in[i]);
+                ASSERT_EQ(rep.out_degree(i), out[i]);
+            }
+        }
     }
 }
