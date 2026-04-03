@@ -830,18 +830,18 @@ TYPED_TEST(RepresentationCore, VertexOperations)
         }
 
         // Add some vertices
+        rep.add_vertex((TestFixture::v_count));
         rep.add_vertex((TestFixture::v_count + 1));
         rep.add_vertex((TestFixture::v_count + 2));
         rep.add_vertex((TestFixture::v_count + 3));
-        rep.add_vertex((TestFixture::v_count + 4));
 
         // Add some edges
-        rep.add_edge(0, 8);
-        rep.add_edge(1, 5);
-        rep.add_edge(1, 7);
-        rep.add_edge(8, 7);
-        rep.add_edge(7, 6);
-        rep.add_edge(6, 5);
+        rep.add_edge(0, 8, i++);
+        rep.add_edge(1, 5, i++);
+        rep.add_edge(1, 7, i++);
+        rep.add_edge(8, 7, i++);
+        rep.add_edge(7, 6, i++);
+        rep.add_edge(6, 5, i++);
 
         edges.push_back({0, 8});
         edges.push_back({1, 5});
@@ -961,13 +961,10 @@ TYPED_TEST(RepresentationCore, Degree)
 
         for (size_t i = 0; i < TestFixture::v_count; i++)
         {
-            if constexpr (!Representation::directed)
+            ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+
+            if constexpr (Representation::directed)
             {
-                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
-            }
-            else
-            {
-                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
                 ASSERT_EQ(rep.in_degree(i), in[i]);
                 ASSERT_EQ(rep.out_degree(i), out[i]);
             }
@@ -993,16 +990,192 @@ TYPED_TEST(RepresentationCore, Degree)
         // Check degrees again.
         for (size_t i = 0; i < TestFixture::v_count; i++)
         {
-            if constexpr (!Representation::directed)
+            ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+
+            if constexpr (Representation::directed)
             {
-                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
-            }
-            else
-            {
-                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
                 ASSERT_EQ(rep.in_degree(i), in[i]);
                 ASSERT_EQ(rep.out_degree(i), out[i]);
             }
         }
     }
 }
+
+TYPED_TEST(RepresentationCore, SelfLoops)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    // If we cannot call degree and cannot call both
+    // in_degree and out_degree
+    if constexpr (!DegreeQueryable<Representation>
+                  && !(OutDegreeQueryable<Representation>
+                       && InDegreeQueryable<Representation>))
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        // Add some more edges
+        edges.push_back({4, 4});
+        edges.push_back({3, 3});
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        // Try to introduce errors.
+        if constexpr (VertexMutable<Representation>)
+        {
+            rep.add_vertex(TestFixture::v_count);
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        if constexpr (VertexMutable<Representation>)
+        {
+            rep.remove_vertex(TestFixture::v_count);
+        }
+
+        std::vector<size_t> in(TestFixture::v_count);
+        std::vector<size_t> out(TestFixture::v_count);
+        std::vector<uint8_t> self_loops(TestFixture::v_count);
+
+        // Compute the degree of each vertex, and check
+        // for self loops.
+        for (const auto & e : edges)
+        {
+            in[e.second.value] += 1;
+            out[e.first.value] += 1;
+
+            if (e.first.value == e.second.value)
+            {
+                self_loops[e.first.value] = 1;
+            }
+        }
+
+        // Ensure the self loops are as expected, and check
+        // the degree computation.
+        for (size_t i = 0; i < TestFixture::v_count; i++)
+        {
+            ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+
+            if constexpr (Representation::directed)
+            {
+                ASSERT_EQ(rep.in_degree(i), in[i]);
+                ASSERT_EQ(rep.out_degree(i), out[i]);
+            }
+
+            ASSERT_EQ(rep.has_self_loop(i), self_loops[i]);
+        }
+
+        // Remove an edge.
+        {
+            auto & e = edges.back();
+            edges.pop_back();
+            in[e.second.value] -= 1;
+            out[e.first.value] -= 1;
+
+            if (e.first.value == e.second.value)
+            {
+                self_loops[e.first.value] = 0;
+            }
+
+            rep.remove_edge(e.first, e.second);
+        }
+
+        // Check everything again.
+        for (size_t i = 0; i < TestFixture::v_count; i++)
+        {
+            ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+
+            if constexpr (Representation::directed)
+            {
+                ASSERT_EQ(rep.in_degree(i), in[i]);
+                ASSERT_EQ(rep.out_degree(i), out[i]);
+            }
+
+            ASSERT_EQ(rep.has_self_loop(i), self_loops[i]);
+        }
+
+        ASSERT_TRUE(rep.has_self_loops());
+
+        if constexpr (!VertexMutable<Representation>)
+        {
+            return;
+        }
+        else
+        {
+            // Remove some vertices.
+            rep.remove_vertex(4);
+            rep.remove_vertex(3);
+
+            std::vector<
+                std::pair<VertexID,
+                        VertexID>> edges_copy;
+
+            // Setup our test values.
+            in.clear();
+            out.clear();
+            self_loops.clear();
+
+            in.resize(TestFixture::v_count - 2);
+            out.resize(TestFixture::v_count - 2);
+            self_loops.resize(TestFixture::v_count - 2);
+
+            for (const auto & e : edges)
+            {
+                if (e.first.value == 4 || e.second.value == 4)
+                {
+                    continue;
+                }
+
+                if (e.first.value == 3 || e.second.value == 3)
+                {
+                    continue;
+                }
+
+                edges_copy.push_back(e);
+            }
+
+            for (const auto & e : edges_copy)
+            {
+                in[e.second.value] += 1;
+                out[e.first.value] += 1;
+
+                if (e.first.value == e.second.value)
+                {
+                    self_loops[e.first.value] = 1;
+                }
+            }
+
+            // Check everything again.
+            for (size_t i = 0; i < TestFixture::v_count - 2; i++)
+            {
+                ASSERT_EQ(rep.degree(i), in[i] + out[i]);
+
+                if constexpr (Representation::directed)
+                {
+                    ASSERT_EQ(rep.in_degree(i), in[i]);
+                    ASSERT_EQ(rep.out_degree(i), out[i]);
+                }
+
+                ASSERT_EQ(rep.has_self_loop(i), self_loops[i]);
+            }
+
+            ASSERT_FALSE(rep.has_self_loops());
+        }
+    }
+}
+
