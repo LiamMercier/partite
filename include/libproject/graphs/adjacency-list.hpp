@@ -540,7 +540,17 @@ public:
         return self_loop_[v.value];
     }
 
-    // TODO: valid_vertex(VertexID v)
+    bool valid_vertex(VertexID v) const
+        requires (directed)
+    {
+        v.value < out_edges_.size();
+    }
+
+    bool valid_vertex(VertexID v) const
+        requires (!directed)
+    {
+        v.value < adj_.size();
+    }
 
     size_t vertex_count() const noexcept
         requires (directed)
@@ -558,7 +568,25 @@ public:
     // Transformations
     //
 
-    // TODO: compute_transpose()
+    [[nodiscard]] AdjacencyList compute_transpose() const
+    {
+        if constexpr (directed)
+        {
+            // Swap the adjacency lists.
+            return AdjacencyList{in_edges_,
+                                 out_edges_,
+                                 num_self_loops_}
+        }
+        else
+        {
+            // Return a copy, G^T = G in an undirected graph.
+            return AdjacencyList{adj_,
+                                 self_loop_,
+                                 num_self_loops_};
+        }
+    }
+
+    // TODO: transpose_inplace()
 
 private:
     auto & out_list(VertexID v)
@@ -598,22 +626,46 @@ private:
     }
 
 private:
+    using ListStorage = std::vector<std::vector<std::pair<VertexID, EdgeID>>>;
+
+    // For returning a copy.
+    AdjacencyList(ListStorage out_edges,
+                  ListStorage in_edges,
+                  size_t loop_count)
+        requires (directed)
+    :out_edges_(std::move(out_edges)),
+    in_edges_(std::move(in_edges)),
+    num_self_loops_{loop_count}
+    {
+    }
+
+    AdjacencyList(ListStorage adj,
+                  std::vector<uint8_t> self_loop_state,
+                  size_t loop_count)
+        requires (!directed)
+    :adj_(std::move(adj)),
+    self_loop_(std::move(self_loop_state)),
+    num_self_loops_{loop_count}
+    {
+    }
+
+private:
     // If we have a digraph, store out_edges_ and in_edges_ for
     // fast vertex deletion. Otherwise, we can store one adj_
     // for undirected graphs.
     std::conditional_t<
         directed,
-        std::vector<std::vector<std::pair<VertexID, EdgeID>>>,
+        ListStorage,
         std::monostate> out_edges_;
 
     std::conditional_t<
         directed,
-        std::vector<std::vector<std::pair<VertexID, EdgeID>>>,
+        ListStorage,
         std::monostate> in_edges_;
 
     std::conditional_t<
         !directed,
-        std::vector<std::vector<std::pair<VertexID, EdgeID>>>,
+        ListStorage,
         std::monostate> adj_;
 
     // State storage for self loops in an undirected graph.
