@@ -34,7 +34,8 @@ public:
 
     AdjacencyList(size_t num_vertices)
         requires (!directed)
-    :adj_(num_vertices)
+    :adj_(num_vertices),
+    self_loop_(num_vertices)
     {
     }
 
@@ -352,6 +353,7 @@ public:
         if (v.value == adj_.size())
         {
             adj_.emplace_back();
+            self_loop_.emplace_back(0);
         }
 
         return true;
@@ -379,7 +381,12 @@ public:
     {
         for (const auto & [u, _] : out_list(v))
         {
-            auto & in = in_list(u.first);
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+            }
+
+            auto & in = in_list(u);
 
             for (size_t i = 0; i < in.size(); i++)
             {
@@ -395,7 +402,7 @@ public:
 
         for (const auto & [u, _] : in_list(v))
         {
-            auto & out = out_list(u.first);
+            auto & out = out_list(u);
 
             for (size_t i = 0; i < out.size(); i++)
             {
@@ -426,6 +433,11 @@ public:
         {
             auto & u_list = adj_list(u);
 
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+            }
+
             for (size_t i = 0; i < u_list.size(); i++)
             {
                 // swap and pop
@@ -439,6 +451,7 @@ public:
         }
 
         adj_list(v).clear();
+        self_loop_[v.value] = 0;
     }
 
     //
@@ -529,7 +542,17 @@ public:
 
     // TODO: valid_vertex(VertexID v)
 
-    // TODO: vertex_count()
+    size_t vertex_count() const noexcept
+        requires (directed)
+    {
+        return out_edges_.size();
+    }
+
+    size_t vertex_count() const noexcept
+        requires (!directed)
+    {
+        return adj_.size();
+    }
 
     //
     // Transformations
