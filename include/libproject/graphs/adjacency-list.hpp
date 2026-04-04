@@ -43,11 +43,46 @@ public:
     // Ranges front end
     //
 
-    // TODO: neighbors(v) const
+    // TODO <optimization>: Should we be returning edge IDs here?
+    //
+    //                      If we can return the VertexID stream then
+    //                      there would be less filtering in the higher
+    //                      level loop, but we already return edge IDs...
+    auto neighbors(VertexID v) const
+    {
+        if constexpr(directed)
+        {
+            return out_neighbors(v);
+        }
+        else
+        {
+            auto & adj = adj_list(v);
+            return adj
+                   | std::views::transform([&adj](size_t indx){
+                           return adj[indx].second;
+                   });
+        }
+    }
 
-    // TODO: in_neighbors(v) const
+    auto out_neighbors(VertexID v) const
+        requires (directed)
+    {
+        auto & out = out_list(v);
+            return out
+                   | std::views::transform([&out](size_t indx){
+                           return out[indx].second;
+                   });
+    }
 
-    // TODO: out_neighbors(v) const
+    auto in_neighbors(VertexID v) const
+        requires (directed)
+    {
+        auto & in = in_list(v);
+            return in
+                   | std::views::transform([&in](size_t indx){
+                           return in[indx].second;
+                   });
+    }
 
     // TODO: edges() const
 
@@ -575,7 +610,7 @@ public:
             // Swap the adjacency lists.
             return AdjacencyList{in_edges_,
                                  out_edges_,
-                                 num_self_loops_}
+                                 num_self_loops_};
         }
         else
         {
