@@ -7,6 +7,15 @@
 #include <unordered_map>
 #include <unordered_set>
 
+struct PairHash
+{
+    std::size_t operator()(const std::pair<size_t, size_t> & pair) const
+    {
+        return std::hash<size_t>()(pair.first)
+               ^ std::hash<size_t>()(pair.second);
+    }
+};
+
 using namespace libproject::graphs;
 
 TEST(GraphRepresentations, AdjacencyMatrixConstruction)
@@ -611,60 +620,256 @@ TYPED_TEST(RepresentationCore, SelfLoops)
     }
 }
 
-// TYPED_TEST(RepresentationCore, Neighbors)
-// {
-//     using Representation = typename TestFixture::Representation;
-//     auto edges = TestFixture::get_edges();
-//
-//     if constexpr (!Clearable<Representation>)
-//     {
-//         return;
-//     }
-//     else
-//     {
-//         Representation rep = [&]() -> Representation
-//         {
-//             return Representation(TestFixture::v_count);
-//         }();
-//
-//         size_t i = 0;
-//         for (const auto & e : edges)
-//         {
-//             rep.add_edge(e.first, e.second, i);
-//             i++;
-//         }
-//
-//         for (const auto & e : edges)
-//         {
-//             ASSERT_TRUE(rep.has_edge(e.first, e.second));
-//         }
-//
-//         std::vector<std::unordered_set<size_t>> incoming(TestFixture::v_count);
-//         std::vector<std::unordered_set<size_t>> outgoing(TestFixture::v_count);
-//         size_t id = 0;
-//
-//         for (const auto & e : edges)
-//         {
-//             incoming[e.second.value].insert(id);
-//             outgoing[e.first.value].insert(id);
-//             id++;
-//         }
-//
-//         // Check that each neighbor is as expected.
-//         for (size_t v = 0; v < TestFixture::v_count; v++)
-//         {
-//             if (!Representation::directed)
-//             {
-//                 for (const auto & u : rep.neighbors(v))
-//                 {
-//                     ASSERT_TRUE(outgoing[v].contains())
-//                 }
-//             }
-//             else
-//             {
-//
-//             }
-//
-//         }
-//     }
-// }
+TYPED_TEST(RepresentationCore, Neighbors)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    if constexpr (!Clearable<Representation>)
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        std::vector<std::unordered_set<size_t>> incoming(TestFixture::v_count);
+        std::vector<std::unordered_set<size_t>> outgoing(TestFixture::v_count);
+        std::vector<std::unordered_set<size_t>> incident(TestFixture::v_count);
+
+        for (const auto & e : edges)
+        {
+            if constexpr (!Representation::directed)
+            {
+                incident[e.second.value].insert(e.first.value);
+                incident[e.first.value].insert(e.second.value);
+            }
+            else
+            {
+                incoming[e.second.value].insert(e.first.value);
+                outgoing[e.first.value].insert(e.second.value);
+            }
+        }
+
+        // Check that each neighbor is as expected.
+        for (size_t v = 0; v < TestFixture::v_count; v++)
+        {
+            if constexpr (!Representation::directed)
+            {
+                for (const auto & u : rep.neighbors(v))
+                {
+                    ASSERT_TRUE(incident[v].contains(u.value));
+                    ASSERT_TRUE(incident[u.value].contains(v));
+                }
+            }
+            else
+            {
+                for (const auto & u : rep.neighbors(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains(u.value));
+                }
+
+                for (const auto & u : rep.out_neighbors(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains(u.value));
+                }
+
+                for (const auto & u : rep.in_neighbors(v))
+                {
+                    ASSERT_TRUE(incoming[v].contains(u.value));
+                }
+            }
+
+        }
+    }
+}
+
+TYPED_TEST(RepresentationCore, IncidentEdgeIDs)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    if constexpr (!Clearable<Representation>)
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        std::vector<std::unordered_set<size_t>> incoming(TestFixture::v_count);
+        std::vector<std::unordered_set<size_t>> outgoing(TestFixture::v_count);
+        std::vector<std::unordered_set<size_t>> incident(TestFixture::v_count);
+        size_t indx = 0;
+
+        for (const auto & e : edges)
+        {
+            if constexpr (!Representation::directed)
+            {
+                incident[e.second.value].insert(indx);
+                incident[e.first.value].insert(indx);
+            }
+            else
+            {
+                incoming[e.second.value].insert(indx);
+                outgoing[e.first.value].insert(indx);
+            }
+
+            indx++;
+        }
+
+        // Check that each neighbor is as expected.
+        for (size_t v = 0; v < TestFixture::v_count; v++)
+        {
+            if constexpr (!Representation::directed)
+            {
+                for (const auto & u : rep.incident_edge_ids(v))
+                {
+                    ASSERT_TRUE(incident[v].contains(u.value));
+                }
+            }
+            else
+            {
+                for (const auto & u : rep.incident_edge_ids(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains(u.value));
+                }
+
+                for (const auto & u : rep.out_edge_ids(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains(u.value));
+                }
+
+                for (const auto & u : rep.in_edge_ids(v))
+                {
+                    ASSERT_TRUE(incoming[v].contains(u.value));
+                }
+            }
+
+        }
+    }
+}
+
+TYPED_TEST(RepresentationCore, IncidentEdges)
+{
+    using Representation = typename TestFixture::Representation;
+    auto edges = TestFixture::get_edges();
+
+    if constexpr (!Clearable<Representation>)
+    {
+        return;
+    }
+    else
+    {
+        Representation rep = [&]() -> Representation
+        {
+            return Representation(TestFixture::v_count);
+        }();
+
+        size_t i = 0;
+        for (const auto & e : edges)
+        {
+            rep.add_edge(e.first, e.second, i);
+            i++;
+        }
+
+        for (const auto & e : edges)
+        {
+            ASSERT_TRUE(rep.has_edge(e.first, e.second));
+        }
+
+        std::vector<
+            std::unordered_set<
+                std::pair<size_t, size_t>,
+                PairHash>> incoming(TestFixture::v_count);
+        std::vector<
+            std::unordered_set<
+                std::pair<size_t, size_t>,
+                PairHash>> outgoing(TestFixture::v_count);
+        std::vector<
+            std::unordered_set<
+                std::pair<size_t, size_t>,
+                PairHash>> incident(TestFixture::v_count);
+        size_t indx = 0;
+
+        for (const auto & e : edges)
+        {
+            if constexpr (!Representation::directed)
+            {
+                incident[e.second.value].insert({e.first.value, indx});
+                incident[e.first.value].insert({e.second.value, indx});
+            }
+            else
+            {
+                incoming[e.second.value].insert({e.first.value, indx});
+                outgoing[e.first.value].insert({e.second.value, indx});
+            }
+
+            indx++;
+        }
+
+        // Check that each neighbor is as expected.
+        for (size_t v = 0; v < TestFixture::v_count; v++)
+        {
+            if constexpr (!Representation::directed)
+            {
+                for (const auto & ie : rep.incident_edges(v))
+                {
+                    ASSERT_TRUE(incident[v].contains({ie.neighbor.value,
+                                                      ie.id.value}));
+                }
+            }
+            else
+            {
+                for (const auto & ie : rep.incident_edges(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains({ie.neighbor.value,
+                                                      ie.id.value}));
+                }
+
+                for (const auto & ie : rep.out_edges(v))
+                {
+                    ASSERT_TRUE(outgoing[v].contains({ie.neighbor.value,
+                                                      ie.id.value}));
+                }
+
+                for (const auto & ie : rep.in_edges(v))
+                {
+                    ASSERT_TRUE(incoming[v].contains({ie.neighbor.value,
+                                                      ie.id.value}));
+                }
+            }
+
+        }
+    }
+}
