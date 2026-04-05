@@ -671,27 +671,44 @@ TYPED_TEST(RepresentationCore, Neighbors)
         {
             if constexpr (!Representation::directed)
             {
+                std::unordered_set<size_t> seen;
+
                 for (const auto & u : rep.neighbors(v))
                 {
                     ASSERT_TRUE(incident[v].contains(u.value));
-                    ASSERT_TRUE(incident[u.value].contains(v));
+
+                    // Duplicate checks.
+                    ASSERT_FALSE(seen.contains(u.value));
+                    seen.insert(u.value);
                 }
             }
             else
             {
+                std::unordered_set<size_t> seen;
                 for (const auto & u : rep.neighbors(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains(u.value));
+
+                    ASSERT_FALSE(seen.contains(u.value));
+                    seen.insert(u.value);
                 }
 
+                std::unordered_set<size_t> out_seen;
                 for (const auto & u : rep.out_neighbors(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains(u.value));
+
+                    ASSERT_FALSE(out_seen.contains(u.value));
+                    out_seen.insert(u.value);
                 }
 
+                std::unordered_set<size_t> in_seen;
                 for (const auto & u : rep.in_neighbors(v))
                 {
                     ASSERT_TRUE(incoming[v].contains(u.value));
+
+                    ASSERT_FALSE(in_seen.contains(u.value));
+                    in_seen.insert(u.value);
                 }
             }
 
@@ -753,26 +770,43 @@ TYPED_TEST(RepresentationCore, IncidentEdgeIDs)
         {
             if constexpr (!Representation::directed)
             {
+                std::unordered_set<size_t> seen;
+
                 for (const auto & u : rep.incident_edge_ids(v))
                 {
                     ASSERT_TRUE(incident[v].contains(u.value));
+
+                    ASSERT_FALSE(seen.contains(u.value));
+                    seen.insert(u.value);
                 }
             }
             else
             {
+                std::unordered_set<size_t> seen;
                 for (const auto & u : rep.incident_edge_ids(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains(u.value));
+
+                    ASSERT_FALSE(seen.contains(u.value));
+                    seen.insert(u.value);
                 }
 
+                std::unordered_set<size_t> out_seen;
                 for (const auto & u : rep.out_edge_ids(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains(u.value));
+
+                    ASSERT_FALSE(out_seen.contains(u.value));
+                    out_seen.insert(u.value);
                 }
 
+                std::unordered_set<size_t> in_seen;
                 for (const auto & u : rep.in_edge_ids(v))
                 {
                     ASSERT_TRUE(incoming[v].contains(u.value));
+
+                    ASSERT_FALSE(in_seen.contains(u.value));
+                    in_seen.insert(u.value);
                 }
             }
 
@@ -843,30 +877,66 @@ TYPED_TEST(RepresentationCore, IncidentEdges)
         {
             if constexpr (!Representation::directed)
             {
+                std::unordered_set<
+                    std::pair<size_t, size_t>,
+                    PairHash> seen;
+
                 for (const auto & ie : rep.incident_edges(v))
                 {
                     ASSERT_TRUE(incident[v].contains({ie.neighbor.value,
                                                       ie.id.value}));
+
+                    ASSERT_FALSE(seen.contains({ie.neighbor.value,
+                                                ie.id.value}));
+                    seen.insert({ie.neighbor.value,
+                                 ie.id.value});
                 }
             }
             else
             {
+                std::unordered_set<
+                    std::pair<size_t, size_t>,
+                    PairHash> seen;
+
                 for (const auto & ie : rep.incident_edges(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains({ie.neighbor.value,
                                                       ie.id.value}));
+
+                    ASSERT_FALSE(seen.contains({ie.neighbor.value,
+                                                ie.id.value}));
+                    seen.insert({ie.neighbor.value,
+                                 ie.id.value});
                 }
+
+                std::unordered_set<
+                    std::pair<size_t, size_t>,
+                    PairHash> out_seen;
 
                 for (const auto & ie : rep.out_edges(v))
                 {
                     ASSERT_TRUE(outgoing[v].contains({ie.neighbor.value,
                                                       ie.id.value}));
+
+                    ASSERT_FALSE(out_seen.contains({ie.neighbor.value,
+                                                    ie.id.value}));
+                    out_seen.insert({ie.neighbor.value,
+                                     ie.id.value});
                 }
+
+                std::unordered_set<
+                    std::pair<size_t, size_t>,
+                    PairHash> in_seen;
 
                 for (const auto & ie : rep.in_edges(v))
                 {
                     ASSERT_TRUE(incoming[v].contains({ie.neighbor.value,
                                                       ie.id.value}));
+
+                    ASSERT_FALSE(in_seen.contains({ie.neighbor.value,
+                                                   ie.id.value}));
+                    in_seen.insert({ie.neighbor.value,
+                                    ie.id.value});
                 }
             }
 
