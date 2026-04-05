@@ -98,14 +98,14 @@ public:
     }
 
     //
-    // Views for getting the EdgeView of each neighbor
+    // Views for getting the IncidentEdge descriptor of each neighbor
     //
 
     auto incident_edges(VertexID v) const
     {
         if constexpr(directed)
         {
-            return in_edges(v);
+            return out_edges(v);
         }
         else
         {

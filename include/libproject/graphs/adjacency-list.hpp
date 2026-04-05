@@ -43,11 +43,12 @@ public:
     // Ranges front end
     //
 
-    // TODO <optimization>: Should we be returning edge IDs here?
+    // TODO: edges() const
+
     //
-    //                      If we can return the VertexID stream then
-    //                      there would be less filtering in the higher
-    //                      level loop, but we already return edge IDs...
+    // Views for getting the VertexID of each neighbor
+    //
+
     auto neighbors(VertexID v) const
     {
         if constexpr(directed)
@@ -58,8 +59,8 @@ public:
         {
             auto & adj = adj_list(v);
             return adj
-                   | std::views::transform([&adj](size_t indx){
-                           return adj[indx].second;
+                   | std::views::transform([](const auto & edge){
+                       return edge.first;
                    });
         }
     }
@@ -68,23 +69,101 @@ public:
         requires (directed)
     {
         auto & out = out_list(v);
-            return out
-                   | std::views::transform([&out](size_t indx){
-                           return out[indx].second;
-                   });
+        return out
+               | std::views::transform([](const auto & edge){
+                   return edge.first;
+               });
     }
 
     auto in_neighbors(VertexID v) const
         requires (directed)
     {
         auto & in = in_list(v);
-            return in
-                   | std::views::transform([&in](size_t indx){
-                           return in[indx].second;
-                   });
+        return in
+               | std::views::transform([](const auto & edge){
+                   return edge.first;
+               });
     }
 
-    // TODO: edges() const
+    //
+    // Views for getting the IncidentEdge descriptor of each neighbor
+    //
+
+    auto incident_edges(VertexID v) const
+    {
+        if constexpr(directed)
+        {
+            return out_edges(v);
+        }
+        else
+        {
+            auto & adj = adj_list(v);
+            return adj
+                   | std::views::transform([](const auto & edge){
+                       return IncidentEdge{edge.first, edge.second};
+                   });
+        }
+    }
+
+    auto out_edges(VertexID v) const
+        requires (directed)
+    {
+        auto & out = out_list(v);
+        return out
+               | std::views::transform([](const auto & edge){
+                   return IncidentEdge{edge.first, edge.second};
+               });
+    }
+
+    auto in_edges(VertexID v) const
+        requires (directed)
+    {
+        auto & in = in_list(v);
+        return in
+               | std::views::transform([](const auto & edge){
+                   return IncidentEdge{edge.first, edge.second};
+               });
+    }
+
+    //
+    // Views for getting the EdgeID of each neighbor
+    //
+
+    auto incident_edge_ids(VertexID v) const
+    {
+        if constexpr(directed)
+        {
+            return out_edge_ids(v);
+        }
+        else
+        {
+            auto & adj = adj_list(v);
+            return adj
+                   | std::views::transform([](const auto & edge){
+                       return edge.second;
+                   });
+        }
+    }
+
+    auto out_edge_ids(VertexID v) const
+        requires (directed)
+    {
+        auto & out = out_list(v);
+        return out
+               | std::views::transform([](const auto & edge){
+                   return edge.second;
+               });
+    }
+
+    auto in_edge_ids(VertexID v) const
+        requires (directed)
+    {
+        auto & in = in_list(v);
+        return in
+               | std::views::transform([](const auto & edge){
+                   return edge.second;
+               });
+    }
 
     //
     // Edge Operations
