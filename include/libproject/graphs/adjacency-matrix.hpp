@@ -553,6 +553,12 @@ private:
 //
 
 private:
+    struct IncidentEntry
+    {
+        VertexID u;
+        size_t index;
+    };
+
     // Adjacency matrix based custom view to reduce multiplications when
     // traversing the flat array.
     //
@@ -599,6 +605,7 @@ private:
     //     }
     //
     //     return n;
+    template <bool VertexInfo>
     class NeighborsIndexView
     {
     public:
@@ -607,11 +614,17 @@ private:
         vertex_count_(vertex_count)
         {}
 
+        using value_type = std::conditional_t<VertexInfo,
+                                              IncidentEntry,
+                                              size_t>;
+
         class Iterator
         {
             public:
                 using iterator_concept = std::forward_iterator_tag;
-                using value_type = size_t;
+                using value_type = std::conditional_t<VertexInfo,
+                                                      IncidentEntry,
+                                                      size_t>;
                 // (size_t - size_t) specific type.
                 using difference_type = std::ptrdiff_t;
 
@@ -634,9 +647,19 @@ private:
                 {}
 
                 // Iterator value is just the current array index
-                size_t operator*() const
+                value_type operator*() const
                 {
-                    return current_index_;
+                    if constexpr (VertexInfo)
+                    {
+                        return IncidentEntry{
+                            VertexID{step_},
+                            current_index_
+                        };
+                    }
+                    else
+                    {
+                        return current_index_;
+                    }
                 }
 
                 // Increment based on the rules in the above loops
