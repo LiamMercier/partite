@@ -56,40 +56,116 @@ concept Clearable = GraphRepresentation<T> &&
     { rep.clear() };
 };
 
-// Representations where neighbors(v) exists.
+//
+// Concepts for getting the VertexID of the neighbors of a vertex.
+//
+
 template <typename T>
 concept NeighborsQueryable = GraphRepresentation<T> &&
                             requires(const T rep, VertexID v_id)
 {
     { rep.neighbors(v_id) } -> std::ranges::range;
+
     requires std::same_as<std::ranges::range_value_t
                             <decltype(rep.neighbors(v_id))>,
-                          EdgeID>;
+                          VertexID>;
 };
 
 template <typename T>
 concept OutNeighborsQueryable = GraphRepresentation<T> &&
-                            requires(const T rep, VertexID v_id)
+                                requires(const T rep, VertexID v_id)
 {
     { rep.out_neighbors(v_id) } -> std::ranges::range;
+
     requires std::same_as<std::ranges::range_value_t
                             <decltype(rep.out_neighbors(v_id))>,
-                          EdgeID>;
+                          VertexID>;
 };
 
-// TODO: consider constraining to views instead of ranges.
 // For representations that allows in_neighbors(v)
 template <typename T>
 concept InNeighborsQueryable = GraphRepresentation<T> &&
-                              requires(const T rep, VertexID v_id)
+                               requires(const T rep, VertexID v_id)
 {
     { rep.in_neighbors(v_id) } -> std::ranges::range;
+
     requires std::same_as<std::ranges::range_value_t
                             <decltype(rep.in_neighbors(v_id))>,
+                          VertexID>;
+};
+
+//
+// Concepts for getting the IncidentEdge of the neighbors of a vertex.
+//
+
+template <typename T>
+concept IncidentEdgesQueryable = GraphRepresentation<T> &&
+                                 requires(const T rep, VertexID v_id)
+{
+    { rep.incident_edges(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.incident_edges(v_id))>,
+                          IncidentEdge>;
+};
+
+template <typename T>
+concept OutEdgesQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.out_edges(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.out_edges(v_id))>,
+                          IncidentEdge>;
+};
+
+template <typename T>
+concept InEdgesQueryable = GraphRepresentation<T> &&
+                           requires(const T rep, VertexID v_id)
+{
+    { rep.in_edges(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.in_edges(v_id))>,
+                          IncidentEdge>;
+};
+
+//
+// Concepts for getting the EdgeID of the neighbors of a vertex.
+//
+
+template <typename T>
+concept IncidentEdgeIDsQueryable = GraphRepresentation<T> &&
+                                 requires(const T rep, VertexID v_id)
+{
+    { rep.incident_edge_ids(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.incident_edge_ids(v_id))>,
                           EdgeID>;
 };
 
-// For representations that allow degree(v)
+template <typename T>
+concept OutEdgeIDsQueryable = GraphRepresentation<T> &&
+                            requires(const T rep, VertexID v_id)
+{
+    { rep.out_edge_ids(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.out_edge_ids(v_id))>,
+                          EdgeID>;
+};
+
+template <typename T>
+concept InEdgeIDsQueryable = GraphRepresentation<T> &&
+                           requires(const T rep, VertexID v_id)
+{
+    { rep.in_edge_ids(v_id) } -> std::ranges::range;
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.in_edge_ids(v_id))>,
+                          EdgeID>;
+};
+
+//
+// Concepts for degree queries.
+//
+
 template <typename T>
 concept DegreeQueryable = GraphRepresentation<T> &&
                           requires(const T rep, VertexID v_id)

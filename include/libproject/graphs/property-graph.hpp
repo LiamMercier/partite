@@ -94,14 +94,6 @@ template <GraphRepresentation Representation,
 class PropertyGraph
 {
 public:
-    struct EdgeView
-    {
-        VertexID from;
-        VertexID to;
-        EdgeID id;
-    };
-
-public:
     static constexpr bool directed = Representation::directed;
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
     static constexpr bool edges_mutable = EdgeMutable<Representation>;
@@ -269,7 +261,10 @@ public:
             });
     }
 
-    // View over every edge in the graph.
+    // View over every edge in the graph as an EdgeView.
+    //
+    // TODO: overload to allow representation to construct
+    //       the view faster if the member is exposed.
     auto edges() const
         noexcept(noexcept(representation_.edges()))
         requires (GlobalEdgesQueryable<Representation>)
@@ -290,6 +285,10 @@ public:
         return representation_.edges();
     }
 
+    //
+    // Views for getting neighboring VertexIDs.
+    //
+
     // View over neighboring VertexID values.
     auto neighbors(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
@@ -300,23 +299,14 @@ public:
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        // For an undirected graph, we want all edges with
-        // v as an element.
-        //
-        // Return edges_.to[indx] or edges_.from[indx]
-        // depending on which vertex is not equal to v.
-        return representation_.neighbors(v)
-                | std::views::transform([this, v](EdgeID id){
-                    return (target(id) == v)
-                            ? (source(id))
-                            : (target(id));
-                });
+        return representation_.neighbors(v);
     }
 
     // View over neighboring VertexID values (outgoing in a digraph).
     auto neighbors(VertexID v) const
         noexcept(noexcept(out_neighbors(v)))
-        requires (directed) && OutNeighborsQueryable<Representation>
+        requires (directed) &&
+                 OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::neighbors "
@@ -329,17 +319,15 @@ public:
     // View over outgoing VertexID values for each edge (v, u).
     auto out_neighbors(VertexID v) const
         noexcept(noexcept(representation_.out_neighbors(v)))
-        requires (directed) && OutNeighborsQueryable<Representation>
+        requires (directed) &&
+                 OutNeighborsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_neighbors "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.out_neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                       return target(id);
-                   });
+        return representation_.out_neighbors(v);
     }
 
     // View over incoming VertexID values for each edge (u, v).
@@ -352,44 +340,59 @@ public:
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.in_neighbors(v)
-                   | std::views::transform([this](EdgeID id){
-                       return source(id);
-                   });
+        return representation_.in_neighbors(v);
     }
 
-    // View over edges as EdgeViews
+    //
+    // Views for getting neighboring IncidentEdges.
+    //
+
+    // View over edges as IncidentEdges.
     auto incident_edges(VertexID v) const
-        noexcept(
-            noexcept(representation_.neighbors(v)) &&
-            noexcept(EdgeView{source(EdgeID{}),
-                              target(EdgeID{}),
-                              EdgeID{}})
-        )
-        requires (!directed) && NeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.incident_edges(v)))
+        requires (!directed) &&
+                 IncidentEdgesQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        // For an undirected graph, we want all edges with
-        // v as an element.
-        //
-        // Return edges_.to[indx] or edges_.from[indx]
-        // depending on which vertex is not equal to v.
-        return representation_.neighbors(v)
+        return representation_.incident_edges(v);
+    }
+
+    // View over edges as IncidentEdges, only used if the
+    // representation doesn't expose incident_edges(v)
+    //
+    // This version is slower because we will have more
+    // cache misses each time in a large graph.
+    auto incident_edges(VertexID v) const
+        noexcept(
+            noexcept(representation_.incident_edge_ids(v)) &&
+            noexcept(IncidentEdge{target(EdgeID{}), EdgeID{}})
+        )
+        requires (!directed &&
+                 IncidentEdgeIDsQueryable<Representation> &&
+                 !IncidentEdgesQueryable<Representation>)
+    {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::incident_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
+        return representation_.incident_edge_ids(v)
                 | std::views::transform([this](EdgeID id){
-                    return EdgeView{source(id),
-                                    target(id),
-                                    id};
+                    return IncidentEdge{target(id),
+                                        id};
                 });
     }
 
-    // View over edges as EdgeViews (outgoing for digraphs)
+    // View over edges as an IncidentEdge (outgoing for digraphs)
     auto incident_edges(VertexID v) const
         noexcept(noexcept(out_edges(v)))
-        requires (directed) && OutNeighborsQueryable<Representation>
+        requires (directed) &&
+                 (OutEdgesQueryable<Representation>
+                  || OutEdgeIDsQueryable<Representation>)
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges "
@@ -399,69 +402,104 @@ public:
         return out_edges(v);
     }
 
-    // View over outgoing edges as EdgeViews
+    // View over outgoing edges as IncidentEdges.
     auto out_edges(VertexID v) const
-        noexcept(
-            noexcept(representation_.neighbors(v)) &&
-            noexcept(EdgeView{source(EdgeID{}),
-                              target(EdgeID{}),
-                              EdgeID{}})
-        )
-        requires (directed) && OutNeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.out_edges(v)))
+        requires (directed) &&
+                 OutEdgesQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_edges "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.out_neighbors(v)
+        return representation_.out_edges(v);
+    }
+
+    // View over outgoing edges as IncidentEdges.
+    //
+    // Only used if representation doesn't expose an
+    // out_edges method.
+    auto out_edges(VertexID v) const
+        noexcept(
+            noexcept(representation_.out_edge_ids(v)) &&
+            noexcept(IncidentEdge{target(EdgeID{}), EdgeID{}})
+        )
+        requires (directed &&
+                 !OutEdgesQueryable<Representation> &&
+                 OutEdgeIDsQueryable<Representation>)
+    {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::out_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
+        return representation_.out_edge_ids(v)
                | std::views::transform([this](EdgeID id){
-                    return EdgeView{source(id),
-                                    target(id),
-                                    id};
+                    return IncidentEdge{target(id),
+                                        id};
                });
     }
 
-    // View over incoming edges as EdgeViews
+    // View over incoming edges as IncidentEdges
     auto in_edges(VertexID v) const
-        noexcept(
-            noexcept(representation_.in_neighbors(v)) &&
-            noexcept(EdgeView{source(EdgeID{}),
-                              target(EdgeID{}),
-                              EdgeID{}})
-        )
-        requires (directed) && InNeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.in_edges(v)))
+        requires (directed) && InEdgesQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_edges "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.in_neighbors(v)
+        return representation_.in_edges(v);
+    }
+
+    // View over incoming edges as IncidentEdges.
+    //
+    // Only used if representation doesn't expose an
+    // in_edges method.
+    auto in_edges(VertexID v) const
+        noexcept(
+            noexcept(representation_.in_edge_ids(v)) &&
+            noexcept(IncidentEdge{source(EdgeID{}), EdgeID{}})
+        )
+        requires (directed &&
+                 !InEdgesQueryable<Representation> &&
+                 InEdgeIDsQueryable<Representation>)
+    {
+        libproject_assert(valid_vertex(v),
+                          "PropertyGraph::in_edges "
+                          "called on invalid VertexID: "
+                          + std::to_string(v.value));
+
+        return representation_.in_edge_ids(v)
                | std::views::transform([this](EdgeID id){
-                    return EdgeView{source(id),
-                                    target(id),
-                                    id};
+                    return IncidentEdge{source(id), id};
                });
     }
 
+    //
+    // Views for getting neighboring EdgeIDs.
+    //
+
     // View over edges as EdgeIDs
     auto incident_edge_ids(VertexID v) const
-        noexcept(noexcept(representation_.neighbors(v)))
-        requires(!directed) && NeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.incident_edge_ids(v)))
+        requires (!directed &&
+                 IncidentEdgeIDsQueryable<Representation>)
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.neighbors(v);
+        return representation_.incident_edge_ids(v);
     }
 
     // View over edges as EdgeIDs (outgoing for digraphs)
     auto incident_edge_ids(VertexID v) const
         noexcept(noexcept(out_edge_ids(v)))
-        requires(directed) && OutNeighborsQueryable<Representation>
+        requires(directed) && OutEdgeIDsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids "
@@ -474,28 +512,28 @@ public:
 
     // View over outgoing edges as EdgeIDs
     auto out_edge_ids(VertexID v) const
-        noexcept(noexcept(representation_.neighbors(v)))
-        requires (directed) && OutNeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.out_edge_ids(v)))
+        requires (directed) && OutEdgeIDsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::out_edge_ids "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.out_neighbors(v);
+        return representation_.out_edge_ids(v);
     }
 
     // View over incoming edges as EdgeIDs
     auto in_edge_ids(VertexID v) const
-        noexcept(noexcept(representation_.in_neighbors(v)))
-        requires (directed) && InNeighborsQueryable<Representation>
+        noexcept(noexcept(representation_.in_edge_ids(v)))
+        requires (directed) && InEdgeIDsQueryable<Representation>
     {
         libproject_assert(valid_vertex(v),
                           "PropertyGraph::in_edge_ids "
                           "called on invalid VertexID: "
                           + std::to_string(v.value));
 
-        return representation_.in_neighbors(v);
+        return representation_.in_edge_ids(v);
     }
 
     //
@@ -1163,6 +1201,8 @@ public:
     //
     // Utility functions
     //
+
+    // TODO: edge view from edge ID
 
     // Return const or non-const VertexData based on lvalue
     VertexData & operator[](VertexID v)

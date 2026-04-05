@@ -45,11 +45,125 @@ public:
     // Iteration front end
     //
 
+    //
+    // Views for getting the VertexID of each neighbor
+    //
+
     auto neighbors(VertexID v) const
     {
         if constexpr(directed)
         {
             return out_neighbors(v);
+        }
+        else
+        {
+            return NeighborsIndexView<true>(v.value, vertex_count_)
+                | std::views::filter([this](const auto & pair){
+                    return adj_[pair.index] != EdgeID::empty;
+                })
+                | std::views::transform([](const auto & pair){
+                        return pair.u;
+                });
+        }
+    }
+
+    auto in_neighbors(VertexID v) const
+        requires (directed)
+    {
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::filter(
+                    [this, v_0 = v.value](size_t indx)
+                    {
+                        return adj_[v_0 + (vertex_count_ * indx)]
+                                != EdgeID::empty;
+                    })
+                | std::views::transform([this](size_t indx){
+                    return VertexID{indx};
+                });
+    }
+
+    auto out_neighbors(VertexID v) const
+        requires (directed)
+    {
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::filter(
+                    [this, v_0 = (v.value * vertex_count_)](size_t indx)
+                    {
+                        return adj_[v_0 + indx]
+                                != EdgeID::empty;
+                    })
+                | std::views::transform([this](size_t indx){
+                    return VertexID{indx};
+                });
+    }
+
+    //
+    // Views for getting the EdgeView of each neighbor
+    //
+
+    auto incident_edges(VertexID v) const
+    {
+        if constexpr(directed)
+        {
+            return in_edges(v);
+        }
+        else
+        {
+            // TODO: transform -> filter is better here for memory access
+            return NeighborsIndexView<true>(v.value, vertex_count_)
+                | std::views::filter([this](const auto & pair){
+                    return adj_[pair.index] != EdgeID::empty;
+                })
+                | std::views::transform([this](const auto & pair){
+                        return IncidentEdge{
+                                   VertexID{pair.u},
+                                   EdgeID{adj_[pair.index]}
+                               };
+                });
+        }
+    }
+
+    auto in_edges(VertexID v) const
+        requires (directed)
+    {
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::transform(
+                    [this, v_0 = v.value](size_t u){
+                        return IncidentEdge{
+                            VertexID{u},
+                            adj_[v_0 + (vertex_count_ * u)]
+                        };
+                })
+                | std::views::filter([](const auto & pair){
+                    return pair.id != EdgeID::empty;
+                });
+    }
+
+    auto out_edges(VertexID v) const
+        requires (directed)
+    {
+        return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::transform(
+                    [this, v_0 = (v.value * vertex_count_)](size_t u){
+                        return IncidentEdge{
+                            VertexID{u},
+                            adj_[v_0 + u]
+                        };
+                })
+                | std::views::filter([](const auto & pair){
+                    return pair.id != EdgeID::empty;
+                });
+    }
+
+    //
+    // Views for getting the EdgeID of each neighbor
+    //
+
+    auto incident_edge_ids(VertexID v) const
+    {
+        if constexpr(directed)
+        {
+            return out_edge_ids(v);
         }
         else
         {
@@ -75,8 +189,8 @@ public:
             // Then, map the index into array elements.
             //
             // Then, filter elements that represent empty edges.
-            return NeighborsIndexView(v.value, vertex_count_)
-                | std::views::transform([this](int indx){
+            return NeighborsIndexView<false>(v.value, vertex_count_)
+                | std::views::transform([this](size_t indx){
                         return adj_[indx];
                     })
                 | std::views::filter([](const auto & e_id){
@@ -85,7 +199,7 @@ public:
         }
     }
 
-    auto in_neighbors(VertexID v) const
+    auto in_edge_ids(VertexID v) const
         requires (directed)
     {
         // For a digraph's incoming edges, we want all index values
@@ -94,7 +208,7 @@ public:
         // {0, ..., |V| - 1} -> {v, ..., v + |V| * i} where 0 <= i < |V|
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::transform(
-                    [this, v_0 = v.value](int indx)
+                    [this, v_0 = v.value](size_t indx)
                     {
                         return adj_[v_0 + (vertex_count_ * indx)];
                     })
@@ -104,7 +218,7 @@ public:
                     });
     }
 
-    auto out_neighbors(VertexID v) const
+    auto out_edge_ids(VertexID v) const
             requires (directed)
     {
         // For a digraph's outgoing edges, we want all index values
@@ -113,7 +227,7 @@ public:
         // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::transform(
-                    [this, v_0 = (v.value * vertex_count_)](int indx)
+                    [this, v_0 = (v.value * vertex_count_)](size_t indx)
                     {
                         return adj_[v_0 + indx];
                     })
@@ -127,7 +241,7 @@ public:
     auto edges() const
     {
         return std::views::iota(size_t{0}, adj_.size())
-               | std::views::transform([this](int indx){
+               | std::views::transform([this](size_t indx){
                         return adj_[indx];
                     })
                | std::views::filter([](const auto & e_id){

@@ -53,4 +53,23 @@ namespace libproject::graphs
 
     static_assert(std::is_trivially_copyable_v<EdgeID>);
     static_assert(sizeof(EdgeID) == sizeof(GRAPH_EDGE_ID_TYPE));
+
+    // For global views over all edges
+    struct EdgeView
+    {
+        VertexID from;
+        VertexID to;
+        EdgeID id;
+    };
+
+    static_assert(std::is_trivially_copyable_v<EdgeView>);
+
+    // For views which already have the input vertex
+    struct IncidentEdge
+    {
+        VertexID neighbor;
+        EdgeID id;
+    };
+
+    static_assert(std::is_trivially_copyable_v<IncidentEdge>);
 };
