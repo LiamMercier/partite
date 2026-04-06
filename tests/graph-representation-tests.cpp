@@ -18,6 +18,16 @@ struct PairHash
 
 using namespace libproject::graphs;
 
+struct EdgeViewHash
+{
+    std::size_t operator()(const EdgeView & edge) const
+    {
+        return std::hash<size_t>()(edge.from.value)
+               ^ std::hash<size_t>()(edge.to.value)
+               ^ std::hash<size_t>()(edge.id.value);
+    }
+};
+
 TEST(GraphRepresentations, AdjacencyMatrixConstruction)
 {
     {

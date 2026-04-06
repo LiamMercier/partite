@@ -262,27 +262,26 @@ public:
     }
 
     // View over every edge in the graph as an EdgeView.
-    //
-    // TODO: overload to allow representation to construct
-    //       the view faster if the member is exposed.
     auto edges() const
-        noexcept(noexcept(representation_.edges()))
-        requires (GlobalEdgesQueryable<Representation>)
     {
-        return representation_.edges()
+        return edge_ids()
                | std::views::transform([this](EdgeID id){
                    return EdgeView{source(id),
                                    target(id),
                                    id};
-               });
+            });
     }
 
     // View over every edge ID in the graph.
     auto edge_ids() const
-        noexcept(noexcept(representation_.edges()))
-        requires (GlobalEdgesQueryable<Representation>)
     {
-        return representation_.edges();
+        return std::views::iota(size_t{0}, edges_.size())
+               | std::views::filter([this](size_t id){
+                   return edges_.from[id] != VertexID::empty;
+               })
+               | std::views::transform([](size_t id){
+                   return EdgeID{static_cast<EdgeID>(id)};
+               });
     }
 
     //
@@ -714,7 +713,7 @@ public:
                 return {rep_edge, false};
             }
 
-            libproject_assert(valid_edge(e_id),
+            libproject_assert(e_id.value < edges_.size(),
                               "PropertyGraph::add_edge "
                               "tried to modify edges_ through EdgeID "
                               + std::to_string(e_id.value)
@@ -927,10 +926,12 @@ public:
         // If edge was not empty, remove from the list.
         free_edges_.push_back(res);
 
+        auto data = std::move(edge_data(res));
+
         edges_.from[res.value] = VertexID::empty;
         edges_.to[res.value] = VertexID::empty;
 
-        return { std::move(edge_data(res)) };
+        return data;
     }
 
     //
@@ -991,9 +992,8 @@ public:
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::remove_edge "
-                          "called on EdgeID "
-                          + std::to_string(e_id.value)
-                          + " out of range");
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
 
         return remove_edge(source(e_id), target(e_id));
     }
@@ -1003,9 +1003,8 @@ public:
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::erase_edge "
-                          "called on EdgeID "
-                          + std::to_string(e_id.value)
-                          + " out of range");
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
 
         return erase_edge(source(e_id), target(e_id));
     }
@@ -1016,9 +1015,8 @@ public:
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge "
-                          "called on EdgeID "
-                          + std::to_string(e_id.value)
-                          + " out of range");
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
 
         return extract_edge(source(e_id), target(e_id), out);
     }
@@ -1028,9 +1026,8 @@ public:
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge "
-                          "called on EdgeID "
-                          + std::to_string(e_id.value)
-                          + " out of range");
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
 
         return extract_edge(source(e_id), target(e_id));
     }
@@ -1292,7 +1289,8 @@ public:
 
     bool valid_edge(EdgeID e_id) const noexcept
     {
-        return (e_id < edges_.size());
+        return (e_id < edges_.size()
+                && edges_.from[e_id.value] != VertexID::empty);
     }
 
     void reserve_vertices(size_t N)

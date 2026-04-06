@@ -43,8 +43,6 @@ public:
     // Ranges front end
     //
 
-    // TODO: edges() const
-
     //
     // Views for getting the VertexID of each neighbor
     //

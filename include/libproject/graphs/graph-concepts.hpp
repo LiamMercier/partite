@@ -189,17 +189,6 @@ concept InDegreeQueryable = GraphRepresentation<T> &&
     { rep.in_degree(v_id) } -> std::convertible_to<std::size_t>;
 };
 
-// Representations that expose a global edge range.
-template <typename T>
-concept GlobalEdgesQueryable = GraphRepresentation<T> &&
-                               requires(const T rep)
-{
-    { rep.edges() } -> std::ranges::range;
-    requires std::same_as<std::ranges::range_value_t
-                            <decltype(rep.edges())>,
-                          EdgeID>;
-};
-
 // Representations that can be transposed.
 template <typename T>
 concept Transposable = GraphRepresentation<T> &&
