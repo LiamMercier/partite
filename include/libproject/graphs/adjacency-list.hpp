@@ -655,13 +655,13 @@ public:
     bool valid_vertex(VertexID v) const
         requires (directed)
     {
-        v.value < out_edges_.size();
+        return v.value < out_edges_.size();
     }
 
     bool valid_vertex(VertexID v) const
         requires (!directed)
     {
-        v.value < adj_.size();
+        return v.value < adj_.size();
     }
 
     size_t vertex_count() const noexcept

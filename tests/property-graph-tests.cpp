@@ -2,6 +2,7 @@
 
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
+#include <libproject/graphs/adjacency-list.hpp>
 
 #include <unordered_set>
 #include <tuple>
@@ -348,12 +349,24 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
                 std::monostate,
                 std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>>,
+                std::monostate,
+                std::monostate>,
 
     // EdgeData but no VertexData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
                 int,
                 std::monostate>,
     GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, int>,
                 int,
                 std::monostate>,
 
@@ -364,12 +377,24 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int, int>,
                 int,
                 int>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, int, int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, int, int>,
+                int,
+                int>,
 
     // VertexData but no EdgeData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
                 std::monostate,
                 int>,
     GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, std::monostate, int>,
                 std::monostate,
                 int>
 >;
@@ -1803,7 +1828,7 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
         graph.add_edge(0, 2, 8);
 
         // Test failed add
-        auto res = graph.add_edge(0, 2, 9);
+        auto res = graph.add_edge_unique(0, 2, 9);
         ASSERT_EQ(res.first, EdgeID{8});
         ASSERT_FALSE(res.second);
 

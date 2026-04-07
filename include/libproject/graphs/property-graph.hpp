@@ -102,6 +102,12 @@ public:
     static constexpr bool has_edge_data = HasData<EdgeData>;
     static constexpr bool has_vertex_data = HasData<VertexData>;
 
+    enum class EdgeInsertPolicy
+    {
+        Unchecked,
+        Unique
+    };
+
     // TODO: should we maybe have representations expose "is_multigraph"
     //       and keep this as a generic container?
 
@@ -678,8 +684,8 @@ public:
     //
     // On success, return the new EdgeID as {new_id, true}
     // On failure, return the old EdgeID as {old_id, false}
-    template<typename... Args>
-    std::pair<EdgeID, bool> add_edge(VertexID from, VertexID to, Args&&... args)
+    template<EdgeInsertPolicy Policy, typename... Args>
+    std::pair<EdgeID, bool> add_edge_impl(VertexID from, VertexID to, Args&&... args)
         requires ((!has_edge_data && sizeof...(Args) == 0) ||
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
                  && edges_mutable
@@ -697,6 +703,7 @@ public:
                           + " which was invalid");
 
         EdgeID e_id;
+        EdgeID rep_edge;
 
         // If we have deleted an edge in the past, use the old slot.
         if (!free_edges_.empty())
@@ -704,7 +711,32 @@ public:
             e_id = free_edges_.back();
             free_edges_.pop_back();
 
-            EdgeID rep_edge = representation_.add_edge(from, to, e_id);
+            if constexpr (Policy == EdgeInsertPolicy::Unique)
+            {
+                // If we expose add_edge_unique then use this.
+                if constexpr (requires {representation_
+                                            .add_edge_unique(from, to, e_id);})
+                {
+                    rep_edge = representation_.add_edge_unique(from,
+                                                               to,
+                                                               e_id);
+                }
+                // If the representation doesn't expose a uniqueness
+                // check, then we can do it ourself, but it might be slower.
+                else
+                {
+                    rep_edge = representation_.find_edge(from, to);
+
+                    if (rep_edge == EdgeID::empty)
+                    {
+                        rep_edge = representation_.add_edge(from, to, e_id);
+                    }
+                }
+            }
+            else
+            {
+                rep_edge = representation_.add_edge(from, to, e_id);
+            }
 
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
@@ -749,7 +781,33 @@ public:
             (edges_.from).push_back(from);
             (edges_.to).push_back(to);
 
-            EdgeID rep_edge = representation_.add_edge(from, to, e_id);
+            // Representation insertion based on policy.
+            if constexpr (Policy == EdgeInsertPolicy::Unique)
+            {
+                // If we expose add_edge_unique then use this.
+                if constexpr (requires {representation_
+                                            .add_edge_unique(from, to, e_id);})
+                {
+                    rep_edge = representation_.add_edge_unique(from,
+                                                               to,
+                                                               e_id);
+                }
+                // If the representation doesn't expose a uniqueness
+                // check, then we can do it ourself, but it might be slower.
+                else
+                {
+                    rep_edge = representation_.find_edge(from, to);
+
+                    if (rep_edge == EdgeID::empty)
+                    {
+                        rep_edge = representation_.add_edge(from, to, e_id);
+                    }
+                }
+            }
+            else
+            {
+                rep_edge = representation_.add_edge(from, to, e_id);
+            }
 
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
@@ -773,6 +831,20 @@ public:
         }
 
         return {e_id, true};
+    }
+
+    template<typename... Args>
+    auto add_edge(VertexID from, VertexID to, Args&&... args)
+    {
+        return add_edge_impl<EdgeInsertPolicy::Unchecked>(
+            from, to, std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    auto add_edge_unique(VertexID from, VertexID to, Args&&... args)
+    {
+        return add_edge_impl<EdgeInsertPolicy::Unique>(
+            from, to, std::forward<Args>(args)...);
     }
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
@@ -1341,7 +1413,8 @@ public:
         noexcept(noexcept(has_edge(from, to)))
         requires EdgeQueryable<Representation>
     {
-        if (!valid_vertex(from) || !valid_vertex(to))
+        if (from.value >= vertices_.size() || !valid_vertex(from) ||
+            to.value >= vertices_.size() || !valid_vertex(to))
         {
             return false;
         }
