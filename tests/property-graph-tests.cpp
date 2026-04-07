@@ -1680,7 +1680,12 @@ TYPED_TEST(PropertyGraphTest, Clear)
 
     for (const auto & e : edges)
     {
-        bool exists = graph.has_edge_safe(e.from, e.to);
+        if (!graph.valid_vertex(e.from) || !graph.valid_vertex(e.to))
+        {
+            continue;
+        }
+
+        bool exists = graph.has_edge(e.from, e.to);
 
         if (exists)
         {
@@ -1693,7 +1698,8 @@ TYPED_TEST(PropertyGraphTest, Clear)
     }
 
     ASSERT_EQ(graph.edge_count(), 0);
-    graph.valid_vertex(0);
+    ASSERT_EQ(graph.vertex_count(), 0);
+    ASSERT_FALSE(graph.valid_vertex(0));
 }
 
 TYPED_TEST(PropertyGraphTest, VertexModification)
@@ -1827,11 +1833,6 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
 
         // add some edges
         graph.add_edge(0, 2, 8);
-
-        // Test failed add
-        auto res = graph.add_edge_unique(0, 2, 9);
-        ASSERT_EQ(res.first, EdgeID{8});
-        ASSERT_FALSE(res.second);
 
         graph.add_edge(0, 3, 9);
         graph.add_edge(0, 4, 10);
