@@ -108,8 +108,12 @@ public:
         Unique
     };
 
-    // TODO: should we maybe have representations expose "is_multigraph"
-    //       and keep this as a generic container?
+    // For simplification of pair overloads.
+    using EdgePair = std::pair<VertexID, VertexID>;
+
+    // TODO <feature>: should we maybe have representations
+    //                 expose "is_multigraph" and keep this
+    //                 as a generic container?
 
     // Empty graph constructor
     PropertyGraph(size_t num_vertices)
@@ -840,13 +844,6 @@ public:
             from, to, std::forward<Args>(args)...);
     }
 
-    template<typename... Args>
-    auto add_edge_unique(VertexID from, VertexID to, Args&&... args)
-    {
-        return add_edge_impl<EdgeInsertPolicy::Unique>(
-            from, to, std::forward<Args>(args)...);
-    }
-
     // Remove an edge, this will have to invalidate any EdgeData reference.
     bool remove_edge(VertexID from, VertexID to)
         requires edges_mutable
@@ -1271,7 +1268,15 @@ public:
     // Utility functions
     //
 
-    // TODO: edge view from edge ID
+    EdgeView edge_view(EdgeID e_id)
+    {
+        libproject_assert(valid_edge(e_id),
+                          "PropertyGraph::edge_view "
+                          "called on invalid EdgeID "
+                          + std::to_string(e_id.value));
+
+        return EdgeView{source(e_id), target(e_id), e_id};
+    }
 
     // Return const or non-const VertexData based on lvalue
     VertexData & operator[](VertexID v)
@@ -1353,7 +1358,9 @@ public:
         // the vertex is alive.
         if constexpr (vertices_mutable)
         {
-            return representation_.valid_vertex(v) && vertices_.alive(v);
+            return representation_.valid_vertex(v)
+                   && (v.value < vertices_.size())
+                   && vertices_.alive(v);
         }
 
         return representation_.valid_vertex(v);
@@ -1382,6 +1389,9 @@ public:
     //                 are actually alive, wasting space and time.
     //
     //                 perhaps garbage_collect() or compress() is a good name?
+    //
+    //                 we also probably need an overload for the resulting map
+    //                 from old VertexID values to the new ones.
 
     //
     // Transformations
@@ -1407,7 +1417,19 @@ public:
     // Safe functions and wrappers
     //
 
-    // TODO <feature>: safe variants for all relevant functions
+    // TODO consider safe view functions as well?
+
+    EdgeID find_edge_safe(VertexID from, VertexID to) const
+        noexcept(noexcept(find_edge(from, to)))
+        requires EdgeQueryable<Representation>
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return EdgeID::empty;
+        }
+
+        return find_edge(from, to);
+    }
 
     bool has_edge_safe(VertexID from, VertexID to) const
         noexcept(noexcept(has_edge(from, to)))
@@ -1422,7 +1444,281 @@ public:
         return has_edge(from, to);
     }
 
-    // TODO: add_edge_unique
+    std::pair<VertexID, VertexID> endpoints_safe(EdgeID e_id) const noexcept
+    {
+        if (!valid_edge(e_id))
+        {
+            return {VertexID::empty, VertexID::empty};
+        }
+
+        if (!valid_vertex(source(e_id)) || valid_vertex(target(e_id)))
+        {
+            return {VertexID::empty, VertexID::empty};
+        }
+
+        return {source(e_id), target(e_id)};
+    }
+
+    std::optional<EdgeData> edge_data_safe(EdgeID e_id) const noexcept
+        requires (has_edge_data)
+    {
+        if (!valid_edge(e_id))
+        {
+            return std::nullopt;
+        }
+
+        return edges_.data[e_id.value];
+    }
+
+    std::optional<VertexData> vertex_data_safe(VertexID v_id) noexcept
+        requires (has_vertex_data)
+    {
+        if(!valid_vertex(v_id))
+        {
+            return std::nullopt;
+        }
+
+        return vertices_[v_id.value];
+    }
+
+    template<typename... Args>
+    auto add_edge_unique(VertexID from, VertexID to, Args&&... args)
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                  (has_edge_data && std::constructible_from<EdgeData, Args...>))
+                 && edges_mutable
+    {
+        return add_edge_impl<EdgeInsertPolicy::Unique>(
+            from, to, std::forward<Args>(args)...);
+    }
+
+    // unique + vertex validity checks.
+    template<typename... Args>
+    auto add_edge_safe(VertexID from, VertexID to, Args&&... args)
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                    (has_edge_data && std::constructible_from<EdgeData, Args...>))
+                    && edges_mutable
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return {EdgeID::empty, false};
+        }
+
+        return add_edge_impl<EdgeInsertPolicy::Unique>(
+            from, to, std::forward<Args>(args)...);
+    }
+
+    bool remove_edge_safe(VertexID from, VertexID to)
+        requires edges_mutable
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return false;
+        }
+
+        return remove_edge(from, to);
+    }
+
+    bool erase_edge_safe(VertexID from, VertexID to)
+        requires edges_mutable
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return false;
+        }
+
+        erase_edge(from, to);
+    }
+
+    bool extract_edge_safe(VertexID from, VertexID to, EdgeData & out)
+        requires (has_edge_data && edges_mutable)
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return false;
+        }
+
+        extract_edge(from, to, out);
+    }
+
+    // Remove an edge and return the edge's data if it exists.
+    std::optional<EdgeData> extract_edge_safe(VertexID from, VertexID to)
+        requires (has_edge_data && edges_mutable)
+    {
+        if (!valid_vertex(from) || !valid_vertex(to))
+        {
+            return false;
+        }
+
+        return extract_edge(from, to);
+    }
+
+    void remove_vertex_safe(VertexID v_id)
+        requires vertices_mutable
+    {
+        if (!valid_vertex(v_id))
+        {
+            return;
+        }
+
+        return remove_vertex(v_id);
+    }
+
+    void extract_vertex_safe(VertexID v_id, VertexData & out)
+        requires (vertices_mutable && has_vertex_data)
+    {
+        if (!valid_vertex(v_id))
+        {
+            return;
+        }
+
+        return extract_vertex(v_id, out);
+    }
+
+    size_t degree_safe(VertexID v) const
+        requires DegreeQueryable<Representation>
+    {
+        if (!valid_vertex(v))
+        {
+            return 0;
+        }
+
+        return degree(v);
+    }
+
+    size_t in_degree_safe(VertexID v) const
+        requires InDegreeQueryable<Representation>
+    {
+        if (!valid_vertex(v))
+        {
+            return 0;
+        }
+
+        return in_degree(v);
+    }
+
+    size_t out_degree_safe(VertexID v) const
+        requires OutDegreeQueryable<Representation>
+    {
+        if (!valid_vertex(v))
+        {
+            return 0;
+        }
+
+        return out_degree(v);
+    }
+
+    EdgeView edge_view_safe(EdgeID e_id)
+    {
+        if (!valid_edge(e_id))
+        {
+            return {VertexID::empty, VertexID::empty, EdgeID::empty};
+        }
+
+        if (!valid_vertex(source(e_id)) || valid_vertex(target(e_id)))
+        {
+            return {VertexID::empty, VertexID::empty, EdgeID::empty};
+        }
+
+        return {source(e_id), target(e_id), e_id};
+    }
+
+    bool has_self_loop_safe(VertexID v) const
+        requires SelfLoopQueryable<Representation>
+    {
+        if (!valid_vertex(v))
+        {
+            return false;
+        }
+
+        return has_self_loop(v);
+    }
+
+    //
+    // Safe overloads
+    //
+
+    EdgeID find_edge_safe(std::pair<VertexID, VertexID> edge) const
+        requires EdgeQueryable<Representation>
+    {
+        return find_edge_safe(edge.first, edge.second);
+    }
+
+    bool has_edge_safe(std::pair<VertexID, VertexID> edge) const
+        requires EdgeQueryable<Representation>
+    {
+        return has_edge_safe(edge.first, edge.second);
+    }
+
+    // unique + vertex validity checks.
+    template<typename... Args>
+    auto add_edge_unique(std::pair<VertexID, VertexID> edge, Args&&... args)
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                  (has_edge_data && std::constructible_from<EdgeData, Args...>))
+                 && edges_mutable
+    {
+        return add_edge_unique(edge.first,
+                               edge.second,
+                               std::forward<Args>(args)...);
+    }
+
+    template<typename... Args>
+    auto add_edge_safe(std::pair<VertexID, VertexID> edge, Args&&... args)
+        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+                  (has_edge_data && std::constructible_from<EdgeData, Args...>))
+                 && edges_mutable
+    {
+        return add_edge_safe(edge.first,
+                             edge.second,
+                             std::forward<Args>(args)...);
+    }
+
+    bool remove_edge_safe(std::pair<VertexID, VertexID> edge)
+        requires edges_mutable
+    {
+        return remove_edge_safe(edge.first, edge.second);
+    }
+
+    bool erase_edge_safe(std::pair<VertexID, VertexID> edge)
+        requires edges_mutable
+    {
+        return erase_edge_safe(edge.first, edge.second);
+    }
+
+    bool extract_edge_safe(std::pair<VertexID, VertexID> edge, EdgeData & out)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge_safe(edge.first, edge.second, out);
+    }
+
+    std::optional<EdgeData> extract_edge_safe(EdgePair edge)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge_safe(edge.first, edge.second);
+    }
+
+    bool remove_edge_safe(EdgeID e_id)
+        requires edges_mutable
+    {
+        return remove_edge_safe(endpoints_safe(e_id));
+    }
+
+    bool erase_edge_safe(EdgeID e_id)
+        requires edges_mutable
+    {
+        return erase_edge_safe(endpoints_safe(e_id));
+    }
+
+    bool extract_edge_safe(EdgeID e_id, EdgeData & out)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge_safe(endpoints_safe(e_id), out);
+    }
+
+    std::optional<EdgeData> extract_edge_safe(EdgeID e_id)
+        requires (has_edge_data && edges_mutable)
+    {
+        return extract_edge_safe(endpoints_safe(e_id));
+    }
 
 private:
     // Internal structure-of-arrays storage.

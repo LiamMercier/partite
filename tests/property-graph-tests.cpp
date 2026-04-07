@@ -1693,6 +1693,7 @@ TYPED_TEST(PropertyGraphTest, Clear)
     }
 
     ASSERT_EQ(graph.edge_count(), 0);
+    graph.valid_vertex(0);
 }
 
 TYPED_TEST(PropertyGraphTest, VertexModification)
