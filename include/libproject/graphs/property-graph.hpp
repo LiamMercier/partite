@@ -87,7 +87,6 @@ public:
 //
 //                      we can also use some enum MutabilityPolicy as well
 
-// TODO <feature>: standardize assert debug strings for user clarity
 template <GraphRepresentation Representation,
           typename EdgeData = std::monostate,
           typename VertexData = std::monostate>

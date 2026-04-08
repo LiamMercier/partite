@@ -11,6 +11,7 @@
 namespace libproject::graphs
 {
 
+// TODO: finish asserts
 template <bool Directed>
 class AdjacencyMatrix
 {
@@ -246,15 +247,12 @@ public:
         size_t index = compute_index(from, to);
 
         libproject_assert(index < adj_.size(),
-                          "AdjacencyMatrix::find_edge: index "
+                          "AdjacencyMatrix::find_edge(from, to): "
+                          "out of bounds access; index = "
                           + std::to_string(index)
-                          + " is out of bounds for matrix of "
+                          + " adj_.size() = "
                           + std::to_string(adj_.size())
-                          + " elements.\nInput: {from: "
-                          + std::to_string(from.value)
-                          + ", to: "
-                          + std::to_string(to.value)
-                          +"}");
+                          + ". Your vertices are likely invalid.");
 
         return adj_[index];
     }
@@ -269,15 +267,12 @@ public:
         size_t index = compute_index(from, to);
 
         libproject_assert(index < adj_.size(),
-                          "AdjacencyMatrix::has_edge: index "
+                          "AdjacencyMatrix::has_edge(from, to): "
+                          "out of bounds access; index = "
                           + std::to_string(index)
-                          + " is out of bounds for matrix of "
+                          + " adj_.size() = "
                           + std::to_string(adj_.size())
-                          + " elements.\nInput: {from: "
-                          + std::to_string(from.value)
-                          + ", to: "
-                          + std::to_string(to.value)
-                          +"}");
+                          + ". Your vertices are likely invalid.");
 
         EdgeID edge_id = adj_[index];
         return (edge_id != EdgeID::empty);
@@ -299,15 +294,12 @@ public:
         size_t index = compute_index(from, to);
 
         libproject_assert(index < adj_.size(),
-                          "AdjacencyMatrix::add_edge: index "
+                          "AdjacencyMatrix::add_edge(from, to, id): "
+                          "out of bounds access; index = "
                           + std::to_string(index)
-                          + " is out of bounds for matrix of "
+                          + " adj_.size() = "
                           + std::to_string(adj_.size())
-                          + " elements.\nInput: {from: "
-                          + std::to_string(from.value)
-                          + ", to: "
-                          + std::to_string(to.value)
-                          +"}");
+                          + ". Your vertices are likely invalid.");
 
         // Prevent double counting degrees.
         if (adj_[index] != EdgeID::empty)
@@ -320,37 +312,37 @@ public:
         if constexpr (!directed)
         {
             libproject_assert(from.value < deg_.size(),
-                              "AdjacencyMatrix::add_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; from = "
                               + std::to_string(from.value)
-                              + " is out of bounds for degree list of "
-                              + std::to_string(deg_.size())
-                              + " elements (usually |V|)");
+                              + " deg_.size() = "
+                              + std::to_string(deg_.size()));
 
             libproject_assert(to.value < deg_.size(),
-                              "AdjacencyMatrix::add_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; to = "
                               + std::to_string(to.value)
-                              + " is out of bounds for degree list of "
-                              + std::to_string(deg_.size())
-                              + " elements (usually |V|)");
+                              + " deg_.size() = "
+                              + std::to_string(deg_.size()));
 
             deg_[from.value] += 1;
             deg_[to.value] += 1;
         }
         else
         {
-            libproject_assert(to.value < in_deg_.size(),
-                              "AdjacencyMatrix::add_edge: index "
-                              + std::to_string(to.value)
-                              + " is out of bounds for in degree list of "
-                              + std::to_string(in_deg_.size())
-                              + " elements (usually |V|)");
-
             libproject_assert(from.value < out_deg_.size(),
-                              "AdjacencyMatrix::add_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; from = "
                               + std::to_string(from.value)
-                              + " is out of bounds for out degree list of "
-                              + std::to_string(out_deg_.size())
-                              + " elements (usually |V|)");
+                              + " out_deg_.size() = "
+                              + std::to_string(out_deg_.size()));
+
+            libproject_assert(to.value < in_deg_.size(),
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; to = "
+                              + std::to_string(to.value)
+                              + " in_deg_.size() = "
+                              + std::to_string(in_deg_.size()));
 
             in_deg_[to.value] += 1;
             out_deg_[from.value] += 1;
@@ -370,15 +362,12 @@ public:
         size_t index = compute_index(from, to);
 
         libproject_assert(index < adj_.size(),
-                          "AdjacencyMatrix::remove_edge: index "
+                          "AdjacencyMatrix::remove_edge(from, to): "
+                          "out of bounds access; index = "
                           + std::to_string(index)
-                          + " is out of bounds for matrix of "
+                          + " adj_.size() = "
                           + std::to_string(adj_.size())
-                          + " elements.\nInput: {from: "
-                          + std::to_string(from.value)
-                          + ", to: "
-                          + std::to_string(to.value)
-                          +"}");
+                          + ". Your vertices are likely invalid.");
 
         EdgeID old_edge = adj_[index];
 
@@ -393,37 +382,37 @@ public:
         if constexpr (!directed)
         {
             libproject_assert(from.value < deg_.size(),
-                              "AdjacencyMatrix::remove_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; from = "
                               + std::to_string(from.value)
-                              + " is out of bounds for degree list of "
-                              + std::to_string(deg_.size())
-                              + " elements (usually |V|)");
+                              + " deg_.size() = "
+                              + std::to_string(deg_.size()));
 
             libproject_assert(to.value < deg_.size(),
-                              "AdjacencyMatrix::remove_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; to = "
                               + std::to_string(to.value)
-                              + " is out of bounds for degree list of "
-                              + std::to_string(deg_.size())
-                              + " elements (usually |V|)");
+                              + " deg_.size() = "
+                              + std::to_string(deg_.size()));
 
             deg_[from.value] -= 1;
             deg_[to.value] -= 1;
         }
         else
         {
-            libproject_assert(to.value < in_deg_.size(),
-                              "AdjacencyMatrix::remove_edge: index "
-                              + std::to_string(to.value)
-                              + " is out of bounds for in degree list of "
-                              + std::to_string(in_deg_.size())
-                              + " elements (usually |V|)");
-
             libproject_assert(from.value < out_deg_.size(),
-                              "AdjacencyMatrix::remove_edge: index "
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; from = "
                               + std::to_string(from.value)
-                              + " is out of bounds for out degree list of "
-                              + std::to_string(out_deg_.size())
-                              + " elements (usually |V|)");
+                              + " out_deg_.size() = "
+                              + std::to_string(out_deg_.size()));
+
+            libproject_assert(to.value < in_deg_.size(),
+                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "out of bounds access; to = "
+                              + std::to_string(to.value)
+                              + " in_deg_.size() = "
+                              + std::to_string(in_deg_.size()));
 
             in_deg_[to.value] -= 1;
             out_deg_[from.value] -= 1;
@@ -451,10 +440,11 @@ public:
         if constexpr (!directed)
         {
             libproject_assert(deg_.size() == vertex_count_,
-                              "AdjacencyMatrix::clear: degree list size "
-                              "does not equal vertex count\n|V|: "
+                              "AdjacencyMatrix::clear(): degree list size "
+                              "does not equal vertex count; "
+                              "vertex_count_ = "
                               + std::to_string(vertex_count_)
-                              + "\nDegree list size: "
+                              + ", deg_.size() = "
                               + std::to_string(deg_.size()));
 
             for (size_t i = 0; i < vertex_count_; i++)
@@ -465,17 +455,19 @@ public:
         else
         {
             libproject_assert(in_deg_.size() == vertex_count_,
-                              "AdjacencyMatrix::clear: indegree list size "
-                              "does not equal vertex count\n|V|: "
+                              "AdjacencyMatrix::clear(): degree list size "
+                              "does not equal vertex count; "
+                              "vertex_count_ = "
                               + std::to_string(vertex_count_)
-                              + "\nDegree list size: "
+                              + ", in_deg_.size() = "
                               + std::to_string(in_deg_.size()));
 
             libproject_assert(out_deg_.size() == vertex_count_,
-                              "AdjacencyMatrix::clear: outdegree list size "
-                              "does not equal vertex count\n|V|: "
+                              "AdjacencyMatrix::clear(): degree list size "
+                              "does not equal vertex count; "
+                              "vertex_count_ = "
                               + std::to_string(vertex_count_)
-                              + "\nDegree list size: "
+                              + ", out_deg_.size() = "
                               + std::to_string(out_deg_.size()));
 
             for (size_t i = 0; i < vertex_count_; i++)
