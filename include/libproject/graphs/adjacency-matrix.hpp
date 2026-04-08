@@ -11,7 +11,7 @@
 namespace libproject::graphs
 {
 
-// TODO: finish asserts
+
 template <bool Directed>
 class AdjacencyMatrix
 {
@@ -22,6 +22,11 @@ public:
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
     {
+        libproject_assert(num_vertices > 0,
+                          "AdjacencyMatrix::AdjacencyMatrix(num_vertices): "
+                          "invalid matrix size; num_vertices = "
+                          + std::to_string(num_vertices));
+
         if constexpr (directed)
         {
             adj_.resize(vertex_count_ * vertex_count_,
@@ -52,6 +57,11 @@ public:
 
     auto neighbors(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_neighbors(v);
@@ -71,6 +81,11 @@ public:
     auto in_neighbors(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::in_neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::filter(
                     [this, v_0 = v.value](size_t indx)
@@ -86,6 +101,11 @@ public:
     auto out_neighbors(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::out_neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::filter(
                     [this, v_0 = (v.value * vertex_count_)](size_t indx)
@@ -104,6 +124,11 @@ public:
 
     auto incident_edges(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::incident_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_edges(v);
@@ -127,6 +152,11 @@ public:
     auto in_edges(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::in_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::transform(
                     [this, v_0 = v.value](size_t u){
@@ -143,6 +173,11 @@ public:
     auto out_edges(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::out_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return std::views::iota(size_t{0}, vertex_count_)
                 | std::views::transform(
                     [this, v_0 = (v.value * vertex_count_)](size_t u){
@@ -162,6 +197,11 @@ public:
 
     auto incident_edge_ids(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::incident_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_edge_ids(v);
@@ -203,6 +243,11 @@ public:
     auto in_edge_ids(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::in_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         // For a digraph's incoming edges, we want all index values
         // corresponding to column v. We can use the transformation:
         //
@@ -222,6 +267,11 @@ public:
     auto out_edge_ids(VertexID v) const
             requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::out_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         // For a digraph's outgoing edges, we want all index values
         // corresponding to row v. We can use the transformation:
         //
@@ -382,14 +432,14 @@ public:
         if constexpr (!directed)
         {
             libproject_assert(from.value < deg_.size(),
-                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " deg_.size() = "
                               + std::to_string(deg_.size()));
 
             libproject_assert(to.value < deg_.size(),
-                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
                               + " deg_.size() = "
@@ -401,14 +451,14 @@ public:
         else
         {
             libproject_assert(from.value < out_deg_.size(),
-                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " out_deg_.size() = "
                               + std::to_string(out_deg_.size()));
 
             libproject_assert(to.value < in_deg_.size(),
-                              "AdjacencyMatrix::add_edge(from, to, id): "
+                              "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
                               + " in_deg_.size() = "
@@ -484,6 +534,11 @@ public:
 
     size_t degree(VertexID v) const noexcept
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr (!directed)
         {
             return deg_[v.value];
@@ -497,12 +552,22 @@ public:
     size_t in_degree(VertexID v) const noexcept
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::in_degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return in_deg_[v.value];
     }
 
     size_t out_degree(VertexID v) const noexcept
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::out_degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return out_deg_[v.value];
     }
 
@@ -543,6 +608,11 @@ public:
 
     bool has_self_loop(VertexID v) const noexcept
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyMatrix::has_self_loop(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return has_edge(v, v);
     }
 
