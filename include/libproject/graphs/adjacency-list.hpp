@@ -14,7 +14,6 @@ namespace libproject::graphs
 //                      all fragmented, very bad since most
 //                      graphs are going to be sparse and large.
 
-// TODO: asserts
 
 // AdjacencyList class for simple graphs.
 template <bool Directed>
@@ -49,6 +48,11 @@ public:
 
     auto neighbors(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_neighbors(v);
@@ -66,6 +70,11 @@ public:
     auto out_neighbors(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & out = out_list(v);
         return out
                | std::views::transform([](const auto & edge){
@@ -76,6 +85,11 @@ public:
     auto in_neighbors(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_neighbors(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & in = in_list(v);
         return in
                | std::views::transform([](const auto & edge){
@@ -89,6 +103,11 @@ public:
 
     auto incident_edges(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::incident_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_edges(v);
@@ -106,6 +125,11 @@ public:
     auto out_edges(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & out = out_list(v);
         return out
                | std::views::transform([](const auto & edge){
@@ -116,6 +140,11 @@ public:
     auto in_edges(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_edges(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & in = in_list(v);
         return in
                | std::views::transform([](const auto & edge){
@@ -129,6 +158,11 @@ public:
 
     auto incident_edge_ids(VertexID v) const
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::incident_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         if constexpr(directed)
         {
             return out_edge_ids(v);
@@ -146,6 +180,11 @@ public:
     auto out_edge_ids(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & out = out_list(v);
         return out
                | std::views::transform([](const auto & edge){
@@ -156,6 +195,11 @@ public:
     auto in_edge_ids(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_edge_ids(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         auto & in = in_list(v);
         return in
                | std::views::transform([](const auto & edge){
@@ -170,6 +214,16 @@ public:
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
         requires (directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         // Look through the adjacency list for a pair with "to"
         for (const auto & [v, e_id] : out_edges_[from.value])
         {
@@ -185,6 +239,16 @@ public:
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
         requires (!directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         // Look through the adjacency list for a pair with "to"
         for (const auto & [v, e_id] : adj_[from.value])
         {
@@ -200,6 +264,16 @@ public:
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::has_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::has_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         for (const auto & [v, _] : out_edges_[from.value])
         {
             if (v == to)
@@ -214,6 +288,16 @@ public:
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (!directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::has_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::has_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         for (const auto & [v, _] : adj_[from.value])
         {
             if (v == to)
@@ -230,12 +314,12 @@ public:
         requires (directed)
     {
         libproject_assert(find_edge(from, to) == EdgeID::empty,
-                          "AdjacencyList::add_edge inserted "
-                          "duplicate edge ("
+                          "AdjacencyList::add_edge(from, to, edge_id) "
+                          "tried to insert duplicate edge; from = "
                           + std::to_string(from.value)
-                          + " "
+                          + ", to = "
                           + std::to_string(to.value)
-                          + ") with ID "
+                          + ", edge_id = "
                           + std::to_string(edge_id.value)
                           + " (existing edge has ID "
                           + std::to_string(find_edge(from, to).value)
@@ -257,12 +341,12 @@ public:
         requires (!directed)
     {
         libproject_assert(find_edge(from, to) == EdgeID::empty,
-                          "AdjacencyList::add_edge inserted "
-                          "duplicate edge ("
+                          "AdjacencyList::add_edge(from, to, edge_id) "
+                          "tried to insert duplicate edge; from = "
                           + std::to_string(from.value)
-                          + " "
+                          + ", to = "
                           + std::to_string(to.value)
-                          + ") with ID "
+                          + ", edge_id = "
                           + std::to_string(edge_id.value)
                           + " (existing edge has ID "
                           + std::to_string(find_edge(from, to).value)
@@ -290,6 +374,16 @@ public:
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::add_edge_unique(from, to, edge_id): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::add_edge_unique(from, to, edge_id): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         // Return an edge if it already exists.
         EdgeID lookup = find_edge(from, to);
         if (lookup != EdgeID::empty)
@@ -311,6 +405,16 @@ public:
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (!directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::add_edge_unique(from, to, edge_id): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::add_edge_unique(from, to, edge_id): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         // Return an edge if it already exists.
         EdgeID lookup = find_edge(from, to);
         if (lookup != EdgeID::empty)
@@ -341,6 +445,16 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
         requires (directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::remove_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::remove_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         EdgeID e_id = EdgeID::empty;
         auto & out_edges = out_list(from);
 
@@ -373,9 +487,9 @@ public:
 
             libproject_assert(num_self_loops_ + 1 >
                               num_self_loops_,
-                              "AdjacencyList::remove_edge underflow was "
-                              "detected for num_self_loops_ (likely a"
-                              " library error)");
+                              "AdjacencyList::remove_edge(from, to): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
         }
 
         return e_id;
@@ -384,6 +498,16 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
         requires (!directed)
     {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::remove_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::remove_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         EdgeID e_id = EdgeID::empty;
         auto & from_adj = adj_list(from);
         auto & to_adj = adj_list(to);
@@ -418,9 +542,9 @@ public:
 
             libproject_assert(num_self_loops_ + 1 >
                               num_self_loops_,
-                              "AdjacencyList::remove_edge underflow was "
-                              "detected for num_self_loops_ (likely a"
-                              " library error)");
+                              "AdjacencyList::remove_edge(from, to): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
         }
 
         return e_id;
@@ -435,12 +559,12 @@ public:
         requires (directed)
     {
         libproject_assert(v.value <= out_edges_.size(),
-                          "AdjacencyList::add_vertex was called "
-                          "on VertexID "
+                          "AdjacencyList::add_vertex(v): "
+                          "internal library error: monotonic VertexID "
+                          "is larger than list size; v = "
                           + std::to_string(v.value)
-                          + " which was expected to be <= "
-                          + std::to_string(out_edges_.size())
-                          + " (likely a library error)");
+                          + ", out_edges_.size() = "
+                          + std::to_string(out_edges_.size()));
 
         if (v.value == out_edges_.size())
         {
@@ -455,12 +579,12 @@ public:
         requires (!directed)
     {
         libproject_assert(v.value <= adj_.size(),
-                          "AdjacencyList::add_vertex was called "
-                          "on VertexID "
+                          "AdjacencyList::add_vertex(v): "
+                          "internal library error: monotonic VertexID "
+                          "is larger than list size; v = "
                           + std::to_string(v.value)
-                          + " which was expected to be <= "
-                          + std::to_string(adj_.size())
-                          + " (likely a library error)");
+                          + ", adj_.size() = "
+                          + std::to_string(adj_.size()));
 
         if (v.value == adj_.size())
         {
@@ -491,11 +615,22 @@ public:
     void remove_vertex(VertexID v)
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         for (const auto & [u, _] : out_list(v))
         {
             if (u == v)
             {
                 num_self_loops_ -= 1;
+
+                libproject_assert(num_self_loops_ + 1 >
+                                  num_self_loops_,
+                                  "AdjacencyList::remove_vertex(v): "
+                                  "internal library error: num_self_loops_ "
+                                  "underflowed");
             }
 
             auto & in = in_list(u);
@@ -541,6 +676,11 @@ public:
     void remove_vertex(VertexID v)
         requires (!directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         for (const auto & [u, _] : adj_list(v))
         {
             auto & u_list = adj_list(u);
@@ -548,6 +688,12 @@ public:
             if (u == v)
             {
                 num_self_loops_ -= 1;
+
+                libproject_assert(num_self_loops_ + 1 >
+                                  num_self_loops_,
+                                  "AdjacencyList::remove_vertex(v): "
+                                  "internal library error: num_self_loops_ "
+                                  "underflowed");
             }
 
             for (size_t i = 0; i < u_list.size(); i++)
@@ -596,12 +742,22 @@ public:
     size_t degree(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return in_degree(v) + out_degree(v);
     }
 
     size_t degree(VertexID v) const
         requires (!directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         // A self loop adds 1 to the degree that our adjacency list
         // would not be able to account for.
         return adj_[v.value].size() + self_loop_[v.value];
@@ -610,12 +766,22 @@ public:
     size_t in_degree(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return in_edges_[v.value].size();
     }
 
     size_t out_degree(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_degree(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return out_edges_[v.value].size();
     }
 
@@ -633,6 +799,11 @@ public:
     bool has_self_loop(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::has_self_loop(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         for (const auto & u : out_list(v))
         {
             if (u.first == v)
@@ -649,6 +820,11 @@ public:
     bool has_self_loop(VertexID v) const
         requires (!directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::has_self_loop(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return self_loop_[v.value];
     }
 
@@ -704,36 +880,66 @@ private:
     auto & out_list(VertexID v)
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return out_edges_[v.value];
     }
 
     const auto & out_list(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::out_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return out_edges_[v.value];
     }
 
     auto & in_list(VertexID v)
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return in_edges_[v.value];
     }
 
     const auto & in_list(VertexID v) const
         requires (directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::in_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return in_edges_[v.value];
     }
 
     auto & adj_list(VertexID v)
         requires (!directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::adj_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return adj_[v.value];
     }
 
     const auto & adj_list(VertexID v) const
         requires (!directed)
     {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::adj_list(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
         return adj_[v.value];
     }
 
