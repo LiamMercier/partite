@@ -198,6 +198,16 @@ concept Transposable = GraphRepresentation<T> &&
     { rep.compute_transpose() } -> std::same_as<T>;
 };
 
+// Representations that expose .rebuild()
+template <typename T>
+concept Rebuildable = GraphRepresentation<T> &&
+                      requires(const T rep,
+                               const std::vector<VertexID> & from,
+                               const std::vector<VertexID> & to)
+{
+    { rep.rebuild(from, to) };
+};
+
 // Representations where self loops can be checked.
 template <typename T>
 concept SelfLoopQueryable = GraphRepresentation<T> &&

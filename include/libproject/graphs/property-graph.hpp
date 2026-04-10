@@ -1,6 +1,7 @@
 #pragma once
 
 #include <variant>
+#include <numeric>
 
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
@@ -71,6 +72,13 @@ struct EdgeInput<std::monostate>
 public:
     VertexID from;
     VertexID to;
+};
+
+// Map from old ID values to new values after a compression occurs.
+struct CompressionMap
+{
+    std::vector<VertexID> old_to_new_vertex;
+    std::vector<EdgeID> old_to_new_edge;
 };
 
 // TODO <optimization>: reconsider noexcept for certain functions
@@ -1219,7 +1227,12 @@ public:
 
     size_t edge_count() const noexcept
     {
-        return (edges_.size() - free_edges_.size());
+        if constexpr (edges_mutable)
+        {
+            return (edges_.size() - free_edges_.size());
+        }
+
+        return edges_.size();
     }
 
     size_t degree(VertexID v) const
@@ -1377,16 +1390,170 @@ public:
         edges_.reserve(N);
     }
 
-    // TODO <feature>: We really need functions for compressing the
-    //                 edges_ and vertices_ members that the user can
-    //                 call to shrink the vectors, otherwise we might
-    //                 have a case where N slots are stored but M << N
-    //                 are actually alive, wasting space and time.
-    //
-    //                 perhaps garbage_collect() or compress() is a good name?
-    //
-    //                 we also probably need an overload for the resulting map
-    //                 from old VertexID values to the new ones.
+    // This function compresses the graph to improve
+    // performance after many remove operations.
+    CompressionMap compress()
+    {
+        CompressionMap map;
+        auto & vertex_map = map.old_to_new_vertex;
+        auto & edge_map = map.old_to_new_edge;
+
+        // Map each element to itself by default.
+        std::iota(vertex_map.begin(), vertex_map.end(), 0);
+        std::iota(edge_map.begin(), edge_map.end(), 0);
+
+        // Step 1: compress the vertices.
+        remap_vertices(map);
+
+        // Step 2: remap the old VertexID values in edges_
+        remap_edge_vertices(map);
+
+        // Step 3: compress the edges.
+        remap_edges(map);
+
+        // Step 4: rebuild the topology.
+        rebuild_topology();
+
+        return map;
+    }
+
+    // Internal function for compressing and remapping the vertex array.
+    void remap_vertices(CompressionMap & map)
+    {
+        // We want to swap and pop dead vertices with alive vertices
+        // until we have removed all of the empty space.
+
+        // Use two pointers, the head looks for dead slots and the tail
+        // looks for alive slots to swap.
+        size_t head = 0;
+        size_t tail = vertices_.size() - 1;
+
+        while (head < tail)
+        {
+            // Search for the first dead slot.
+            while (head < tail && vertices_.alive(head))
+            {
+                head++;
+            }
+
+            // Search backwards for the first alive slot.
+            while (head < tail && !vertices_.alive(tail))
+            {
+                tail--;
+            }
+
+            // If we haven't passed over the boundry, swap.
+            if (head < tail)
+            {
+                std::swap(vertices_.data_[head],
+                          vertices_.data_[tail]);
+
+                std::swap(vertices_.alive_vertices_[head],
+                          vertices_.alive_vertices_[tail]);
+
+                // Record the mapping.
+                map.old_to_new_vertex[tail] = head;
+                map.old_to_new_vertex[head] = VertexID::empty;
+
+                // Keep the iteration going.
+                head++;
+                tail--;
+            }
+        }
+
+        // vertex_count = vertices_.size() - free_vertices_.size()
+        size_t v_count = vertex_count();
+
+        vertices_.resize(v_count);
+        free_vertices_.clear();
+    }
+
+    // Internal function for remapping each VertexID stored in an edge.
+    void remap_edge_vertices(CompressionMap & map)
+    {
+        auto & vertex_map = map.old_to_new_vertex;
+        for (size_t i = 0; i < edges_.size(); i++)
+        {
+            if (valid_edge(i))
+            {
+                // Apply the stored transformation.
+                edges_.from[i] = vertex_map[edges_.from[i]];
+                edges_.to[i] = vertex_map[edges_.to[i]];
+            }
+        }
+    }
+
+    // Internal function for compressing and remapping the edges array.
+    void remap_edges(CompressionMap & map)
+    {
+        // We want to swap and pop dead edges with alive edges
+        // until we have removed all of the empty space.
+
+        // Use two pointers, the head looks for dead slots and the tail
+        // looks for alive slots to swap.
+        size_t head = 0;
+        size_t tail = edges_.size() - 1;
+
+        while (head < tail)
+        {
+            // Search for the first dead slot.
+            while (head < tail && edges_.alive(head))
+            {
+                head++;
+            }
+
+            // Search backwards for the first alive slot.
+            while (head < tail && !edges_.alive(tail))
+            {
+                tail--;
+            }
+
+            // If we haven't passed over the boundry, swap.
+            if (head < tail)
+            {
+                std::swap(edges_.from[head], edges_.from[tail]);
+                std::swap(edges_.to[head], edges_.to[tail]);
+
+                if constexpr (has_edge_data)
+                {
+                    std::swap(edges_.data[head], edges_.data[tail]);
+                }
+
+                // Record the mapping.
+                map.old_to_new_edge[tail] = head;
+                map.old_to_new_edge[head] = EdgeID::empty;
+
+                // Keep the iteration going.
+                head++;
+                tail--;
+            }
+        }
+
+        // edge_count = edges_.size() - free_edges_.size()
+        size_t e_count = edge_count();
+        edges_.resize(e_count);
+        free_edges_.clear();
+    }
+
+    void rebuild_topology()
+    {
+        if constexpr (Rebuildable<Representation>)
+        {
+            representation_.rebuild(edges_.from, edges_.to);
+        }
+        else
+        {
+            representation_.clear();
+
+            for (size_t i = 0; i < edges_.size(); i++)
+            {
+                // The edge is already valid, thus simply add it.
+                representation_.add_edge(edges_.from[i],
+                                         edges_.to[i],
+                                         i);
+            }
+        }
+    }
 
     //
     // Transformations
@@ -1479,6 +1646,12 @@ private:
 
                 return from.size();
             }
+        }
+
+        // If an edge was deleted, edges_.from will be the empty vertex.
+        bool alive(EdgeID e_id) const
+        {
+            return edges_.from[e_id.value] != EdgeID::empty;
         }
 
         // For returning a transpose ready copy of the array.
