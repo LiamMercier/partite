@@ -74,13 +74,6 @@ public:
     VertexID to;
 };
 
-// Map from old ID values to new values after a compression occurs.
-struct CompressionMap
-{
-    std::vector<VertexID> old_to_new_vertex;
-    std::vector<EdgeID> old_to_new_edge;
-};
-
 // TODO <optimization>: reconsider noexcept for certain functions
 //                      that allocate so users can catch bad alloc
 //                      if they want.
@@ -100,6 +93,14 @@ template <GraphRepresentation Representation,
           typename VertexData = std::monostate>
 class PropertyGraph
 {
+public:
+    // Map from old ID values to new values after a compression occurs.
+    struct CompressionMap
+    {
+        std::vector<VertexID> old_to_new_vertex;
+        std::vector<EdgeID> old_to_new_edge;
+    };
+
 public:
     static constexpr bool directed = Representation::directed;
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
@@ -1405,9 +1406,9 @@ public:
         auto & vertex_map = map.old_to_new_vertex;
         auto & edge_map = map.old_to_new_edge;
 
-        // Map each element to itself by default.
-        std::iota(vertex_map.begin(), vertex_map.end(), 0);
-        std::iota(edge_map.begin(), edge_map.end(), 0);
+        // Set the size (current in use range)
+        vertex_map.resize(vertices_.size(), VertexID::empty);
+        edge_map.resize(edges_.size(), EdgeID::empty);
 
         // Step 1: compress the vertices.
         remap_vertices(map);
@@ -1419,7 +1420,7 @@ public:
         remap_edges(map);
 
         // Step 4: rebuild the topology.
-        rebuild_topology();
+        //rebuild_topology();
 
         return map;
     }
@@ -1435,35 +1436,53 @@ public:
         size_t head = 0;
         size_t tail = vertices_.size() - 1;
 
-        while (head < tail)
+        while (head <= tail)
         {
             // Search for the first dead slot.
-            while (head < tail && vertices_.alive(head))
+            while (head <= tail && vertices_.alive(head))
             {
+                // We need to map this vertex to itself, since by default
+                // we set the entire vector to VertexID::empty
+                map.old_to_new_vertex[head] = head;
                 head++;
             }
 
             // Search backwards for the first alive slot.
-            while (head < tail && !vertices_.alive(tail))
+            while (head <= tail && !vertices_.alive(tail))
             {
+                // Prevent underflow.
+                if (tail == 0)
+                {
+                    break;
+                }
+
                 tail--;
             }
 
             // If we haven't passed over the boundry, swap.
             if (head < tail)
             {
-                std::swap(vertices_.data_[head],
-                          vertices_.data_[tail]);
+                if constexpr (has_vertex_data)
+                {
+                    std::swap(vertices_[head],
+                              vertices_[tail]);
+                }
 
-                std::swap(vertices_.alive_vertices_[head],
-                          vertices_.alive_vertices_[tail]);
+                vertices_.set_alive(head);
+                vertices_.set_dead(tail);
 
                 // Record the mapping.
                 map.old_to_new_vertex[tail] = head;
-                map.old_to_new_vertex[head] = VertexID::empty;
 
                 // Keep the iteration going.
                 head++;
+
+                // Prevent underflow.
+                if (tail == 0)
+                {
+                    break;
+                }
+
                 tail--;
             }
         }
@@ -1484,8 +1503,8 @@ public:
             if (valid_edge(i))
             {
                 // Apply the stored transformation.
-                edges_.from[i] = vertex_map[edges_.from[i]];
-                edges_.to[i] = vertex_map[edges_.to[i]];
+                edges_.from[i] = vertex_map[edges_.from[i].value];
+                edges_.to[i] = vertex_map[edges_.to[i].value];
             }
         }
     }
@@ -1501,17 +1520,26 @@ public:
         size_t head = 0;
         size_t tail = edges_.size() - 1;
 
-        while (head < tail)
+        while (head <= tail)
         {
             // Search for the first dead slot.
-            while (head < tail && edges_.alive(head))
+            while (head <= tail && edges_.alive(head))
             {
+                // We need to map this edge to itself, since by default
+                // we set the entire vector to EdgeID::empty
+                map.old_to_new_edge[head] = head;
                 head++;
             }
 
             // Search backwards for the first alive slot.
-            while (head < tail && !edges_.alive(tail))
+            while (head <= tail && !edges_.alive(tail))
             {
+                // Prevent underflow.
+                if (tail == 0)
+                {
+                    break;
+                }
+
                 tail--;
             }
 
@@ -1528,10 +1556,16 @@ public:
 
                 // Record the mapping.
                 map.old_to_new_edge[tail] = head;
-                map.old_to_new_edge[head] = EdgeID::empty;
 
                 // Keep the iteration going.
                 head++;
+
+                // Prevent underflow.
+                if (tail == 0)
+                {
+                    break;
+                }
+
                 tail--;
             }
         }
@@ -1670,7 +1704,7 @@ private:
         // If an edge was deleted, edges_.from will be the empty vertex.
         bool alive(EdgeID e_id) const
         {
-            return edges_.from[e_id.value] != EdgeID::empty;
+            return from[e_id.value] != VertexID::empty;
         }
 
         // For returning a transpose ready copy of the array.
@@ -1756,6 +1790,19 @@ private:
             if constexpr (vertices_mutable)
             {
                 alive_vertices_.reserve(N);
+            }
+        }
+
+        void resize(size_t N)
+        {
+            if constexpr (has_vertex_data)
+            {
+                data_.resize(N);
+            }
+
+            if constexpr (vertices_mutable)
+            {
+                alive_vertices_.resize(N);
             }
         }
 
