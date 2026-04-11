@@ -1632,44 +1632,55 @@ public:
 
     void rebuild_topology()
     {
-        if constexpr (Rebuildable<Representation>)
+        auto indices = std::views::iota(size_t{0}, edges_.size());
+
+        auto edge_pairs = indices
+                          | std::views::transform([this](size_t i){
+                                return EdgeView{edges_.from[i],
+                                                edges_.to[i],
+                                                i};
+                          });
+
+        if constexpr (Rebuildable<Representation, decltype(edge_pairs)>)
         {
-            representation_.rebuild(edges_.from, edges_.to);
+            representation_.rebuild(edge_pairs);
         }
         else
         {
             representation_.clear();
 
-            for (size_t i = 0; i < edges_.size(); i++)
+            for (auto&& edge : edge_pairs)
             {
-                // The edge is already valid, thus simply add it.
-                representation_.add_edge(edges_.from[i],
-                                         edges_.to[i],
-                                         i);
+                representation_.add_edge(edge.from, edge.to, edge.id);
             }
         }
     }
 
     void rebuild_topology_safe()
     {
-        if constexpr (Rebuildable<Representation>)
+        auto indices = std::views::iota(size_t{0}, edges_.size())
+                       | std::views::filter([this](size_t i){
+                             return edges_.alive(i);
+                       });
+
+        auto edge_pairs = indices
+                          | std::views::transform([this](size_t i){
+                                return EdgeView{edges_.from[i],
+                                                edges_.to[i],
+                                                i};
+                          });
+
+        if constexpr (Rebuildable<Representation, decltype(edge_pairs)>)
         {
-            representation_.rebuild(edges_.from, edges_.to);
+            representation_.rebuild(edge_pairs);
         }
         else
         {
             representation_.clear();
 
-            for (size_t i = 0; i < edges_.size(); i++)
+            for (auto&& edge : edge_pairs)
             {
-                if (!edges_.alive(i))
-                {
-                    continue;
-                }
-
-                representation_.add_edge(edges_.from[i],
-                                         edges_.to[i],
-                                         i);
+                representation_.add_edge(edge.from, edge.to, edge.id);
             }
         }
     }

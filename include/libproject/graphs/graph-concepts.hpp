@@ -199,13 +199,13 @@ concept Transposable = GraphRepresentation<T> &&
 };
 
 // Representations that expose .rebuild()
-template <typename T>
+template <typename T, typename EdgeRange>
 concept Rebuildable = GraphRepresentation<T> &&
-                      requires(const T rep,
-                               const std::vector<VertexID> & from,
-                               const std::vector<VertexID> & to)
+                      std::ranges::range<EdgeRange> &&
+                      requires(T & rep,
+                               const EdgeRange & edges)
 {
-    { rep.rebuild(from, to) };
+    { rep.rebuild(edges) };
 };
 
 // Representations where self loops can be checked.
