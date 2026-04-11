@@ -612,7 +612,8 @@ public:
     //
     // Therefore on average this runs in
     // Theta(deg(v) * average_degree) time (see docs/design).
-    void remove_vertex(VertexID v)
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -620,17 +621,15 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        for (const auto & [u, _] : out_list(v))
+        EdgeID self_loop_id = EdgeID::empty;
+
+        for (const auto & [u, e_id] : out_list(v))
         {
+            // Skip self loops for now.
             if (u == v)
             {
-                num_self_loops_ -= 1;
-
-                libproject_assert(num_self_loops_ + 1 >
-                                  num_self_loops_,
-                                  "AdjacencyList::remove_vertex(v): "
-                                  "internal library error: num_self_loops_ "
-                                  "underflowed");
+                self_loop_id = e_id;
+                continue;
             }
 
             auto & in = in_list(u);
@@ -640,6 +639,7 @@ public:
                 // If we found a match, swap and pop.
                 if (in[i].first == v)
                 {
+                    on_edge_removed(in[i].second);
                     std::swap(in[i], in.back());
                     in.pop_back();
                     break;
@@ -649,6 +649,12 @@ public:
 
         for (const auto & [u, _] : in_list(v))
         {
+            // Skip self loops for now.
+            if (u == v)
+            {
+                continue;
+            }
+
             auto & out = out_list(u);
 
             for (size_t i = 0; i < out.size(); i++)
@@ -656,11 +662,24 @@ public:
                 // If we found a match, swap and pop.
                 if (out[i].first == v)
                 {
+                    on_edge_removed(out[i].second);
                     std::swap(out[i], out.back());
                     out.pop_back();
                     break;
                 }
             }
+        }
+
+        if (self_loop_id != EdgeID::empty)
+        {
+            num_self_loops_ -= 1;
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_vertex(v): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
+
+            on_edge_removed(self_loop_id);
         }
 
         out_list(v).clear();
@@ -673,7 +692,8 @@ public:
     //     remove v from adj_list(u)
     //
     // clear adj_list(v)
-    void remove_vertex(VertexID v)
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (!directed)
     {
         libproject_assert(valid_vertex(v),
@@ -681,19 +701,16 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        for (const auto & [u, _] : adj_list(v))
+        EdgeID self_loop_id = EdgeID::empty;
+
+        for (const auto & [u, e_id] : adj_list(v))
         {
             auto & u_list = adj_list(u);
 
             if (u == v)
             {
-                num_self_loops_ -= 1;
-
-                libproject_assert(num_self_loops_ + 1 >
-                                  num_self_loops_,
-                                  "AdjacencyList::remove_vertex(v): "
-                                  "internal library error: num_self_loops_ "
-                                  "underflowed");
+                self_loop_id = e_id;
+                continue;
             }
 
             for (size_t i = 0; i < u_list.size(); i++)
@@ -701,11 +718,24 @@ public:
                 // swap and pop
                 if (u_list[i].first == v)
                 {
+                    on_edge_removed(u_list[i].second);
                     std::swap(u_list[i], u_list.back());
                     u_list.pop_back();
                     break;
                 }
             }
+        }
+
+        if (self_loop_id != EdgeID::empty)
+        {
+            num_self_loops_ -= 1;
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_vertex(v): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
+
+            on_edge_removed(self_loop_id);
         }
 
         adj_list(v).clear();
@@ -795,7 +825,7 @@ public:
         return num_self_loops_;
     }
 
-    // Search the list in Theta(deg(v)) averate time.
+    // Search the list in Theta(deg(v)) average time.
     bool has_self_loop(VertexID v) const
         requires (directed)
     {

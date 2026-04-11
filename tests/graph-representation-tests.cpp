@@ -282,7 +282,7 @@ TYPED_TEST(RepresentationCore, VertexOperations)
         }
 
         // Remove node 6
-        rep.remove_vertex(6);
+        rep.remove_vertex(6, [](EdgeID id){});
 
         // Add the vertex back, any (u, 6) or (6, u) should be gone.
         rep.add_vertex(6);
@@ -469,7 +469,7 @@ TYPED_TEST(RepresentationCore, SelfLoops)
 
         if constexpr (VertexMutable<Representation>)
         {
-            rep.remove_vertex(TestFixture::v_count);
+            rep.remove_vertex(TestFixture::v_count, [](EdgeID id){});
         }
 
         std::vector<size_t> in(TestFixture::v_count);
@@ -560,8 +560,8 @@ TYPED_TEST(RepresentationCore, SelfLoops)
         else
         {
             // Remove some vertices.
-            rep.remove_vertex(4);
-            rep.remove_vertex(3);
+            rep.remove_vertex(4, [](EdgeID id){});
+            rep.remove_vertex(3, [](EdgeID id){});
 
             std::vector<
                 std::pair<VertexID,
