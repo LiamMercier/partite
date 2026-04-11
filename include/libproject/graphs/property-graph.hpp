@@ -1426,6 +1426,59 @@ public:
         return map;
     }
 
+    // This function compresses the graph's vertices to improve
+    // performance after many remove operations.
+    CompressionMap compress_vertices()
+        requires (vertices_mutable && edges_mutable)
+    {
+        CompressionMap map;
+        auto & vertex_map = map.old_to_new_vertex;
+        auto & edge_map = map.old_to_new_edge;
+
+        // Set the size (current in use range)
+        vertex_map.resize(vertices_.size(), VertexID::empty);
+        edge_map.resize(edges_.size(), EdgeID::empty);
+
+        // Step 1: compress the vertices.
+        remap_vertices(map);
+
+        // Step 2: remap the old VertexID values in edges_
+        remap_edge_vertices(map);
+
+        // Skip step 3, edges are not being compressed.
+
+        // Step 4: rebuild the topology.
+        rebuild_topology_safe();
+
+        return map;
+    }
+
+    // This function compresses the graph's edges to improve
+    // performance after many remove operations.
+    CompressionMap compress_edges()
+        requires (vertices_mutable && edges_mutable)
+    {
+        CompressionMap map;
+        auto & vertex_map = map.old_to_new_vertex;
+        auto & edge_map = map.old_to_new_edge;
+
+        // Set the size (current in use range)
+        vertex_map.resize(vertices_.size(), VertexID::empty);
+        edge_map.resize(edges_.size(), EdgeID::empty);
+
+        // Skip step 1, vertices are not being compressed.
+
+        // Skip step 2, there was no remapping of vertices.
+
+        // Step 3: compress the edges.
+        remap_edges(map);
+
+        // Step 4: rebuild the topology.
+        rebuild_topology_safe();
+
+        return map;
+    }
+
     // Internal function for compressing and remapping the vertex array.
     void remap_vertices(CompressionMap & map)
     {
@@ -1590,6 +1643,30 @@ public:
             for (size_t i = 0; i < edges_.size(); i++)
             {
                 // The edge is already valid, thus simply add it.
+                representation_.add_edge(edges_.from[i],
+                                         edges_.to[i],
+                                         i);
+            }
+        }
+    }
+
+    void rebuild_topology_safe()
+    {
+        if constexpr (Rebuildable<Representation>)
+        {
+            representation_.rebuild(edges_.from, edges_.to);
+        }
+        else
+        {
+            representation_.clear();
+
+            for (size_t i = 0; i < edges_.size(); i++)
+            {
+                if (!edges_.alive(i))
+                {
+                    continue;
+                }
+
                 representation_.add_edge(edges_.from[i],
                                          edges_.to[i],
                                          i);
