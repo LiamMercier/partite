@@ -1401,6 +1401,7 @@ public:
     // This function compresses the graph to improve
     // performance after many remove operations.
     CompressionMap compress()
+        requires (vertices_mutable && edges_mutable)
     {
         CompressionMap map;
         auto & vertex_map = map.old_to_new_vertex;
@@ -1420,7 +1421,7 @@ public:
         remap_edges(map);
 
         // Step 4: rebuild the topology.
-        //rebuild_topology();
+        rebuild_topology();
 
         return map;
     }
@@ -1798,6 +1799,10 @@ private:
             if constexpr (has_vertex_data)
             {
                 data_.resize(N);
+            }
+            else
+            {
+                count_ = N;
             }
 
             if constexpr (vertices_mutable)

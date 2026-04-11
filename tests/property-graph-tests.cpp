@@ -1974,3 +1974,129 @@ TYPED_TEST(PropertyGraphTest, Accessors)
     }
 
 }
+
+TYPED_TEST(PropertyGraphTest, Compress)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    if constexpr (!Graph::vertices_mutable)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::make_edges();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.vertex_count(), 7);
+
+        // Remove some vertices and edges.
+
+        // Right now, our arrays look like
+        //
+        //      -----------------
+        // from |0 1 1 1 2 2 3 3|
+        // to   |1 2 3 6 3 4 5 6|
+        //      -----------------
+        //
+        // Removing vertex 6 will remove edges (1, 6) and (3, 6)
+        // resulting in the arrays
+        //
+        //      -----------------
+        // from |0 1 1 X 2 2 3 X|
+        // to   |1 2 3 X 3 4 5 X|
+        //      -----------------
+        graph.remove_vertex(6);
+
+        // This removal will change the arrays to be
+        //
+        //      -----------------
+        // from |0 1 1 X 2 X 3 X|
+        // to   |1 2 3 X 3 X 5 X|
+        //      -----------------
+        graph.remove_vertex(4);
+
+        // Finally, after removing this edge, we get
+        //
+        //      -----------------
+        // from |X 1 1 X 2 X 3 X|
+        // to   |X 2 3 X 3 X 5 X|
+        //      -----------------
+        graph.remove_edge(0, 1);
+
+        // Now, lets call compress to reduce the array size.
+        //
+        // We expect the following vertex mapping
+        // i -> i for i < 3
+        // 5 -> 4
+        // empty otherwise
+        std::vector<VertexID> good_vertex_map =
+        {
+            0, 1, 2,
+            3, VertexID::empty, 4,
+            VertexID::empty
+        };
+
+        // We expect the following edge mapping
+        //
+        // 6 -> 0
+        // 1 -> 1
+        // 2 -> 2
+        // 4 -> 3
+        // empty otherwise.
+        std::vector<EdgeID> good_edge_map =
+        {
+            EdgeID::empty, 1, 2,
+            EdgeID::empty, 3, EdgeID::empty,
+            0, EdgeID::empty
+        };
+
+        auto res = graph.compress();
+
+        // Check vertex mapping lines up.
+        for (size_t i = 0; i <= 6; i++)
+        {
+            ASSERT_EQ(res.old_to_new_vertex[i],
+                      good_vertex_map[i]);
+        }
+
+        // Check edge mapping lines up.
+        for (size_t i = 0; i <= 7; i++)
+        {
+            ASSERT_EQ(res.old_to_new_edge[i],
+                      good_edge_map[i]);
+        }
+
+        // Check each edge exists.
+        std::vector<std::pair<VertexID, VertexID>> good_edges =
+        {
+            {1, 2}, {1, 3}, {2, 3}, {3, 5}
+        };
+
+        for (const auto & e : good_edges)
+        {
+            ASSERT_TRUE(graph.has_edge(
+                res.old_to_new_vertex[e.first.value],
+                res.old_to_new_vertex[e.second.value]
+            ));
+        }
+
+        ASSERT_EQ(graph.vertex_count(), 5);
+        ASSERT_EQ(graph.edge_count(), 4);
+    }
+}
