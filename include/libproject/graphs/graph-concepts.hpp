@@ -226,13 +226,14 @@ concept VertexValidatable = GraphRepresentation<T> &&
 };
 
 // Representations that allow vertex modifications.
-// TODO: perhaps split into remove and add
 template <typename T>
 concept VertexMutable = GraphRepresentation<T> &&
-                        requires(T rep, VertexID v_id)
+                        requires(T & rep, VertexID v_id)
 {
     { rep.add_vertex(v_id) } -> std::convertible_to<bool>;
-    { rep.remove_vertex(v_id) };
+
+    // Callbacks must be called exactly once per EdgeID we remove.
+    { rep.remove_vertex(v_id, [](EdgeID){}) };
 };
 
 };

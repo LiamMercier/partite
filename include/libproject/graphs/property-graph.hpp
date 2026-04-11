@@ -1186,7 +1186,12 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        representation_.remove_vertex(v);
+        // Remove the vertex, with a callback to remove the edge in the
+        // PropertyGraph whenever we remove one in the representation.
+        representation_.remove_vertex(v, [this](EdgeID e_id){
+            this->remove_edge(e_id);
+        });
+
         vertices_.set_dead(v.value);
         free_vertices_.push_back(v);
     }
@@ -1202,7 +1207,9 @@ public:
         // Overwrite the vertex data.
         out = std::move(vertices_[v.value]);
 
-        representation_.remove_vertex(v);
+        representation_.remove_vertex(v, [this](EdgeID e_id){
+            this->remove_edge(e_id);
+        });
 
         vertices_.set_dead(v.value);
 
@@ -1576,6 +1583,18 @@ public:
     // TODO <feature>: transpose view
 
 private:
+
+    // Internal function for removing vertex data from
+    // our PropertyGraph edges_ storage.
+    //
+    // Data must be modified elsewhere.
+    void remove_edge(EdgeID e_id)
+    {
+        edges_.from[e_id.value] = VertexID::empty;
+        edges_.to[e_id.value] = VertexID::empty;
+        free_edges_.push_back(e_id);
+    }
+
     // Internal structure-of-arrays storage.
     struct EdgeArrays
     {
