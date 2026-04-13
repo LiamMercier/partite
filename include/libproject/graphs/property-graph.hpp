@@ -1479,6 +1479,28 @@ public:
         return map;
     }
 
+    //
+    // Transformations
+    //
+
+    // Compute a new graph where the edges are reversed.
+    [[nodiscard]] PropertyGraph compute_transpose() const
+        requires Transposable<Representation>
+    {
+        Representation rev = representation_.compute_transpose();
+
+        return PropertyGraph {
+            std::move(rev),
+            vertices_,
+            edges_.reverse_copy(),
+            free_edges_
+        };
+    }
+
+    // TODO <feature>: transpose view
+
+// Internal functions for compression calls.
+private:
     // Internal function for compressing and remapping the vertex array.
     void remap_vertices(CompressionMap & map)
     {
@@ -1684,26 +1706,6 @@ public:
             }
         }
     }
-
-    //
-    // Transformations
-    //
-
-    // Compute a new graph where the edges are reversed.
-    [[nodiscard]] PropertyGraph compute_transpose() const
-        requires Transposable<Representation>
-    {
-        Representation rev = representation_.compute_transpose();
-
-        return PropertyGraph {
-            std::move(rev),
-            vertices_,
-            edges_.reverse_copy(),
-            free_edges_
-        };
-    }
-
-    // TODO <feature>: transpose view
 
 private:
 

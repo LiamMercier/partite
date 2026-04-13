@@ -38,6 +38,15 @@ public:
     {
     }
 
+    // TODO: use build with a constructor of edge pairs
+
+    template <typename EdgeRange>
+    void rebuild(EdgeRange&& edge_views)
+    {
+        clear();
+        build(std::forward<EdgeRange>(edge_views));
+    }
+
     //
     // Ranges front end
     //
@@ -758,6 +767,8 @@ public:
         {
             list.clear();
         }
+
+        num_self_loops_ = 0;
     }
 
     void clear()
@@ -767,6 +778,10 @@ public:
         {
             list.clear();
         }
+
+        // Quickly fill the vector with element 0.
+        std::fill(self_loop_.begin(), self_loop_.end(), 0);
+        num_self_loops_ = 0;
     }
 
     size_t degree(VertexID v) const
@@ -907,6 +922,107 @@ public:
     // TODO: transpose_inplace()
 
 private:
+    template <typename EdgeRange>
+    void build(EdgeRange&& edge_views)
+        requires (directed)
+    {
+        // First pass, count the degree of each vertex.
+        size_t v_count = out_edges_.size();
+
+        std::vector<size_t> in_degrees(v_count, 0);
+        std::vector<size_t> out_degrees(v_count, 0);
+
+        for (auto&& ev: edge_views)
+        {
+            libproject_assert(valid_vertex(ev.from),
+                              "AdjacencyList::build(edge_views): "
+                              "invalid VertexID; from = "
+                              + std::to_string(ev.from.value));
+
+            libproject_assert(valid_vertex(ev.to),
+                              "AdjacencyList::build(edge_views): "
+                              "invalid VertexID; to = "
+                              + std::to_string(ev.to.value));
+
+            out_degrees[ev.from.value] += 1;
+            in_degrees[ev.to.value] += 1;
+        }
+
+        // Now that we know the degree of each list, reserve.
+        for (size_t i = 0; i < v_count; i++)
+        {
+            out_edges_[i].reserve(out_degrees[i]);
+            in_edges_[i].reserve(in_degrees[i]);
+        }
+
+        // Do a second pass over the view and insert.
+        for (auto&& ev : edge_views)
+        {
+            out_list(ev.from).push_back({ev.to, ev.id});
+            in_list(ev.to).push_back({ev.from, ev.id});
+
+            if (ev.from == ev.to)
+            {
+                num_self_loops_ += 1;
+            }
+        }
+    }
+
+    template <typename EdgeRange>
+    void build(EdgeRange&& edge_views)
+        requires (!directed)
+    {
+        // First pass, count the degree of each vertex.
+        size_t v_count = adj_.size();
+
+        std::vector<size_t> degrees(v_count, 0);
+
+        for (auto&& ev: edge_views)
+        {
+            libproject_assert(valid_vertex(ev.from),
+                              "AdjacencyList::build(edge_views): "
+                              "invalid VertexID; from = "
+                              + std::to_string(ev.from.value));
+
+            degrees[ev.from.value] += 1;
+
+            // Prevent double counting since we do not store
+            // multiple copies of the same edge and thus do not
+            // need to allocate this extra space.
+            if (ev.from != ev.to)
+            {
+                libproject_assert(valid_vertex(ev.to),
+                                  "AdjacencyList::build(edge_views): "
+                                  "invalid VertexID; to = "
+                                  + std::to_string(ev.to.value));
+
+                degrees[ev.to.value] += 1;
+            }
+        }
+
+        // Now that we know the degree of each list, reserve.
+        for (size_t i = 0; i < v_count; i++)
+        {
+            adj_[i].reserve(degrees[i]);
+        }
+
+        // Do a second pass over the view and insert.
+        for (auto&& ev : edge_views)
+        {
+            adj_list(ev.from).push_back({ev.to, ev.id});
+
+            if (ev.from != ev.to)
+            {
+                adj_list(ev.to).push_back({ev.from, ev.id});
+            }
+            else
+            {
+                num_self_loops_ += 1;
+                self_loop_[ev.from.value] = 1;
+            }
+        }
+    }
+
     auto & out_list(VertexID v)
         requires (directed)
     {
