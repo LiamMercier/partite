@@ -1,5 +1,7 @@
 #pragma once
 
+#include <ranges>
+
 #include <libproject/graphs/graph-constants.hpp>
 
 namespace libproject::graphs
@@ -78,21 +80,6 @@ namespace libproject::graphs
         VertexID to;
     };
 
-    // TODO: proper ID counting
-    template <typename EdgeData, typename ER>
-        requires EdgeInputRange<ER, EdgeData>
-    auto make_edge_view_range(ER&& edge_range)
-    {
-        return std::forward<ER>(edge_range)
-            | std::views::transform([](auto&& item){
-                EdgeInput<EdgeData> e(std::forward<decltype(item)>(item));
-
-                return EdgeView {
-                    e.from, e.to, 0
-                };
-            });
-    }
-
     template <typename T, typename EdgeData>
     concept EdgeInputObject = std::constructible_from<EdgeInput<EdgeData>, T>;
 
@@ -112,4 +99,19 @@ namespace libproject::graphs
     template <typename T>
     concept EdgeViewRange = std::ranges::input_range<T> &&
                             EdgeViewObject<std::ranges::range_value_t<T>>;
+
+    // TODO: proper ID counting
+    template <typename EdgeData, typename ER>
+        requires EdgeInputRange<ER, EdgeData>
+    auto make_edge_view_range(ER&& edge_range)
+    {
+        return std::forward<ER>(edge_range)
+            | std::views::transform([](auto&& item){
+                EdgeInput<EdgeData> e(std::forward<decltype(item)>(item));
+
+                return EdgeView {
+                    e.from, e.to, 0
+                };
+            });
+    }
 };

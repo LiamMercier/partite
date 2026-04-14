@@ -22,18 +22,18 @@ concept GraphRepresentation = requires(const T rep)
     { rep.vertex_count() } -> std::integral;
 };
 
+// To ensure we can construct properly.
+template <typename T>
+concept PropertyGraphConstructible = GraphRepresentation<T>
+                                     && std::constructible_from<T, size_t>;
+
 template <typename T, typename ER>
-concept EdgeViewRangeConstructible = PropertyGraphConstructible &&
+concept EdgeViewRangeConstructible = PropertyGraphConstructible<T> &&
                                      EdgeViewRange<ER> &&
                                      requires(std::size_t v_count, ER&& edges)
 {
     T(v_count, std::forward<ER>(edges));
 };
-
-// To ensure we can construct properly.
-template <typename T>
-concept PropertyGraphConstructible = GraphRepresentation<T>
-                                     && std::constructible_from<T, size_t>;
 
 // Representations that allow edge lookups.
 template <typename T>

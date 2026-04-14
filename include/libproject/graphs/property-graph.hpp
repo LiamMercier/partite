@@ -50,7 +50,8 @@ public:
     enum class EdgeInsertPolicy
     {
         Unchecked,
-        Unique
+        Unique,
+        PushBack
     };
 
     // For simplification of pair overloads.
@@ -73,11 +74,54 @@ public:
         requires EdgeInputRange<ER, EdgeData> &&
                  EdgeViewRangeConstructible<
                     Representation,
-                    decltype(make_edge_view_range<EdgeData>(std::declval<ER&&>()))>
+                    decltype(make_edge_view_range<EdgeData>
+                             (std::declval<ER&&>()))>
     :representation_(num_vertices, make_edge_view_range<EdgeData>(std::forward<ER>(edge_range))),
     vertices_(num_vertices)
     {
-        // TODO: build PropertyGraph edges_
+        if constexpr (std::ranges::sized_range<ER>)
+        {
+            size_t expected_edges = std::ranges::size(edge_range);
+            edges_.reserve(expected_edges);
+        }
+
+        for (auto && item : edge_range)
+        {
+            if constexpr (!has_edge_data)
+            {
+                const auto & [from, to] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(num_vertices, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to);
+            }
+            else
+            {
+                auto && [from, to, data] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(num_vertices, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to, std::forward<decltype(data)>(data));
+            }
+        }
     }
 
     // Constructor for bulk edge descriptors.
@@ -691,10 +735,12 @@ public:
                     }
                 }
             }
-            else
+            else if constexpr (Policy == EdgeInsertPolicy::Unchecked)
             {
                 rep_edge = representation_.add_edge(from, to, e_id);
             }
+
+            // Do nothing if EdgeInsertPolicy::PushBack
 
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
@@ -1654,6 +1700,21 @@ private:
     }
 
 private:
+
+    // Internal function for when a representation can be constructed
+    // from an edge view and thus we do not want normal add_edge logic.
+    //
+    // We avoid modifications to the representation entirely.
+    template<typename... Args>
+    void push_back_edge(VertexID from, VertexID to, Args&&... args)
+    {
+        auto res = add_edge_impl<EdgeInsertPolicy::PushBack>(
+                        from, to, std::forward<Args>(args)...);
+
+        libproject_assert(res.second == true,
+                          "PropertyGraph::push_back_edge(from, to): "
+                          "internal library error: operation failed ");
+    }
 
     // Internal function for removing vertex data from
     // our PropertyGraph edges_ storage.
