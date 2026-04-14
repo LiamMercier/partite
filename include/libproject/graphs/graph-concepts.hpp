@@ -3,6 +3,7 @@
 #include <ranges>
 
 #include <libproject/graphs/graph-constants.hpp>
+#include <libproject/graphs/graph-inputs.hpp>
 
 // Definition of a graph topology
 namespace libproject::graphs
@@ -21,9 +22,13 @@ concept GraphRepresentation = requires(const T rep)
     { rep.vertex_count() } -> std::integral;
 };
 
-// Check if EdgeData or VertexData is monostate.
-template <typename T>
-concept HasData = !std::is_same_v<T, std::monostate>;
+template <typename T, typename ER>
+concept EdgeViewRangeConstructible = PropertyGraphConstructible &&
+                                     EdgeViewRange<ER> &&
+                                     requires(std::size_t v_count, ER&& edges)
+{
+    T(v_count, std::forward<ER>(edges));
+};
 
 // To ensure we can construct properly.
 template <typename T>
@@ -199,11 +204,11 @@ concept Transposable = GraphRepresentation<T> &&
 };
 
 // Representations that expose .rebuild()
-template <typename T, typename EdgeRange>
+template <typename T, typename ER>
 concept Rebuildable = GraphRepresentation<T> &&
-                      std::ranges::range<EdgeRange> &&
+                      EdgeViewRange<ER> &&
                       requires(T & rep,
-                               const EdgeRange & edges)
+                               const ER & edges)
 {
     { rep.rebuild(edges) };
 };
