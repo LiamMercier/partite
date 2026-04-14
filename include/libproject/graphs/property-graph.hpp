@@ -69,61 +69,6 @@ public:
     {
     }
 
-    template <typename ER>
-    PropertyGraph(size_t num_vertices, ER && edge_range)
-        requires EdgeInputRange<ER, EdgeData> &&
-                 EdgeViewRangeConstructible<
-                    Representation,
-                    decltype(make_edge_view_range<EdgeData>
-                             (std::declval<ER&&>()))>
-    :representation_(num_vertices, make_edge_view_range<EdgeData>(std::forward<ER>(edge_range))),
-    vertices_(num_vertices)
-    {
-        if constexpr (std::ranges::sized_range<ER>)
-        {
-            size_t expected_edges = std::ranges::size(edge_range);
-            edges_.reserve(expected_edges);
-        }
-
-        for (auto && item : edge_range)
-        {
-            if constexpr (!has_edge_data)
-            {
-                const auto & [from, to] = item;
-
-                libproject_assert(from.value < vertices_.size()
-                                  && to.value < vertices_.size(),
-                                  "PropertyGraph::PropertyGraph(num_vertices, "
-                                  "edge_range): edge references "
-                                  "invalid vertex; edge = ("
-                                  + std::to_string(from.value)
-                                  + " "
-                                  + std::to_string(to.value)
-                                  + "), vertex_count = "
-                                  + std::to_string(vertices_.size()));
-
-                push_back_edge(from, to);
-            }
-            else
-            {
-                auto && [from, to, data] = item;
-
-                libproject_assert(from.value < vertices_.size()
-                                  && to.value < vertices_.size(),
-                                  "PropertyGraph::PropertyGraph(num_vertices, "
-                                  "edge_range): edge references "
-                                  "invalid vertex; edge = ("
-                                  + std::to_string(from.value)
-                                  + " "
-                                  + std::to_string(to.value)
-                                  + "), vertex_count = "
-                                  + std::to_string(vertices_.size()));
-
-                push_back_edge(from, to, std::forward<decltype(data)>(data));
-            }
-        }
-    }
-
     // Constructor for bulk edge descriptors.
     //
     // In the general case, there is no way for us to optimize
@@ -133,15 +78,19 @@ public:
     // Asymptotically, the expected time is Theta(|E| * add_edge(e))
     // so if add_edge(e) is expected to take Theta(1) time, there is no
     // asymptotic increase over reading the graph memory.
-    template <typename ER>
-    PropertyGraph(size_t num_vertices, ER && edge_range)
-        requires EdgeInputRange<ER, EdgeData> &&
-                 PropertyGraphConstructible<Representation>
+    template <std::ranges::input_range InputEdgeRange>
+    PropertyGraph(size_t num_vertices, InputEdgeRange && edge_range)
+        requires (EdgeInputRange<InputEdgeRange, EdgeData> &&
+                 PropertyGraphConstructible<Representation> &&
+                 !EdgeViewRangeConstructible<
+                    Representation,
+                    decltype(make_edge_view_range<EdgeData>
+                             (std::declval<InputEdgeRange&&>()))>)
     :representation_(num_vertices),
     vertices_(num_vertices)
     {
         // First, lets reserve.
-        if constexpr (std::ranges::sized_range<ER>)
+        if constexpr (std::ranges::sized_range<InputEdgeRange>)
         {
             size_t expected_edges = std::ranges::size(edge_range);
             edges_.reserve(expected_edges);
@@ -190,7 +139,12 @@ public:
     template <std::ranges::sized_range VertexRange,
               std::ranges::input_range InputEdgeRange>
     PropertyGraph(VertexRange && vertex_range, InputEdgeRange && edge_range)
-        requires PropertyGraphConstructible<Representation>
+        requires (PropertyGraphConstructible<Representation> &&
+                 EdgeInputRange<InputEdgeRange, EdgeData> &&
+                 !EdgeViewRangeConstructible<
+                    Representation,
+                    decltype(make_edge_view_range<EdgeData>
+                             (std::declval<InputEdgeRange&&>()))>)
     :representation_(std::ranges::size(vertex_range)),
     vertices_(vertex_range)
     {
@@ -236,6 +190,126 @@ public:
                                   + std::to_string(vertices_.size()));
 
                 add_edge(from, to, std::forward<decltype(data)>(data));
+            }
+        }
+    }
+
+    //
+    // Constructor for representations that expose a range constructor
+    //
+
+    template <typename ER>
+    PropertyGraph(size_t num_vertices, ER && edge_range)
+        requires EdgeInputRange<ER, EdgeData> &&
+                 EdgeViewRangeConstructible<
+                    Representation,
+                    decltype(make_edge_view_range<EdgeData>
+                             (std::declval<ER&&>()))>
+    :representation_(num_vertices,
+                     make_edge_view_range<EdgeData>(
+                         std::forward<ER>(edge_range))),
+    vertices_(num_vertices)
+    {
+        if constexpr (std::ranges::sized_range<ER>)
+        {
+            size_t expected_edges = std::ranges::size(edge_range);
+            edges_.reserve(expected_edges);
+        }
+
+        for (auto && item : edge_range)
+        {
+            if constexpr (!has_edge_data)
+            {
+                const auto & [from, to] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(num_vertices, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to);
+            }
+            else
+            {
+                auto && [from, to, data] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(num_vertices, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to, std::forward<decltype(data)>(data));
+            }
+        }
+    }
+
+    template <std::ranges::sized_range VertexRange,
+              typename ER>
+    PropertyGraph(VertexRange vertex_range,
+                  ER && edge_range)
+        requires EdgeInputRange<ER, EdgeData> &&
+                 EdgeViewRangeConstructible<
+                    Representation,
+                    decltype(make_edge_view_range<EdgeData>
+                             (std::declval<ER&&>()))>
+    :representation_(std::ranges::size(vertex_range),
+                     make_edge_view_range<EdgeData>(
+                         std::forward<ER>(edge_range))),
+    vertices_(vertex_range)
+    {
+        if constexpr (std::ranges::sized_range<ER>)
+        {
+            size_t expected_edges = std::ranges::size(edge_range);
+            edges_.reserve(expected_edges);
+        }
+
+        for (auto && item : edge_range)
+        {
+            if constexpr (!has_edge_data)
+            {
+                const auto & [from, to] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(vertex_range, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to);
+            }
+            else
+            {
+                auto && [from, to, data] = item;
+
+                libproject_assert(from.value < vertices_.size()
+                                  && to.value < vertices_.size(),
+                                  "PropertyGraph::PropertyGraph(vertex_range, "
+                                  "edge_range): edge references "
+                                  "invalid vertex; edge = ("
+                                  + std::to_string(from.value)
+                                  + " "
+                                  + std::to_string(to.value)
+                                  + "), vertex_count = "
+                                  + std::to_string(vertices_.size()));
+
+                push_back_edge(from, to, std::forward<decltype(data)>(data));
             }
         }
     }
