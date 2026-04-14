@@ -38,13 +38,19 @@ public:
     {
     }
 
-    // TODO: use build with a constructor of edge pairs
+    // Bulk edge constructor.
+    template <EdgeViewRange ER>
+    AdjacencyList(size_t num_vertices, ER&& edge_views)
+    :AdjacencyList(num_vertices)
+    {
+        build(std::forward<ER>(edge_views));
+    }
 
-    template <typename EdgeRange>
-    void rebuild(EdgeRange&& edge_views)
+    template <EdgeViewRange ER>
+    void rebuild(ER&& edge_views)
     {
         clear();
-        build(std::forward<EdgeRange>(edge_views));
+        build(std::forward<ER>(edge_views));
     }
 
     //
@@ -922,8 +928,8 @@ public:
     // TODO: transpose_inplace()
 
 private:
-    template <typename EdgeRange>
-    void build(EdgeRange&& edge_views)
+    template <EdgeViewRange ER>
+    void build(ER&& edge_views)
         requires (directed)
     {
         // First pass, count the degree of each vertex.
@@ -968,8 +974,8 @@ private:
         }
     }
 
-    template <typename EdgeRange>
-    void build(EdgeRange&& edge_views)
+    template <EdgeViewRange ER>
+    void build(ER&& edge_views)
         requires (!directed)
     {
         // First pass, count the degree of each vertex.

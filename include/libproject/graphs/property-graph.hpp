@@ -5,74 +5,11 @@
 
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
+#include <libproject/graphs/graph-inputs.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
 
 namespace libproject::graphs
 {
-
-
-template <typename EdgeData = std::monostate>
-struct EdgeInput
-{
-    // Construct an EdgeInput from something like
-    // {VertexID, VertexID}
-    EdgeInput(VertexID f, VertexID t)
-        requires (!HasData<EdgeData>)
-    :from(f),
-    to(t)
-    {}
-
-    // Construct an EdgeInput from something like
-    // {VertexID, VertexID}
-    EdgeInput(VertexID f, VertexID t, EdgeData d)
-        requires (HasData<EdgeData>)
-    :from(f),
-    to(t),
-    data(std::move(d))
-    {}
-
-    // Construct an EdgeInput from something like
-    // {{VertexID, VertexID}, EdgeData}
-    //
-    // Example: {{0, 1}, "edge value"}
-    EdgeInput(std::pair<VertexID, VertexID> verts, EdgeData e)
-        requires (HasData<EdgeData>)
-    :from(verts.first),
-    to(verts.second),
-    data(std::move(e))
-    {
-    }
-
-    // Construct an EdgeInput from something like
-    // {VertexID, VertexID, EdgeData}
-    EdgeInput(std::tuple<VertexID, VertexID, EdgeData> edge)
-        requires (HasData<EdgeData>)
-    :from(std::get<0>(edge)),
-    to(std::get<1>(edge)),
-    data(std::get<2>(edge))
-    {
-    }
-
-public:
-    VertexID from;
-    VertexID to;
-
-    // This might be monostate, if so, don't store memory.
-    [[no_unique_address]] EdgeData data{};
-};
-
-template <>
-struct EdgeInput<std::monostate>
-{
-    EdgeInput(VertexID f, VertexID t)
-    :from(f),
-    to(t)
-    {}
-
-public:
-    VertexID from;
-    VertexID to;
-};
 
 // TODO <optimization>: reconsider noexcept for certain functions
 //                      that allocate so users can catch bad alloc
@@ -131,6 +68,18 @@ public:
     {
     }
 
+    template <typename ER>
+    PropertyGraph(size_t num_vertices, ER && edge_range)
+        requires EdgeInputRange<ER, EdgeData> &&
+                 EdgeViewRangeConstructible<
+                    Representation,
+                    decltype(make_edge_view_range<EdgeData>(std::declval<ER&&>()))>
+    :representation_(num_vertices, make_edge_view_range<EdgeData>(std::forward<ER>(edge_range))),
+    vertices_(num_vertices)
+    {
+        // TODO: build PropertyGraph edges_
+    }
+
     // Constructor for bulk edge descriptors.
     //
     // In the general case, there is no way for us to optimize
@@ -140,18 +89,15 @@ public:
     // Asymptotically, the expected time is Theta(|E| * add_edge(e))
     // so if add_edge(e) is expected to take Theta(1) time, there is no
     // asymptotic increase over reading the graph memory.
-    //
-    // TODO <optimization>: If we find a representation specific optimization
-    //                      for construction we can use constexpr to call
-    //                      the specific optimization for that representation.
-    template <std::ranges::input_range EdgeRange>
-    PropertyGraph(size_t num_vertices, EdgeRange && edge_range)
-        requires PropertyGraphConstructible<Representation>
+    template <typename ER>
+    PropertyGraph(size_t num_vertices, ER && edge_range)
+        requires EdgeInputRange<ER, EdgeData> &&
+                 PropertyGraphConstructible<Representation>
     :representation_(num_vertices),
     vertices_(num_vertices)
     {
         // First, lets reserve.
-        if constexpr (std::ranges::sized_range<EdgeRange>)
+        if constexpr (std::ranges::sized_range<ER>)
         {
             size_t expected_edges = std::ranges::size(edge_range);
             edges_.reserve(expected_edges);
@@ -198,14 +144,14 @@ public:
 
     // Cosntruct a graph from a list of verices and a list of edges.
     template <std::ranges::sized_range VertexRange,
-              std::ranges::input_range EdgeRange>
-    PropertyGraph(VertexRange && vertex_range, EdgeRange && edge_range)
+              std::ranges::input_range InputEdgeRange>
+    PropertyGraph(VertexRange && vertex_range, InputEdgeRange && edge_range)
         requires PropertyGraphConstructible<Representation>
     :representation_(std::ranges::size(vertex_range)),
     vertices_(vertex_range)
     {
         // First, lets reserve.
-        if constexpr (std::ranges::sized_range<EdgeRange>)
+        if constexpr (std::ranges::sized_range<InputEdgeRange>)
         {
             size_t expected_edges = std::ranges::size(edge_range);
             edges_.reserve(expected_edges);
