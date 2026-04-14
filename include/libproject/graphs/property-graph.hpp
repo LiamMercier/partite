@@ -735,7 +735,19 @@ public:
                     }
                 }
             }
-            else if constexpr (Policy == EdgeInsertPolicy::Unchecked)
+            // This should never happen, we only use PushBack internally
+            // for range based constructors where representation has .build().
+            else if constexpr (Policy == EdgeInsertPolicy::PushBack)
+            {
+                libproject_assert(false,
+                                  "PropertyGraph::push_back_edge(from, to): "
+                                  "internal library error: tried to use "
+                                  "free edge "
+                                  + std::to_string(e_id.value)
+                                  + " but free_edges_ should be "
+                                  "empty during construction.");
+            }
+            else
             {
                 rep_edge = representation_.add_edge(from, to, e_id);
             }
@@ -807,6 +819,11 @@ public:
                         rep_edge = representation_.add_edge(from, to, e_id);
                     }
                 }
+            }
+            else if constexpr (Policy == EdgeInsertPolicy::PushBack)
+            {
+                // Stop early, we have no failure case.
+                return {e_id, true};
             }
             else
             {
@@ -1713,7 +1730,11 @@ private:
 
         libproject_assert(res.second == true,
                           "PropertyGraph::push_back_edge(from, to): "
-                          "internal library error: operation failed ");
+                          "internal library error: operation failed; "
+                          "from = "
+                          + std::to_string(from.value)
+                          + " , to = "
+                          + std::to_string(to.value));
     }
 
     // Internal function for removing vertex data from
