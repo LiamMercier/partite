@@ -135,7 +135,6 @@ public:
         }
         else
         {
-            // TODO: transform -> filter is better here for memory access
             return NeighborsIndexView<true>(v.value, vertex_count_)
                 | std::views::filter([this](const auto & pair){
                     return adj_[pair.index] != EdgeID::empty;
@@ -158,15 +157,17 @@ public:
                           + std::to_string(v.value));
 
         return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::filter(
+                    [this, v_0 = v.value](size_t u){
+                        return adj_[v_0 + (vertex_count_ * u)]
+                               != EdgeID::empty;
+                })
                 | std::views::transform(
                     [this, v_0 = v.value](size_t u){
                         return IncidentEdge{
                             VertexID{u},
                             adj_[v_0 + (vertex_count_ * u)]
                         };
-                })
-                | std::views::filter([](const auto & pair){
-                    return pair.id != EdgeID::empty;
                 });
     }
 
@@ -179,15 +180,16 @@ public:
                           + std::to_string(v.value));
 
         return std::views::iota(size_t{0}, vertex_count_)
+                | std::views::filter(
+                    [this, v_0 = (v.value * vertex_count_)](size_t u){
+                        return adj_[v_0 + u] != EdgeID::empty;
+                })
                 | std::views::transform(
                     [this, v_0 = (v.value * vertex_count_)](size_t u){
                         return IncidentEdge{
                             VertexID{u},
                             adj_[v_0 + u]
                         };
-                })
-                | std::views::filter([](const auto & pair){
-                    return pair.id != EdgeID::empty;
                 });
     }
 
