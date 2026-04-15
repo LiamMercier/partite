@@ -621,7 +621,7 @@ public:
         return v.value < vertex_count_;
     }
 
-    size_t vertex_count() const noexcept
+    size_t max_vertex_id() const noexcept
     {
         return vertex_count_;
     }

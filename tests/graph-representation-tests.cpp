@@ -33,9 +33,9 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
     {
         AdjacencyMatrix<true> A(5);
 
-        for (int i = 0; i < A.vertex_count(); i++)
+        for (int i = 0; i < A.max_vertex_id(); i++)
         {
-            for (int j = 0; j < A.vertex_count(); j++)
+            for (int j = 0; j < A.max_vertex_id(); j++)
             {
                 // There should be no valid edges
                 EXPECT_FALSE(A.has_edge(i, j));
@@ -47,13 +47,13 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
         }
 
         // Test removing edges
-        for (int i = 0; i < A.vertex_count(); i++)
+        for (int i = 0; i < A.max_vertex_id(); i++)
         {
             // There should be a valid edge
             EXPECT_TRUE(A.has_edge(i, i));
             EXPECT_EQ(A.find_edge(i, i), 0);
 
-            for (int j = 0; j < A.vertex_count(); j++)
+            for (int j = 0; j < A.max_vertex_id(); j++)
             {
                 A.remove_edge(i, j);
             }
@@ -66,9 +66,9 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
     {
         AdjacencyMatrix<false> A(5);
 
-        for (int i = 0; i < A.vertex_count(); i++)
+        for (int i = 0; i < A.max_vertex_id(); i++)
         {
-            for (int j = 0; j < A.vertex_count(); j++)
+            for (int j = 0; j < A.max_vertex_id(); j++)
             {
                 // There should be no valid edges
                 EXPECT_FALSE(A.has_edge(i, j));
@@ -80,13 +80,13 @@ TEST(GraphRepresentations, AdjacencyMatrixConstruction)
         }
 
         // Test removing edges
-        for (int i = 0; i < A.vertex_count(); i++)
+        for (int i = 0; i < A.max_vertex_id(); i++)
         {
             // There should be a valid edge
             EXPECT_TRUE(A.has_edge(i, i));
             EXPECT_EQ(A.find_edge(i, i), 0);
 
-            for (int j = 0; j < A.vertex_count(); j++)
+            for (int j = 0; j < A.max_vertex_id(); j++)
             {
                 A.remove_edge(i, j);
             }

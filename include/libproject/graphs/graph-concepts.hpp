@@ -12,14 +12,11 @@ namespace libproject::graphs
 template <typename T>
 concept GraphRepresentation = requires(const T rep)
 {
-    // TODO: consider max_vertex_id and then delegate
-    //       vertex count to PropertyGraph
-
     // Ensure we have properly set Directed.
     { T::directed } -> std::convertible_to<bool>;
 
-    // Ensure we can query the number of vertices
-    { rep.vertex_count() } -> std::integral;
+    // Ensure we can query the max valid vertex.
+    { rep.max_vertex_id() } -> std::integral;
 };
 
 // To ensure we can construct properly.

@@ -880,24 +880,17 @@ public:
     }
 
     bool valid_vertex(VertexID v) const
-        requires (directed)
     {
-        return v.value < out_edges_.size();
+        return v.value < max_vertex_id();
     }
 
-    bool valid_vertex(VertexID v) const
-        requires (!directed)
-    {
-        return v.value < adj_.size();
-    }
-
-    size_t vertex_count() const noexcept
+    size_t max_vertex_id() const noexcept
         requires (directed)
     {
         return out_edges_.size();
     }
 
-    size_t vertex_count() const noexcept
+    size_t max_vertex_id() const noexcept
         requires (!directed)
     {
         return adj_.size();
