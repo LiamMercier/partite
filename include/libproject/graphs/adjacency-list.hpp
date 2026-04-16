@@ -918,7 +918,19 @@ public:
         }
     }
 
-    // TODO: transpose_inplace()
+    void transpose_inplace()
+    {
+        if constexpr (directed)
+        {
+            // Swap the adjacency lists.
+            std::swap(in_edges_, out_edges_);
+        }
+        else
+        {
+            // G^T = G in an undirected graph.
+            return;
+        }
+    }
 
 private:
     template <EdgeViewRange ER>
