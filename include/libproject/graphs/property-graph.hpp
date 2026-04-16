@@ -11,10 +11,6 @@
 namespace libproject::graphs
 {
 
-// TODO <optimization>: reconsider noexcept for certain functions
-//                      that allocate so users can catch bad alloc
-//                      if they want.
-
 // TODO <optimization>: We can add a new template parameter
 //                      "bool mutable = true" so users can decide
 //                      to override the Representation being mutable
@@ -1093,14 +1089,14 @@ public:
     // std::pair and EdgeID overloads.
     //
 
-    EdgeID find_edge(std::pair<VertexID, VertexID> edge) const
+    EdgeID find_edge(EdgePair edge) const
         noexcept(noexcept(find_edge(edge.first, edge.second)))
         requires EdgeQueryable<Representation>
     {
         return find_edge(edge.first, edge.second);
     }
 
-    bool has_edge(std::pair<VertexID, VertexID> edge) const
+    bool has_edge(EdgePair edge) const
         noexcept(noexcept(has_edge(edge.first, edge.second)))
         requires EdgeQueryable<Representation>
     {
@@ -1108,7 +1104,7 @@ public:
     }
 
     template<typename... Args>
-    std::pair<EdgeID, bool> add_edge(std::pair<VertexID, VertexID> edge,
+    std::pair<EdgeID, bool> add_edge(EdgePair edge,
                                      Args&&... args)
         requires ((!has_edge_data && sizeof...(Args) == 0) ||
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
@@ -1117,25 +1113,25 @@ public:
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
     }
 
-    bool remove_edge(std::pair<VertexID, VertexID> edge)
+    bool remove_edge(EdgePair edge)
         requires edges_mutable
     {
         return remove_edge(edge.first, edge.second);
     }
 
-    bool erase_edge(std::pair<VertexID, VertexID> edge)
+    bool erase_edge(EdgePair edge)
         requires edges_mutable
     {
         return erase_edge(edge.first, edge.second);
     }
 
-    bool extract_edge(std::pair<VertexID, VertexID> edge, EdgeData & out)
+    bool extract_edge(EdgePair edge, EdgeData & out)
         requires (has_edge_data && edges_mutable)
     {
         return extract_edge(edge.first, edge.second, out);
     }
 
-    std::optional<EdgeData> extract_edge(std::pair<VertexID, VertexID> edge)
+    std::optional<EdgeData> extract_edge(EdgePair edge)
         requires (has_edge_data && edges_mutable)
     {
         return extract_edge(edge.first, edge.second);
@@ -1367,6 +1363,7 @@ public:
     //
 
     EdgeView edge_view(EdgeID e_id)
+        noexcept(noexcept(EdgeView{source(e_id), target(e_id), e_id}))
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::edge_view(e_id): "
@@ -1377,26 +1374,26 @@ public:
     }
 
     // Return const or non-const VertexData based on lvalue
-    VertexData & operator[](VertexID v)
+    VertexData & operator[](VertexID v) noexcept
         requires (has_vertex_data)
     {
         return vertex_data(v);
     }
 
-    const VertexData & operator[](VertexID v) const
+    const VertexData & operator[](VertexID v) const noexcept
         requires (has_vertex_data)
     {
         return vertex_data(v);
     }
 
     // Return const or non-const EdgeData based on lvalue
-    EdgeData & operator[](EdgeID e)
+    EdgeData & operator[](EdgeID e) noexcept
         requires (has_edge_data)
     {
         return edge_data(e);
     }
 
-    const EdgeData & operator[](EdgeID e) const
+    const EdgeData & operator[](EdgeID e) const noexcept
         requires (has_edge_data)
     {
         return edge_data(e);
@@ -1586,6 +1583,9 @@ public:
 private:
     // Internal function for compressing and remapping the vertex array.
     void remap_vertices(CompressionMap & map)
+        // We std::swap VertexData elements and may destroy dead vertices.
+        noexcept(std::is_nothrow_swappable_v<VertexData> &&
+                 std::is_nothrow_destructible_v<VertexData>)
     {
         // We want to swap and pop dead vertices with alive vertices
         // until we have removed all of the empty space.
@@ -1654,7 +1654,7 @@ private:
     }
 
     // Internal function for remapping each VertexID stored in an edge.
-    void remap_edge_vertices(CompressionMap & map)
+    void remap_edge_vertices(CompressionMap & map) noexcept
     {
         auto & vertex_map = map.old_to_new_vertex;
         for (size_t i = 0; i < edges_.size(); i++)
@@ -1670,6 +1670,9 @@ private:
 
     // Internal function for compressing and remapping the edges array.
     void remap_edges(CompressionMap & map)
+        // We std::swap EdgeData elements and may destroy dead vertices.
+        noexcept(std::is_nothrow_swappable_v<EdgeData> &&
+                 std::is_nothrow_destructible_v<EdgeData>)
     {
         // We want to swap and pop dead edges with alive edges
         // until we have removed all of the empty space.
@@ -1836,7 +1839,7 @@ private:
             }
         }
 
-        void resize(size_t N) noexcept
+        void resize(size_t N)
         {
             from.resize(N);
             to.resize(N);
@@ -1895,8 +1898,16 @@ private:
         }
 
         // If an edge was deleted, edges_.from will be the empty vertex.
-        bool alive(EdgeID e_id) const
+        bool alive(EdgeID e_id) const noexcept
         {
+            libproject_assert(e_id.value < from.size(),
+                              "PropertyGraph::EdgeArrays::alive(e_id): "
+                              "internal library error: out of bounds access "
+                              "in from array; from.size() = "
+                              + std::to_string(from.size())
+                              + " e_id = "
+                              + std::to_string(e_id.value));
+
             return from[e_id.value] != VertexID::empty;
         }
 
@@ -2021,6 +2032,7 @@ private:
         }
 
         void pop_back()
+            noexcept(std::is_nothrow_destructible_v<VertexData>)
         {
             if constexpr (has_vertex_data)
             {
@@ -2086,7 +2098,7 @@ private:
             }
         }
 
-        VertexData & operator[](size_t i)
+        VertexData & operator[](size_t i) noexcept
             requires (has_vertex_data)
         {
             libproject_assert(i < data_.size(),
@@ -2098,7 +2110,7 @@ private:
             return data_[i];
         }
 
-        const VertexData & operator[](size_t i) const
+        const VertexData & operator[](size_t i) const noexcept
             requires (has_vertex_data)
         {
             libproject_assert(i < data_.size(),
@@ -2110,7 +2122,7 @@ private:
             return data_[i];
         }
 
-        bool alive(VertexID v) const
+        bool alive(VertexID v) const noexcept
             requires (vertices_mutable)
         {
             libproject_assert(v.value < alive_vertices_.size(),
@@ -2123,7 +2135,7 @@ private:
             return alive_vertices_[v.value];
         }
 
-        void set_alive(VertexID v)
+        void set_alive(VertexID v) noexcept
             requires (vertices_mutable)
         {
             libproject_assert(v.value < alive_vertices_.size(),
@@ -2136,7 +2148,7 @@ private:
             alive_vertices_[v.value] = 1;
         }
 
-        void set_dead(VertexID v)
+        void set_dead(VertexID v) noexcept
             requires (vertices_mutable)
         {
             libproject_assert(v.value < alive_vertices_.size(),
