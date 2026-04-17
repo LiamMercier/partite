@@ -1,34 +1,17 @@
 #include <gtest/gtest.h>
 
+#include "test-utils.hpp"
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
 
 #include <unordered_set>
-#include <tuple>
-
-struct PairHash
-{
-    std::size_t operator()(const std::pair<size_t, size_t> & pair) const
-    {
-        return std::hash<size_t>()(pair.first)
-               ^ std::hash<size_t>()(pair.second);
-    }
-};
 
 using namespace libproject::graphs;
 
 //
 // Typed test for different graph types on neighbor functions.
 //
-
-template <typename GraphT, typename EdgeDataT, typename VertexDataT>
-struct GraphConfig
-{
-    using Graph = GraphT;
-    using EdgeData = EdgeDataT;
-    using VertexData = VertexDataT;
-};
 
 // Tests for a graph type combination.
 using TestGraphs = ::testing::Types
