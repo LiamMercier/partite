@@ -5,6 +5,26 @@
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
 
+template <typename Graph, typename Edges>
+std::pair<size_t, bool> assert_edges_exist(const Graph & graph,
+                                           const Edges & edges)
+{
+    size_t index = 0;
+    for (const auto & edge : edges)
+    {
+        bool exists = graph.has_edge(edge.from, edge.to);
+
+        if (!exists)
+        {
+            return {index, false};
+        }
+
+        index++;
+    }
+
+    return {index, true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -273,6 +293,15 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
     {
         auto edges = TestFixture::compute_edges(i);
         i++;
+
+        auto res = assert_edges_exist(graph, edges);
+        ASSERT_TRUE(res.second) << "Graph "
+                                << i
+                                << " was missing edge ("
+                                << edges[res.first].from.value
+                                << " "
+                                << edges[res.first].to.value
+                                << ")";
 
         // TODO: different tests.
 
