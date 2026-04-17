@@ -218,6 +218,27 @@ public:
         }
     }
 
+    // Cache all graphs for significantly faster tests.
+    static const std::vector<Graph> & all_graphs()
+    {
+        size_t num_graphs = Graph::directed ? directed_graphs
+                                            : undirected_graphs;
+
+        static std::vector<Graph> cache = [num_graphs]{
+            std::vector<Graph> res;
+
+            for (size_t i = 0; i < num_graphs; i++)
+            {
+                auto edges = compute_edges(i);
+                res.emplace_back(v_count, edges);
+            }
+
+            return res;
+        }();
+
+        return cache;
+    }
+
     // We simply generate a list of vertex labels "0, ..., |V| - 1"
     static std::vector<VertexData> compute_vertices()
     {
@@ -228,5 +249,33 @@ public:
         {
             vertices.push_back(std::to_string(v));
         }
+
+        return vertices;
     }
 };
+
+TYPED_TEST_SUITE(PropertyGraphExhaustiveTest, TestGraphs);
+
+TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    size_t num_graphs = Graph::directed ? TestFixture::directed_graphs
+                                        : TestFixture::undirected_graphs;
+
+    size_t v_count = TestFixture::v_count;
+    size_t i = 0;
+
+    // Go over each possible graph, and do every test necessary.
+    for (const auto & graph : TestFixture::all_graphs())
+    {
+        auto edges = TestFixture::compute_edges(i);
+        i++;
+
+        // TODO: different tests.
+
+        continue;
+    }
+}
