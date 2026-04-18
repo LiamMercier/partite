@@ -54,6 +54,31 @@ void populate_neighbors(const Edges & edges,
     }
 }
 
+template <bool directed, typename Edges>
+void populate_edge_ids(const Edges & edges,
+                       std::vector<EdgeIDSet> & edge_ids,
+                       std::vector<EdgeIDSet> & out_edge_ids,
+                       std::vector<EdgeIDSet> & in_edge_ids)
+{
+    size_t index = 0;
+    for (const auto & e : edges)
+    {
+        if constexpr (directed)
+        {
+            edge_ids[e.from.value].insert(index);
+            out_edge_ids[e.from.value].insert(index);
+            in_edge_ids[e.to.value].insert(index);
+        }
+        else
+        {
+            edge_ids[e.from.value].insert(index);
+            edge_ids[e.to.value].insert(index);
+        }
+
+        index++;
+    }
+}
+
 template <bool directed, typename Graph>
 SubtestResultPair
     assert_neighbors(const Graph & graph,
@@ -124,7 +149,7 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u.value);
+                bool duplicate = seen.contains(u);
 
                 if (duplicate)
                 {
@@ -172,7 +197,7 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u.value);
+                bool duplicate = seen.contains(u);
 
                 if (duplicate)
                 {
@@ -196,6 +221,158 @@ SubtestResultPair
                                     + " neighbors, expected to see "
                                     + std::to_string(
                                         in_neighbors[v.value].size()
+                                    );
+                return {fail, false};
+            }
+        }
+    }
+
+    return {std::string(), true};
+}
+
+template <bool directed, typename Graph>
+SubtestResultPair
+    assert_neighboring_edge_ids(const Graph & graph,
+                                const std::vector<EdgeIDSet> & edge_ids,
+                                const std::vector<EdgeIDSet> & out_edge_ids,
+                                const std::vector<EdgeIDSet> & in_edge_ids)
+{
+    for (const auto & v : graph.vertices())
+    {
+        // Check incident_edge_ids(v)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & u : graph.incident_edge_ids(v))
+            {
+                bool match = edge_ids[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected EdgeID "
+                                    + std::to_string(u.value)
+                                    + " for incident_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate EdgeID "
+                                    + std::to_string(u.value)
+                                    + " for incident_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != edge_ids[v.value].size())
+            {
+                std::string fail =  "Missing at least one vertex "
+                                    "for incident_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ")";
+                return {fail, false};
+            }
+        }
+
+        // Check out_edge_ids(v) if digraph.
+        if constexpr (directed)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & u : graph.out_edge_ids(v))
+            {
+                bool match = out_edge_ids[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected EdgeID "
+                                       + std::to_string(u.value)
+                                       + " for out_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate EdgeID "
+                                       + std::to_string(u.value)
+                                       + " for out_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != out_edge_ids[v.value].size())
+            {
+                std::string fail =  "out_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ") saw "
+                                    + std::to_string(seen.size())
+                                    + " neighbors, expected to see "
+                                    + std::to_string(
+                                        out_edge_ids[v.value].size()
+                                    );
+                return {fail, false};
+            }
+        }
+
+        // Check in_edge_ids(v) if digraph.
+        if constexpr (directed)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & u : graph.in_edge_ids(v))
+            {
+                bool match = in_edge_ids[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected EdgeID "
+                                       + std::to_string(u.value)
+                                       + " for in_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate EdgeID "
+                                       + std::to_string(u.value)
+                                       + " for in_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != in_edge_ids[v.value].size())
+            {
+                std::string fail =  "in_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ") saw "
+                                    + std::to_string(seen.size())
+                                    + " neighbors, expected to see "
+                                    + std::to_string(
+                                        in_edge_ids[v.value].size()
                                     );
                 return {fail, false};
             }
@@ -500,6 +677,28 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_neighbors failed; "
+                                    << res.first;
+        }
+
+        std::vector<EdgeIDSet> edge_ids(v_count);
+        std::vector<EdgeIDSet> out_edge_ids(v_count);
+        std::vector<EdgeIDSet> in_edge_ids(v_count);
+
+        populate_edge_ids<Graph::directed>(edges,
+                                           edge_ids,
+                                           out_edge_ids,
+                                           in_edge_ids);
+
+        {
+            auto res = assert_neighboring_edge_ids
+                           <Graph::directed>(graph,
+                                             edge_ids,
+                                             out_edge_ids,
+                                             in_edge_ids);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_neighboring_edge_ids failed; "
                                     << res.first;
         }
 
