@@ -5,9 +5,11 @@
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
 
+using SubtestResultPair = std::pair<std::string, bool>;
+
 template <typename Graph, typename Edges>
-std::pair<size_t, bool> assert_edges_exist(const Graph & graph,
-                                           const Edges & edges)
+SubtestResultPair assert_edges_exist(const Graph & graph,
+                                     const Edges & edges)
 {
     size_t index = 0;
     for (const auto & edge : edges)
@@ -16,13 +18,191 @@ std::pair<size_t, bool> assert_edges_exist(const Graph & graph,
 
         if (!exists)
         {
-            return {index, false};
+            std::string fail = "missing edge ("
+                               + std::to_string(edges[index].from.value)
+                               + ", "
+                               + std::to_string(edges[index].to.value)
+                               + ")";
+            return {fail, false};
         }
 
         index++;
     }
 
-    return {index, true};
+    return {std::string(), true};
+}
+
+template <bool directed, typename Edges>
+void populate_neighbors(const Edges & edges,
+                        std::vector<VertexIDSet> & neighbors,
+                        std::vector<VertexIDSet> & out_neighbors,
+                        std::vector<VertexIDSet> & in_neighbors)
+{
+    for (const auto & e : edges)
+    {
+        if constexpr (directed)
+        {
+            neighbors[e.from.value].insert(e.to);
+            out_neighbors[e.from.value].insert(e.to);
+            in_neighbors[e.to.value].insert(e.from);
+        }
+        else
+        {
+            neighbors[e.from.value].insert(e.to);
+            neighbors[e.to.value].insert(e.from);
+        }
+    }
+}
+
+template <bool directed, typename Graph>
+SubtestResultPair
+    assert_neighbors(const Graph & graph,
+                     const std::vector<VertexIDSet> & neighbors,
+                     const std::vector<VertexIDSet> & out_neighbors,
+                     const std::vector<VertexIDSet> & in_neighbors)
+{
+    for (const auto & v : graph.vertices())
+    {
+        // Check neighbors(v)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : graph.neighbors(v))
+            {
+                bool match = neighbors[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected vertex "
+                                    + std::to_string(u.value)
+                                    + " for neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u.value);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate vertex "
+                                    + std::to_string(u.value)
+                                    + " for neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != neighbors[v.value].size())
+            {
+                std::string fail =  "Missing at least one vertex for neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                return {fail, false};
+            }
+        }
+
+        // Check out_neighbors(v) if digraph.
+        if constexpr (directed)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : graph.out_neighbors(v))
+            {
+                bool match = out_neighbors[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected vertex "
+                                    + std::to_string(u.value)
+                                    + " for out_neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u.value);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate vertex "
+                                    + std::to_string(u.value)
+                                    + " for out_neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != out_neighbors[v.value].size())
+            {
+                std::string fail =  "out_neighbors("
+                                    + std::to_string(v.value)
+                                    + ") saw "
+                                    + std::to_string(seen.size())
+                                    + " neighbors, expected to see "
+                                    + std::to_string(
+                                        out_neighbors[v.value].size()
+                                    );
+                return {fail, false};
+            }
+        }
+
+        // Check in_neighbors(v) if digraph.
+        if constexpr (directed)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : graph.in_neighbors(v))
+            {
+                bool match = in_neighbors[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected vertex "
+                                    + std::to_string(u.value)
+                                    + " for in_neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u.value);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate vertex "
+                                    + std::to_string(u.value)
+                                    + " for in_neighbors("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != in_neighbors[v.value].size())
+            {
+                std::string fail =  "in_neighbors("
+                                    + std::to_string(v.value)
+                                    + ") saw "
+                                    + std::to_string(seen.size())
+                                    + " neighbors, expected to see "
+                                    + std::to_string(
+                                        in_neighbors[v.value].size()
+                                    );
+                return {fail, false};
+            }
+        }
+    }
+
+    return {std::string(), true};
 }
 
 using namespace libproject::graphs;
@@ -294,16 +474,36 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
         auto edges = TestFixture::compute_edges(i);
         i++;
 
-        auto res = assert_edges_exist(graph, edges);
-        ASSERT_TRUE(res.second) << "Graph "
-                                << i
-                                << " was missing edge ("
-                                << edges[res.first].from.value
-                                << " "
-                                << edges[res.first].to.value
-                                << ")";
+        {
+            auto res = assert_edges_exist(graph, edges);
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_edges_exist failed; "
+                                    << res.first;
+        }
 
-        // TODO: different tests.
+        // Check neighbors(v), out_neighbors(v), in_neighbors(v)
+        std::vector<VertexIDSet> neighbors(v_count);
+        std::vector<VertexIDSet> out_neighbors(v_count);
+        std::vector<VertexIDSet> in_neighbors(v_count);
+
+        populate_neighbors<Graph::directed>(edges,
+                                            neighbors,
+                                            out_neighbors,
+                                            in_neighbors);
+
+        {
+            auto res = assert_neighbors<Graph::directed>(graph,
+                                                         neighbors,
+                                                         out_neighbors,
+                                                         in_neighbors);
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_neighbors failed; "
+                                    << res.first;
+        }
+
+        // TODO: more tests.
 
         continue;
     }
