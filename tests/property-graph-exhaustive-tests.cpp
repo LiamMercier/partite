@@ -79,6 +79,31 @@ void populate_edge_ids(const Edges & edges,
     }
 }
 
+template <bool directed, typename Edges>
+void populate_edges(const Edges & edges,
+                    std::vector<IncidentEdgeSet> & incident_edges,
+                    std::vector<IncidentEdgeSet> & out_edges,
+                    std::vector<IncidentEdgeSet> & in_edges)
+{
+    size_t index = 0;
+    for (const auto & e : edges)
+    {
+        if constexpr (directed)
+        {
+            incident_edges[e.from.value].insert({e.to.value, index});
+            out_edges[e.from.value].insert({e.to.value, index});
+            in_edges[e.to.value].insert({e.from.value, index});
+        }
+        else
+        {
+            incident_edges[e.from.value].insert({e.to.value, index});
+            incident_edges[e.to.value].insert({e.from.value, index});
+        }
+
+        index++;
+    }
+}
+
 template <bool directed, typename Graph>
 SubtestResultPair
     assert_neighbors(const Graph & graph,
@@ -99,10 +124,10 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected vertex "
-                                    + std::to_string(u.value)
-                                    + " for neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -111,10 +136,10 @@ SubtestResultPair
                 if (duplicate)
                 {
                     std::string fail = "Duplicate vertex "
-                                    + std::to_string(u.value)
-                                    + " for neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -123,9 +148,14 @@ SubtestResultPair
 
             if (seen.size() != neighbors[v.value].size())
             {
-                std::string fail =  "Missing at least one vertex for neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                std::string fail = "neighbors("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " neighbors, expected to see "
+                                   + std::to_string(
+                                       out_neighbors[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -142,10 +172,10 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected vertex "
-                                    + std::to_string(u.value)
-                                    + " for out_neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for out_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -154,10 +184,10 @@ SubtestResultPair
                 if (duplicate)
                 {
                     std::string fail = "Duplicate vertex "
-                                    + std::to_string(u.value)
-                                    + " for out_neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for out_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -166,14 +196,14 @@ SubtestResultPair
 
             if (seen.size() != out_neighbors[v.value].size())
             {
-                std::string fail =  "out_neighbors("
-                                    + std::to_string(v.value)
-                                    + ") saw "
-                                    + std::to_string(seen.size())
-                                    + " neighbors, expected to see "
-                                    + std::to_string(
-                                        out_neighbors[v.value].size()
-                                    );
+                std::string fail = "out_neighbors("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " neighbors, expected to see "
+                                   + std::to_string(
+                                       out_neighbors[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -190,10 +220,10 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected vertex "
-                                    + std::to_string(u.value)
-                                    + " for in_neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for in_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -202,10 +232,10 @@ SubtestResultPair
                 if (duplicate)
                 {
                     std::string fail = "Duplicate vertex "
-                                    + std::to_string(u.value)
-                                    + " for in_neighbors("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for in_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -214,14 +244,14 @@ SubtestResultPair
 
             if (seen.size() != in_neighbors[v.value].size())
             {
-                std::string fail =  "in_neighbors("
-                                    + std::to_string(v.value)
-                                    + ") saw "
-                                    + std::to_string(seen.size())
-                                    + " neighbors, expected to see "
-                                    + std::to_string(
-                                        in_neighbors[v.value].size()
-                                    );
+                std::string fail = "in_neighbors("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " neighbors, expected to see "
+                                   + std::to_string(
+                                       in_neighbors[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -250,10 +280,10 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected EdgeID "
-                                    + std::to_string(u.value)
-                                    + " for incident_edge_ids("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for incident_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -262,10 +292,10 @@ SubtestResultPair
                 if (duplicate)
                 {
                     std::string fail = "Duplicate EdgeID "
-                                    + std::to_string(u.value)
-                                    + " for incident_edge_ids("
-                                    + std::to_string(v.value)
-                                    + ")";
+                                       + std::to_string(u.value)
+                                       + " for incident_edge_ids("
+                                       + std::to_string(v.value)
+                                       + ")";
                     return {fail, false};
                 }
 
@@ -274,10 +304,14 @@ SubtestResultPair
 
             if (seen.size() != edge_ids[v.value].size())
             {
-                std::string fail =  "Missing at least one vertex "
-                                    "for incident_edge_ids("
-                                    + std::to_string(v.value)
-                                    + ")";
+                std::string fail = "incident_edge_ids("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " ids, expected to see "
+                                   + std::to_string(
+                                       edge_ids[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -318,14 +352,14 @@ SubtestResultPair
 
             if (seen.size() != out_edge_ids[v.value].size())
             {
-                std::string fail =  "out_edge_ids("
-                                    + std::to_string(v.value)
-                                    + ") saw "
-                                    + std::to_string(seen.size())
-                                    + " neighbors, expected to see "
-                                    + std::to_string(
-                                        out_edge_ids[v.value].size()
-                                    );
+                std::string fail = "out_edge_ids("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " ids, expected to see "
+                                   + std::to_string(
+                                       out_edge_ids[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -366,14 +400,182 @@ SubtestResultPair
 
             if (seen.size() != in_edge_ids[v.value].size())
             {
-                std::string fail =  "in_edge_ids("
-                                    + std::to_string(v.value)
-                                    + ") saw "
-                                    + std::to_string(seen.size())
-                                    + " neighbors, expected to see "
-                                    + std::to_string(
-                                        in_edge_ids[v.value].size()
-                                    );
+                std::string fail = "in_edge_ids("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " ids, expected to see "
+                                   + std::to_string(
+                                       in_edge_ids[v.value].size()
+                                   );
+                return {fail, false};
+            }
+        }
+    }
+
+    return {std::string(), true};
+}
+
+template <bool directed, typename Graph>
+SubtestResultPair
+    assert_neighboring_edges(const Graph & graph,
+                             const std::vector<IncidentEdgeSet> & incident_edges,
+                             const std::vector<IncidentEdgeSet> & out_edges,
+                             const std::vector<IncidentEdgeSet> & in_edges)
+{
+    for (const auto & v : graph.vertices())
+    {
+        // Check incident_edges(v)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & u : graph.incident_edges(v))
+            {
+                bool match = incident_edges[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for incident_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for incident_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != incident_edges[v.value].size())
+            {
+                std::string fail = "incident_edges("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " incident edges, expected to see "
+                                   + std::to_string(
+                                       incident_edges[v.value].size()
+                                   );
+                return {fail, false};
+            }
+        }
+
+        // Check out_edges(v) if digraph.
+        if constexpr (directed)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & u : graph.out_edges(v))
+            {
+                bool match = out_edges[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for out_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for out_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != out_edges[v.value].size())
+            {
+                std::string fail = "out_edges("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " incident edges, expected to see "
+                                   + std::to_string(
+                                       out_edges[v.value].size()
+                                   );
+                return {fail, false};
+            }
+        }
+
+        // Check in_edges(v) if digraph.
+        if constexpr (directed)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & u : graph.in_edges(v))
+            {
+                bool match = in_edges[v.value].contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "Unexpected IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for in_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                bool duplicate = seen.contains(u);
+
+                if (duplicate)
+                {
+                    std::string fail = "Duplicate IncidentEdge (neighbor: "
+                                       + std::to_string(u.neighbor.value)
+                                       + ", id: "
+                                       + std::to_string(u.id.value)
+                                       + ") for in_edges("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+
+                seen.insert(u);
+            }
+
+            if (seen.size() != in_edges[v.value].size())
+            {
+                std::string fail = "in_edges("
+                                   + std::to_string(v.value)
+                                   + ") saw "
+                                   + std::to_string(seen.size())
+                                   + " incident edges, expected to see "
+                                   + std::to_string(
+                                       in_edges[v.value].size()
+                                   );
                 return {fail, false};
             }
         }
@@ -699,6 +901,28 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_neighboring_edge_ids failed; "
+                                    << res.first;
+        }
+
+        std::vector<IncidentEdgeSet> incident_edges(v_count);
+        std::vector<IncidentEdgeSet> out_edges(v_count);
+        std::vector<IncidentEdgeSet> in_edges(v_count);
+
+        populate_edges<Graph::directed>(edges,
+                                        incident_edges,
+                                        out_edges,
+                                        in_edges);
+
+        {
+            auto res = assert_neighboring_edges
+                           <Graph::directed>(graph,
+                                             incident_edges,
+                                             out_edges,
+                                             in_edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_neighboring_edges failed; "
                                     << res.first;
         }
 
