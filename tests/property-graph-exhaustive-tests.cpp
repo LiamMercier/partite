@@ -123,6 +123,19 @@ void populate_vertex_degrees(const Edges & edges,
     }
 }
 
+template <typename Edges>
+void populate_self_loops(const Edges & edges,
+                         std::vector<char> & self_loops)
+{
+    for (const auto & e : edges)
+    {
+        if (e.from == e.to)
+        {
+            self_loops[e.from.value] = 1;
+        }
+    }
+}
+
 template <bool directed, typename Graph>
 SubtestResultPair
     assert_neighbors(const Graph & graph,
@@ -826,6 +839,31 @@ SubtestResultPair
     return {std::string(), true};
 }
 
+template <typename Graph>
+SubtestResultPair
+    assert_self_loops(const Graph & graph,
+                      const std::vector<char> & self_loops)
+{
+    for (const auto & v : graph.vertices())
+    {
+        bool equal = (graph.has_self_loop(v) == self_loops[v.value]);
+
+        if (!equal)
+        {
+            std::string fail = "has_self_loop("
+                               + std::to_string(v.value)
+                               + ") returned "
+                               + (graph.has_self_loop(v) ? "true" : "false")
+                               + " for a vertex with "
+                               + (self_loops[v.value] ? "self loops"
+                                                : "no self loops");
+            return {fail, false};
+        }
+    }
+
+    return {std::string(), true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -1213,6 +1251,19 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_vertex_degrees failed; "
+                                    << res.first;
+        }
+
+        std::vector<char> self_loops(v_count);
+
+        populate_self_loops(edges, self_loops);
+
+        {
+            auto res = assert_self_loops(graph, self_loops);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_self_loops failed; "
                                     << res.first;
         }
 
