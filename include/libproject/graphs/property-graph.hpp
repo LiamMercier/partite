@@ -35,6 +35,9 @@ public:
     };
 
 public:
+    using EdgeDataType = EdgeData;
+    using VertexDataType = VertexData;
+
     static constexpr bool directed = Representation::directed;
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
     static constexpr bool edges_mutable = EdgeMutable<Representation>;
@@ -1362,7 +1365,7 @@ public:
     // Utility functions
     //
 
-    EdgeView edge_view(EdgeID e_id)
+    EdgeView edge_view(EdgeID e_id) const
         noexcept(noexcept(EdgeView{source(e_id), target(e_id), e_id}))
     {
         libproject_assert(valid_edge(e_id),
