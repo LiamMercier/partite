@@ -58,8 +58,29 @@ struct IncidentEdgeEqual
     }
 };
 
+struct EdgeViewHash
+{
+    std::size_t operator()(const EdgeView & ev) const
+    {
+        return std::hash<size_t>()(ev.from.value)
+               ^ std::hash<size_t>()(ev.to.value)
+               ^ std::hash<size_t>()(ev.id.value);
+    }
+};
+
+struct EdgeViewEqual
+{
+    bool operator()(const EdgeView & a, const EdgeView & b) const
+    {
+        return (a.from == b.from)
+               && (a.to == b.to)
+               && (a.id == b.id);
+    }
+};
+
 using VertexIDSet = std::unordered_set<VertexID, VertexIDHash>;
 using EdgeIDSet = std::unordered_set<EdgeID, EdgeIDHash>;
 using IncidentEdgeSet = std::unordered_set<IncidentEdge,
                                            IncidentEdgeHash,
                                            IncidentEdgeEqual>;
+using EdgeViewSet = std::unordered_set<EdgeView, EdgeViewHash, EdgeViewEqual>;

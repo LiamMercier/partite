@@ -584,6 +584,122 @@ SubtestResultPair
     return {std::string(), true};
 }
 
+template <typename Graph, typename Edges>
+SubtestResultPair
+    assert_global_edge_ids(const Graph & graph,
+                           const Edges & edges)
+{
+    EdgeIDSet seen;
+
+    for (const auto & e : graph.edge_ids())
+    {
+        if (edges.size() == 0)
+        {
+            std::string fail = "Unexpected EdgeID "
+                               + std::to_string(e.value)
+                               + " for edge_ids()";
+            return {fail, false};
+        }
+
+        bool valid = (e.value <= (edges.size() - 1));
+
+        if (!valid)
+        {
+            std::string fail = "Unexpected EdgeID "
+                               + std::to_string(e.value)
+                               + " for edge_ids()";
+            return {fail, false};
+        }
+
+        bool duplicate = seen.contains(e);
+
+        if (duplicate)
+        {
+            std::string fail = "Duplicate edge ID "
+                               + std::to_string(e.value)
+                               + " for edge_ids()";
+            return {fail, false};
+        }
+
+        seen.insert(e);
+    }
+
+    if (seen.size() != edges.size())
+    {
+        std::string fail = "edge_ids() saw "
+                           + std::to_string(seen.size())
+                           + " incident edges, expected to see "
+                           + std::to_string(edges.size());
+        return {fail, false};
+    }
+
+    return {std::string(), true};
+}
+
+template <typename Graph, typename Edges>
+SubtestResultPair
+    assert_global_edges(const Graph & graph,
+                        const Edges & edges)
+{
+    EdgeViewSet seen;
+
+    for (const auto & e : graph.edges())
+    {
+        if (edges.size() == 0)
+        {
+            std::string fail = "Unexpected EdgeView (from: "
+                               + std::to_string(e.from.value)
+                               + ", to: "
+                               + std::to_string(e.to.value)
+                               + ", id: "
+                               + std::to_string(e.id.value)
+                               + ") for edges()";
+            return {fail, false};
+        }
+
+        bool valid = (e.id.value <= (edges.size() - 1));
+
+        if (!valid)
+        {
+            std::string fail = "Unexpected EdgeView (from: "
+                               + std::to_string(e.from.value)
+                               + ", to: "
+                               + std::to_string(e.to.value)
+                               + ", id: "
+                               + std::to_string(e.id.value)
+                               + ") for edges()";
+            return {fail, false};
+        }
+
+        bool duplicate = seen.contains(e);
+
+        if (duplicate)
+        {
+            std::string fail = "Duplicate EdgeView (from: "
+                               + std::to_string(e.from.value)
+                               + ", to: "
+                               + std::to_string(e.to.value)
+                               + ", id: "
+                               + std::to_string(e.id.value)
+                               + ") for edges()";
+            return {fail, false};
+        }
+
+        seen.insert(e);
+    }
+
+    if (seen.size() != edges.size())
+    {
+        std::string fail = "edges() saw "
+                           + std::to_string(seen.size())
+                           + " edge views, expected to see "
+                           + std::to_string(edges.size());
+        return {fail, false};
+    }
+
+    return {std::string(), true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -923,6 +1039,24 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_neighboring_edges failed; "
+                                    << res.first;
+        }
+
+        {
+            auto res = assert_global_edge_ids(graph, edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_global_edge_ids failed; "
+                                    << res.first;
+        }
+
+        {
+            auto res = assert_global_edges(graph, edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_global_edges failed; "
                                     << res.first;
         }
 
