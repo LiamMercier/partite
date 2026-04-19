@@ -104,6 +104,25 @@ void populate_edges(const Edges & edges,
     }
 }
 
+template <bool directed, typename Edges>
+void populate_vertex_degrees(const Edges & edges,
+                             std::vector<size_t> & degrees,
+                             std::vector<size_t> & out_degrees,
+                             std::vector<size_t> & in_degrees)
+{
+    for (const auto & e : edges)
+    {
+        degrees[e.from.value]++;
+        degrees[e.to.value]++;
+
+        if constexpr (directed)
+        {
+            out_degrees[e.from.value]++;
+            in_degrees[e.to.value]++;
+        }
+    }
+}
+
 template <bool directed, typename Graph>
 SubtestResultPair
     assert_neighbors(const Graph & graph,
@@ -743,6 +762,70 @@ SubtestResultPair
     return {std::string(), true};
 }
 
+template <bool directed, typename Graph>
+SubtestResultPair
+    assert_vertex_degrees(const Graph & graph,
+                          const std::vector<size_t> & degrees,
+                          const std::vector<size_t> & out_degrees,
+                          const std::vector<size_t> & in_degrees)
+{
+    for (const auto & v : graph.vertices())
+    {
+        // Check degrees are correct.
+        {
+            bool valid = (degrees[v.value] == graph.degree(v));
+
+            if (!valid)
+            {
+                std::string fail = "Expected degree("
+                                   + std::to_string(v.value)
+                                   + ") = "
+                                   + std::to_string(degrees[v.value])
+                                   + ", got "
+                                   + std::to_string(graph.degree(v));
+                return {fail, false};
+            }
+        }
+
+        // Check out_degrees(v) if digraph.
+        if constexpr (directed)
+        {
+            bool valid = (out_degrees[v.value] == graph.out_degree(v));
+
+            if (!valid)
+            {
+                std::string fail = "Expected out_degree("
+                                   + std::to_string(v.value)
+                                   + ") = "
+                                   + std::to_string(out_degrees[v.value])
+                                   + ", got "
+                                   + std::to_string(graph.out_degree(v));
+                return {fail, false};
+            }
+        }
+
+        // Check in_degrees(v) if digraph.
+        if constexpr (directed)
+        {
+            bool valid = (in_degrees[v.value] == graph.in_degree(v));
+
+            if (!valid)
+            {
+                std::string fail = "Expected in_degree("
+                                   + std::to_string(v.value)
+                                   + ") = "
+                                   + std::to_string(in_degrees[v.value])
+                                   + ", got "
+                                   + std::to_string(graph.in_degree(v));
+                return {fail, false};
+            }
+        }
+
+    }
+
+    return {std::string(), true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -1109,6 +1192,27 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_global_vertices failed; "
+                                    << res.first;
+        }
+
+        std::vector<size_t> degrees(v_count);
+        std::vector<size_t> out_degrees(v_count);
+        std::vector<size_t> in_degrees(v_count);
+
+        populate_vertex_degrees<Graph::directed>(edges,
+                                                 degrees,
+                                                 out_degrees,
+                                                 in_degrees);
+
+        {
+            auto res = assert_vertex_degrees<Graph::directed>(graph,
+                                                              degrees,
+                                                              out_degrees,
+                                                              in_degrees);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_vertex_degrees failed; "
                                     << res.first;
         }
 
