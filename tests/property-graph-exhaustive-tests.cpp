@@ -856,8 +856,225 @@ SubtestResultPair
                                + (graph.has_self_loop(v) ? "true" : "false")
                                + " for a vertex with "
                                + (self_loops[v.value] ? "self loops"
-                                                : "no self loops");
+                                                      : "no self loops");
             return {fail, false};
+        }
+    }
+
+    return {std::string(), true};
+}
+
+template <typename Graph, typename Edges>
+SubtestResultPair
+    assert_accessors(Graph & graph,
+                     const Edges & edges)
+{
+    using EdgePair = Graph::EdgePair;
+    using EdgeData = Graph::EdgeDataType;
+    using VertexData = Graph::VertexDataType;
+
+    size_t id = 0;
+    for (const auto & edge : edges)
+    {
+        {
+            bool expected = graph.valid_edge(id);
+
+            if (!expected)
+            {
+                std::string fail = "valid_edge("
+                                   + std::to_string(id)
+                                   + ") returned "
+                                   + std::to_string(expected)
+                                   + "; expected "
+                                   + std::to_string(true);
+                return {fail, false};
+            }
+        }
+
+        {
+            EdgeID found = graph.find_edge(edge.from, edge.to);
+            EdgeID found_pair = graph.find_edge(EdgePair{edge.from, edge.to});
+
+            bool match = (found == found_pair);
+
+            if (!match)
+            {
+                std::string fail = "Value mismatch; find_edge("
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + ") returned "
+                                   + std::to_string(found.value)
+                                   + " but find_edge(EdgePair{"
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + "}) returned "
+                                   + std::to_string(found_pair.value);
+                return {fail, false};
+            }
+
+            bool expected = (found == id);
+
+            if (!expected)
+            {
+                std::string fail = "find_edge("
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + ") returned "
+                                   + std::to_string(found.value)
+                                   + "; expected "
+                                   + std::to_string(id);
+                return {fail, false};
+            }
+        }
+
+        {
+            EdgePair pair = graph.endpoints(id);
+
+            bool expected = (pair.first == edge.from)
+                            && (pair.second == edge.to);
+
+            if (!expected)
+            {
+                std::string fail = "endpoints("
+                                   + std::to_string(id)
+                                   + ") returned EdgePair ("
+                                   + std::to_string(pair.first.value)
+                                   + ", "
+                                   + std::to_string(pair.second.value)
+                                   + "); Expected ("
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + ")";
+                return {fail, false};
+            }
+        }
+
+        {
+            VertexID from = graph.source(id);
+            VertexID to = graph.target(id);
+
+            bool source_expected = (edge.from == from);
+            bool target_expected = (edge.to == to);
+
+            if (!source_expected || !target_expected)
+            {
+                std::string fail = !source_expected ? "source(" : "target("
+                                   + std::to_string(id)
+                                   + ") returned VertexID "
+                                   + std::to_string(
+                                       !source_expected ? from.value : to.value
+                                   )
+                                   + "; Expected "
+                                   + std::to_string(
+                                       !source_expected ? edge.from.value
+                                                        : edge.to.value
+                                   );
+                return {fail, false};
+            }
+        }
+
+        {
+            bool found = graph.has_edge(edge.from, edge.to);
+            bool found_pair = graph.has_edge(EdgePair{edge.from, edge.to});
+
+            bool match = (found == found_pair);
+
+            if (!match)
+            {
+                std::string fail = "Value mismatch; has_edge("
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + ") returned "
+                                   + std::to_string(found)
+                                   + " but has_edge(EdgePair{"
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + "}) returned "
+                                   + std::to_string(found_pair);
+                return {fail, false};
+            }
+
+            bool expected = (found == true);
+
+            if (!expected)
+            {
+                std::string fail = "has_edge("
+                                   + std::to_string(edge.from.value)
+                                   + ", "
+                                   + std::to_string(edge.to.value)
+                                   + ") returned "
+                                   + std::to_string(found)
+                                   + "; expected "
+                                   + std::to_string(true);
+                return {fail, false};
+            }
+        }
+
+        {
+            EdgeView ev = graph.edge_view(id);
+
+            bool expected = (ev.from == edge.from)
+                            && (ev.to == edge.to)
+                            && (ev.id == id);
+
+            if (!expected)
+            {
+                std::string fail = "edge_view("
+                                   + std::to_string(id)
+                                   + ") returned {from: "
+                                   + std::to_string(ev.from.value)
+                                   + ", to: "
+                                   + std::to_string(ev.to.value)
+                                   + ", id: "
+                                   + std::to_string(ev.id.value)
+                                   + "}; expected {from: "
+                                   + std::to_string(edge.from.value)
+                                   + ", to: "
+                                   + std::to_string(edge.to.value)
+                                   + ", id: "
+                                   + std::to_string(id)
+                                   + "}";
+                return {fail, false};
+            }
+        }
+
+        if constexpr (HasData<EdgeData>)
+        {
+            const EdgeData & ed = graph.edge_data(id);
+            const EdgeData & ed_indexed = graph[EdgeID(id)];
+
+            bool match = (ed == ed_indexed);
+
+            if (!match)
+            {
+                std::string fail = "edge_data("
+                                   + std::to_string(id)
+                                   + ") returned "
+                                   + ed
+                                   + ", but graph["
+                                   + std::to_string(id)
+                                   + "] returned "
+                                   + ed_indexed;
+                return {fail, false};
+            }
+        }
+
+        id++;
+    }
+
+    if constexpr (HasData<VertexData>)
+    {
+        for (const auto & v : graph.vertices())
+        {
+            const VertexData & data_const = graph.vertex_data(v);
+            const VertexData & data_indexed_const = graph[v];
+
         }
     }
 
@@ -1264,6 +1481,15 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_self_loops failed; "
+                                    << res.first;
+        }
+
+        {
+            auto res = assert_accessors(graph, edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_accessors failed; "
                                     << res.first;
         }
 
