@@ -866,7 +866,7 @@ SubtestResultPair
 
 template <typename Graph, typename Edges>
 SubtestResultPair
-    assert_accessors(Graph & graph,
+    assert_accessors(const Graph & graph,
                      const Edges & edges)
 {
     using EdgePair = Graph::EdgePair;
@@ -1075,6 +1075,31 @@ SubtestResultPair
             const VertexData & data_const = graph.vertex_data(v);
             const VertexData & data_indexed_const = graph[v];
 
+        }
+    }
+
+    return {std::string(), true};
+}
+
+template <typename Graph, typename Edges>
+SubtestResultPair
+    assert_transpose(const Graph & graph,
+                     const Edges & edges)
+{
+    Graph GT = graph.compute_transpose();
+
+    for (const auto & edge : edges)
+    {
+        bool match = (GT.has_edge(edge.to, edge.from));
+
+        if (!match)
+        {
+            std::string fail = "Missing edge ("
+                               + std::to_string(edge.to.value)
+                               + ", "
+                               + std::to_string(edge.from.value)
+                               + ") in transposed graph";
+            return {fail, false};
         }
     }
 
@@ -1490,6 +1515,15 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_accessors failed; "
+                                    << res.first;
+        }
+
+        {
+            auto res = assert_transpose(graph, edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_transpose failed; "
                                     << res.first;
         }
 
