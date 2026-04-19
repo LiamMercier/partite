@@ -700,6 +700,49 @@ SubtestResultPair
     return {std::string(), true};
 }
 
+template <typename Graph>
+SubtestResultPair
+    assert_global_vertices(const Graph & graph, size_t v_count)
+{
+    VertexIDSet seen;
+
+    for (const auto & v : graph.vertices())
+    {
+        bool valid = (v.value < v_count);
+
+        if (!valid)
+        {
+            std::string fail = "Unexpected VertexID "
+                               + std::to_string(v.value)
+                               + " for vertices()";
+            return {fail, false};
+        }
+
+        bool duplicate = seen.contains(v);
+
+        if (duplicate)
+        {
+            std::string fail = "Duplicate VertexID "
+                               + std::to_string(v.value)
+                               + " for vertices()";
+            return {fail, false};
+        }
+
+        seen.insert(v);
+    }
+
+    if (seen.size() != v_count)
+    {
+        std::string fail = "vertices() saw "
+                           + std::to_string(seen.size())
+                           + " vertices, expected to see "
+                           + std::to_string(v_count);
+        return {fail, false};
+    }
+
+    return {std::string(), true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -1057,6 +1100,15 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
             ASSERT_TRUE(res.second) << "Graph "
                                     << i
                                     << ": assert_global_edges failed; "
+                                    << res.first;
+        }
+
+        {
+            auto res = assert_global_vertices(graph, v_count);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_global_vertices failed; "
                                     << res.first;
         }
 
