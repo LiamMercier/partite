@@ -6,7 +6,7 @@
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-inputs.hpp>
-#include <libproject/graphs/graph-concepts.hpp>
+#include <libproject/graphs/representation-concepts.hpp>
 
 namespace libproject::graphs
 {
@@ -860,7 +860,7 @@ public:
             // Though, we would need to worry about edges_.from being size N + 1
             // and edges_.to being size N depending on when we throw.
             //
-            // TODO <feautre>: function the user can call to check that
+            // TODO <feature>: function the user can call to check that
             //                 each array is of equal size so they can be fixed.
             if constexpr (has_edge_data)
             {
