@@ -1583,10 +1583,10 @@ public:
 
     // TODO: requires clause, impl
     // Return a lightweight transposed view of the graph.
-    // [[nodiscard]] decltype(auto) transpose_view() const &
-    // {
-    //     return TransposeView{*this};
-    // }
+    [[nodiscard]] decltype(auto) transpose_view() const &
+    {
+        return TransposeView{*this};
+    }
 
     // Prevent creating a non-owning view of a temporary.
     [[nodiscard]] decltype(auto) transpose_view() const && = delete;
