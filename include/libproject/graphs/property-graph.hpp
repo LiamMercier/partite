@@ -7,6 +7,7 @@
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-inputs.hpp>
 #include <libproject/graphs/representation-concepts.hpp>
+#include <libproject/graphs/transpose-view.hpp>
 
 namespace libproject::graphs
 {
@@ -318,7 +319,7 @@ public:
     //
 
     // View over all valid vertex IDs
-    auto vertices() const
+    decltype(auto) vertices() const
         requires (vertices_mutable)
     {
         return std::views::iota(size_t(0),
@@ -332,7 +333,7 @@ public:
     }
 
     // View over all vertex IDs
-    auto vertices() const
+    decltype(auto) vertices() const
         requires (!vertices_mutable)
     {
         return std::views::iota(size_t(0),
@@ -343,7 +344,7 @@ public:
     }
 
     // View over every edge in the graph as an EdgeView.
-    auto edges() const
+    decltype(auto) edges() const
     {
         return edge_ids()
                | std::views::transform([this](EdgeID id){
@@ -354,7 +355,7 @@ public:
     }
 
     // View over every edge ID in the graph.
-    auto edge_ids() const
+    decltype(auto) edge_ids() const
     {
         return std::views::iota(size_t{0}, edges_.size())
                | std::views::filter([this](size_t id){
@@ -370,7 +371,7 @@ public:
     //
 
     // View over neighboring VertexID values.
-    auto neighbors(VertexID v) const
+    decltype(auto) neighbors(VertexID v) const
         noexcept(noexcept(representation_.neighbors(v)))
         requires (!directed) && NeighborsQueryable<Representation>
     {
@@ -383,7 +384,7 @@ public:
     }
 
     // View over neighboring VertexID values (outgoing in a digraph).
-    auto neighbors(VertexID v) const
+    decltype(auto) neighbors(VertexID v) const
         noexcept(noexcept(out_neighbors(v)))
         requires (directed) &&
                  OutNeighborsQueryable<Representation>
@@ -397,7 +398,7 @@ public:
     }
 
     // View over outgoing VertexID values for each edge (v, u).
-    auto out_neighbors(VertexID v) const
+    decltype(auto) out_neighbors(VertexID v) const
         noexcept(noexcept(representation_.out_neighbors(v)))
         requires (directed) &&
                  OutNeighborsQueryable<Representation>
@@ -411,7 +412,7 @@ public:
     }
 
     // View over incoming VertexID values for each edge (u, v).
-    auto in_neighbors(VertexID v) const
+    decltype(auto) in_neighbors(VertexID v) const
         noexcept(noexcept(representation_.in_neighbors(v)))
         requires (directed) && InNeighborsQueryable<Representation>
     {
@@ -428,7 +429,7 @@ public:
     //
 
     // View over edges as IncidentEdges.
-    auto incident_edges(VertexID v) const
+    decltype(auto) incident_edges(VertexID v) const
         noexcept(noexcept(representation_.incident_edges(v)))
         requires (!directed) &&
                  IncidentEdgesQueryable<Representation>
@@ -446,7 +447,7 @@ public:
     //
     // This version is slower because we will have more
     // cache misses each time in a large graph.
-    auto incident_edges(VertexID v) const
+    decltype(auto) incident_edges(VertexID v) const
         noexcept(
             noexcept(representation_.incident_edge_ids(v)) &&
             noexcept(IncidentEdge{target(EdgeID{}), EdgeID{}})
@@ -468,7 +469,7 @@ public:
     }
 
     // View over edges as an IncidentEdge (outgoing for digraphs)
-    auto incident_edges(VertexID v) const
+    decltype(auto) incident_edges(VertexID v) const
         noexcept(noexcept(out_edges(v)))
         requires (directed) &&
                  (OutEdgesQueryable<Representation>
@@ -483,7 +484,7 @@ public:
     }
 
     // View over outgoing edges as IncidentEdges.
-    auto out_edges(VertexID v) const
+    decltype(auto) out_edges(VertexID v) const
         noexcept(noexcept(representation_.out_edges(v)))
         requires (directed) &&
                  OutEdgesQueryable<Representation>
@@ -500,7 +501,7 @@ public:
     //
     // Only used if representation doesn't expose an
     // out_edges method.
-    auto out_edges(VertexID v) const
+    decltype(auto) out_edges(VertexID v) const
         noexcept(
             noexcept(representation_.out_edge_ids(v)) &&
             noexcept(IncidentEdge{target(EdgeID{}), EdgeID{}})
@@ -522,7 +523,7 @@ public:
     }
 
     // View over incoming edges as IncidentEdges
-    auto in_edges(VertexID v) const
+    decltype(auto) in_edges(VertexID v) const
         noexcept(noexcept(representation_.in_edges(v)))
         requires (directed) && InEdgesQueryable<Representation>
     {
@@ -538,7 +539,7 @@ public:
     //
     // Only used if representation doesn't expose an
     // in_edges method.
-    auto in_edges(VertexID v) const
+    decltype(auto) in_edges(VertexID v) const
         noexcept(
             noexcept(representation_.in_edge_ids(v)) &&
             noexcept(IncidentEdge{source(EdgeID{}), EdgeID{}})
@@ -563,7 +564,7 @@ public:
     //
 
     // View over edges as EdgeIDs
-    auto incident_edge_ids(VertexID v) const
+    decltype(auto) incident_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.incident_edge_ids(v)))
         requires (!directed &&
                  IncidentEdgeIDsQueryable<Representation>)
@@ -577,7 +578,7 @@ public:
     }
 
     // View over edges as EdgeIDs (outgoing for digraphs)
-    auto incident_edge_ids(VertexID v) const
+    decltype(auto) incident_edge_ids(VertexID v) const
         noexcept(noexcept(out_edge_ids(v)))
         requires(directed) && OutEdgeIDsQueryable<Representation>
     {
@@ -591,7 +592,7 @@ public:
     }
 
     // View over outgoing edges as EdgeIDs
-    auto out_edge_ids(VertexID v) const
+    decltype(auto) out_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.out_edge_ids(v)))
         requires (directed) && OutEdgeIDsQueryable<Representation>
     {
@@ -604,7 +605,7 @@ public:
     }
 
     // View over incoming edges as EdgeIDs
-    auto in_edge_ids(VertexID v) const
+    decltype(auto) in_edge_ids(VertexID v) const
         noexcept(noexcept(representation_.in_edge_ids(v)))
         requires (directed) && InEdgeIDsQueryable<Representation>
     {
@@ -639,7 +640,7 @@ public:
     }
 
     // Given an edge ID, find the vertices such that (u, v) has this ID.
-    std::pair<VertexID, VertexID> endpoints(EdgeID e_id) const noexcept
+    EdgePair endpoints(EdgeID e_id) const noexcept
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::endpoints(e_id): "
@@ -1580,7 +1581,15 @@ public:
         };
     }
 
-    // TODO <feature>: transpose view
+    // TODO: requires clause, impl
+    // Return a lightweight transposed view of the graph.
+    // [[nodiscard]] decltype(auto) transpose_view() const &
+    // {
+    //     return TransposeView{*this};
+    // }
+
+    // Prevent creating a non-owning view of a temporary.
+    [[nodiscard]] decltype(auto) transpose_view() const && = delete;
 
 // Internal functions for compression calls.
 private:

@@ -61,7 +61,7 @@ public:
     // Views for getting the VertexID of each neighbor
     //
 
-    auto neighbors(VertexID v) const
+    decltype(auto) neighbors(VertexID v) const
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::neighbors(v): "
@@ -82,7 +82,7 @@ public:
         }
     }
 
-    auto out_neighbors(VertexID v) const
+    decltype(auto) out_neighbors(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -97,7 +97,7 @@ public:
                });
     }
 
-    auto in_neighbors(VertexID v) const
+    decltype(auto) in_neighbors(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -116,7 +116,7 @@ public:
     // Views for getting the IncidentEdge descriptor of each neighbor
     //
 
-    auto incident_edges(VertexID v) const
+    decltype(auto) incident_edges(VertexID v) const
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::incident_edges(v): "
@@ -137,7 +137,7 @@ public:
         }
     }
 
-    auto out_edges(VertexID v) const
+    decltype(auto) out_edges(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -152,7 +152,7 @@ public:
                });
     }
 
-    auto in_edges(VertexID v) const
+    decltype(auto) in_edges(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -171,7 +171,7 @@ public:
     // Views for getting the EdgeID of each neighbor
     //
 
-    auto incident_edge_ids(VertexID v) const
+    decltype(auto) incident_edge_ids(VertexID v) const
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::incident_edge_ids(v): "
@@ -192,7 +192,7 @@ public:
         }
     }
 
-    auto out_edge_ids(VertexID v) const
+    decltype(auto) out_edge_ids(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
@@ -207,7 +207,7 @@ public:
                });
     }
 
-    auto in_edge_ids(VertexID v) const
+    decltype(auto) in_edge_ids(VertexID v) const
         requires (directed)
     {
         libproject_assert(valid_vertex(v),
