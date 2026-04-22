@@ -21,8 +21,7 @@ namespace libproject::graphs
     };
 
     template <typename Graph>
-    concept BidirectionalAdjacencyGraph = AdjacencyGraph<Graph> &&
-                                          requires (const Graph & g, VertexID v)
+    concept InAdjacencyGraph = requires (const Graph & g, VertexID v)
     {
         { g.in_neighbors(v) } -> std::ranges::range;
 
@@ -32,23 +31,54 @@ namespace libproject::graphs
     };
 
     template <typename Graph>
+    concept BidirectionalAdjacencyGraph = AdjacencyGraph<Graph>
+                                          && InAdjacencyGraph<Graph>;
+
+    template <typename Graph>
     concept IncidenceGraph = requires (const Graph & g, VertexID v)
     {
         { g.incident_edges(v) } -> std::ranges::range;
 
         requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.in_neighbors(v))>,
+                                <decltype(g.incident_edges(v))>,
                                 IncidentEdge>;
     };
 
     template <typename Graph>
-    concept BidirectionalIncidenceGraph = IncidenceGraph<Graph> &&
-                                          requires (const Graph & g, VertexID v)
+    concept InIncidenceGraph = requires (const Graph & g, VertexID v)
     {
-        { g.incident_edges(v) } -> std::ranges::range;
+        { g.in_edges(v) } -> std::ranges::range;
 
         requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.in_neighbors(v))>,
+                                <decltype(g.in_edges(v))>,
                                 IncidentEdge>;
     };
+
+    template <typename Graph>
+    concept BidirectionalIncidenceGraph = IncidenceGraph<Graph>
+                                          && InIncidenceGraph<Graph>;
+
+    template <typename Graph>
+    concept DegreeGraph = requires (const Graph & g, VertexID v)
+    {
+        { g.degree(v) } -> std::convertible_to<size_t>;
+    };
+
+    template <typename Graph>
+    concept OutDegreeGraph = requires (const Graph & g, VertexID v)
+    {
+        { g.out_degree(v) } -> std::convertible_to<size_t>;
+    };
+
+    template <typename Graph>
+    concept InDegreeGraph = requires (const Graph & g, VertexID v)
+    {
+        { g.in_degree(v) } -> std::convertible_to<size_t>;
+    };
+
+    template <typename Graph>
+    concept BidirectionalDegreeGraph = OutDegreeGraph<Graph>
+                                       && InDegreeGraph<Graph>;
+
+    // TODO: mutable, static, standard graph, etc when needed
 };
