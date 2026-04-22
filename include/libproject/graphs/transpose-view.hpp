@@ -6,7 +6,7 @@ namespace libproject::graphs
 
 // A lightweight view of a graph as its transpose.
 //
-// By definition, G^T = {(u, v) | (v, u) \in G}.
+// By definition, E^T = {(u, v) | (v, u) \in E}.
 //
 // We can take advantage of this for lookup calls
 // since we can already query (v, u) and thus any

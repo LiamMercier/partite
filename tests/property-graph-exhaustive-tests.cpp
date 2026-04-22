@@ -1106,6 +1106,536 @@ SubtestResultPair
     return {std::string(), true};
 }
 
+template <typename Graph, typename Edges>
+SubtestResultPair
+    assert_transpose_view(const Graph & graph,
+                          const Edges & edges)
+{
+    using EdgePair = typename Graph::EdgePair;
+    constexpr bool directed = Graph::directed;
+
+    auto tv = graph.transpose_view();
+
+    for (const auto & edge : edges)
+    {
+        auto t_eid = tv.find_edge(edge.to, edge.from);
+        auto valid_eid = graph.find_edge(edge.from, edge.to);
+
+        bool match = (t_eid == valid_eid);
+
+        // Also test pair overloads.
+        auto t_eid_pair = tv.find_edge(EdgePair{edge.to, edge.from});
+        auto valid_eid_pair = graph.find_edge(EdgePair{edge.from, edge.to});
+
+        if (!match)
+        {
+            std::string fail = "find_edge("
+                               + std::to_string(edge.to.value)
+                               + ", "
+                               + std::to_string(edge.from.value)
+                               + ") returned "
+                               + std::to_string(t_eid.value)
+                               + "; expected "
+                               + std::to_string(valid_eid.value);
+            return {fail, false};
+        }
+
+        auto t_ep = tv.endpoints(valid_eid);
+        auto valid_ep = graph.endpoints(valid_eid);
+
+        match = (t_ep.first == valid_ep.second)
+                && (t_ep.second == valid_ep.first);
+
+        if (!match)
+        {
+            std::string fail = "endpoints("
+                               + std::to_string(valid_eid.value)
+                               + ") returned ("
+                               + std::to_string(t_ep.first.value)
+                               + ", "
+                               + std::to_string(t_ep.second.value)
+                               + "); expected ("
+                               + std::to_string(valid_ep.second.value)
+                               + ", "
+                               + std::to_string(valid_ep.first.value)
+                               + ")";
+            return {fail, false};
+        }
+
+        auto t_source = tv.source(valid_eid);
+        auto t_target = tv.target(valid_eid);
+
+        auto valid_source = graph.target(valid_eid);
+        auto valid_target = graph.source(valid_eid);
+
+        match = (t_source == valid_source)
+                && (t_target == valid_target);
+
+        if (!match)
+        {
+            std::string fail = "Invalid (source, target) pair for EdgeID "
+                               + std::to_string(valid_eid.value)
+                               + " ("
+                               + std::to_string(t_source.value)
+                               + ", "
+                               + std::to_string(t_target.value)
+                               + "); expected ("
+                               + std::to_string(valid_source.value)
+                               + ", "
+                               + std::to_string(valid_target.value)
+                               + ")";
+            return {fail, false};
+        }
+
+        match = (tv.has_edge(edge.to, edge.from))
+                && (tv.has_edge(EdgePair{edge.to, edge.from}));
+
+        if (!match)
+        {
+            std::string fail = "Missing edge ("
+                               + std::to_string(edge.to.value)
+                               + ", "
+                               + std::to_string(edge.from.value)
+                               + ") in transposed graph view";
+            return {fail, false};
+        }
+
+        auto t_ev = tv.edge_view(valid_eid);
+        auto valid_ev = graph.edge_view(valid_eid);
+
+        match = (t_ev.from == valid_ev.to)
+                && (t_ev.to == valid_ev.from)
+                && (t_ev.id == valid_ev.id);
+
+        if (!match)
+        {
+            std::string fail = "edge_view("
+                               + std::to_string(valid_eid.value)
+                               + ") returned (from: "
+                               + std::to_string(t_ev.from.value)
+                               + ", to: "
+                               + std::to_string(t_ev.to.value)
+                               + ", id: "
+                               + std::to_string(t_ev.id.value)
+                               + "); expected (from: "
+                               + std::to_string(valid_ev.to.value)
+                               + ", to: "
+                               + std::to_string(valid_ev.from.value)
+                               + ", id: "
+                               + std::to_string(t_ev.id.value)
+                               + ")";
+            return {fail, false};
+        }
+
+        //
+        // Test forwarded operations are equal.
+        //
+
+        if constexpr (Graph::has_edge_data)
+        {
+            auto t_edata = tv.edge_data(valid_eid);
+            auto valid_edata = graph.edge_data(valid_eid);
+
+            match = (t_edata == valid_edata);
+
+            if (!match)
+            {
+                std::string fail = "edge_data("
+                                + std::to_string(valid_eid.value)
+                                + ") was not equal to graph.edge_data("
+                                + std::to_string(valid_eid.value)
+                                + ")";
+                return {fail, false};
+            }
+
+            auto t_edata_op = tv[valid_eid];
+            auto valid_edata_op = graph[valid_eid];
+
+            match = (t_edata_op == valid_edata_op);
+
+            if (!match)
+            {
+                std::string fail = "data from transpose_view["
+                                + std::to_string(valid_eid.value)
+                                + "] was not equal to graph["
+                                + std::to_string(valid_eid.value)
+                                + "]";
+                return {fail, false};
+            }
+        }
+
+        match = (graph.valid_edge(valid_eid) == tv.valid_edge(valid_eid));
+
+        if (!match)
+        {
+            std::string fail = "valid_edge(valid_eid)"
+                               + std::to_string(valid_eid.value)
+                               + ") was not equal to graph.valid_edge("
+                               + std::to_string(valid_eid.value)
+                               + ")";
+            return {fail, false};
+        }
+    }
+
+    // Now, vertex neighborhood functions.
+    for (const auto & v : tv.vertices())
+    {
+        if (!graph.valid_vertex(v))
+        {
+            std::string fail = "tv.vertices() has vertex "
+                               + std::to_string(v.value)
+                               + " which is invalid for the graph";
+            return {fail, false};
+        }
+
+        // Check neighbors(v)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : tv.neighbors(v))
+            {
+                seen.insert(u);
+            }
+
+            if constexpr (directed
+                          && requires (const Graph & graph, VertexID v)
+                                      {graph.in_neighbors(v);})
+            {
+                for (const auto & u : graph.in_neighbors(v))
+                {
+                    bool match = seen.contains(u);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.neighbors("
+                                        + std::to_string(v.value)
+                                        + ") is missing vertex "
+                                        + std::to_string(u.value)
+                                        + " from graph.in_neighbors("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+            else
+            {
+                for (const auto & u : graph.neighbors(v))
+                {
+                    bool match = seen.contains(u);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.neighbors("
+                                        + std::to_string(v.value)
+                                        + ") is missing vertex "
+                                        + std::to_string(u.value)
+                                        + " from graph.neighbors("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+
+        }
+
+        // TODO: use some concept for bidirectional graphs as well.
+
+        // Check out_neighbors(v)
+        if constexpr (directed)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : tv.out_neighbors(v))
+            {
+                seen.insert(u);
+            }
+
+            for (const auto & u : graph.in_neighbors(v))
+            {
+                bool match = seen.contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "tv.out_neighbors("
+                                       + std::to_string(v.value)
+                                       + ") is missing vertex "
+                                       + std::to_string(u.value)
+                                       + " from graph.in_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // Check in_neighbors(v)
+        if constexpr (directed)
+        {
+            VertexIDSet seen;
+
+            for (const auto & u : tv.in_neighbors(v))
+            {
+                seen.insert(u);
+            }
+
+            for (const auto & u : graph.out_neighbors(v))
+            {
+                bool match = seen.contains(u);
+
+                if (!match)
+                {
+                    std::string fail = "tv.in_neighbors("
+                                       + std::to_string(v.value)
+                                       + ") is missing vertex "
+                                       + std::to_string(u.value)
+                                       + " from graph.out_neighbors("
+                                       + std::to_string(v.value)
+                                       + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // Check incident_edges(v)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & ie : tv.incident_edges(v))
+            {
+                seen.insert(ie);
+            }
+
+            if constexpr (directed
+                          && requires (const Graph & graph, VertexID v)
+                                      {graph.in_edges(v);})
+            {
+                for (const auto & ie : graph.in_edges(v))
+                {
+                    bool match = seen.contains(ie);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.incident_edges("
+                                        + std::to_string(v.value)
+                                        + ") is missing incident edge "
+                                          "(neighbor: "
+                                        + std::to_string(ie.neighbor.value)
+                                        + ", id: "
+                                        + std::to_string(ie.id.value)
+                                        + ") from graph.in_edges("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+            else
+            {
+                for (const auto & ie : graph.incident_edges(v))
+                {
+                    bool match = seen.contains(ie);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.incident_edges("
+                                        + std::to_string(v.value)
+                                        + ") is missing incident edge "
+                                          "(neighbor: "
+                                        + std::to_string(ie.neighbor.value)
+                                        + ", id: "
+                                        + std::to_string(ie.id.value)
+                                        + ") from graph.incident_edges("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+
+        }
+
+        // TODO: use some concept for bidirectional graphs as well.
+
+        // Check out_edges(v)
+        if constexpr (directed)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & ie : tv.out_edges(v))
+            {
+                seen.insert(ie);
+            }
+
+            for (const auto & ie : graph.in_edges(v))
+            {
+                bool match = seen.contains(ie);
+
+                if (!match)
+                {
+                    std::string fail = "tv.out_edges("
+                                    + std::to_string(v.value)
+                                    + ") is missing incident edge "
+                                        "(neighbor: "
+                                    + std::to_string(ie.neighbor.value)
+                                    + ", id: "
+                                    + std::to_string(ie.id.value)
+                                    + ") from graph.in_edges("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // Check in_edges(v)
+        if constexpr (directed)
+        {
+            IncidentEdgeSet seen;
+
+            for (const auto & ie : tv.in_edges(v))
+            {
+                seen.insert(ie);
+            }
+
+            for (const auto & ie : graph.out_edges(v))
+            {
+                bool match = seen.contains(ie);
+
+                if (!match)
+                {
+                    std::string fail = "tv.in_edges("
+                                    + std::to_string(v.value)
+                                    + ") is missing incident edge "
+                                        "(neighbor: "
+                                    + std::to_string(ie.neighbor.value)
+                                    + ", id: "
+                                    + std::to_string(ie.id.value)
+                                    + ") from graph.out_edges("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // Check incident_edge_ids(v)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & e : tv.incident_edge_ids(v))
+            {
+                seen.insert(e);
+            }
+
+            if constexpr (directed
+                          && requires (const Graph & graph, VertexID v)
+                                      {graph.in_edge_ids(v);})
+            {
+                for (const auto & e : graph.in_edge_ids(v))
+                {
+                    bool match = seen.contains(e);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.incident_edge_ids("
+                                        + std::to_string(v.value)
+                                        + ") is missing EdgeID "
+                                        + std::to_string(e.value)
+                                        + " from graph.in_edge_ids("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+            else
+            {
+                for (const auto & e : graph.incident_edge_ids(v))
+                {
+                    bool match = seen.contains(e);
+
+                    if (!match)
+                    {
+                        std::string fail = "tv.incident_edge_ids("
+                                        + std::to_string(v.value)
+                                        + ") is missing EdgeID "
+                                        + std::to_string(e.value)
+                                        + " from graph.incident_edge_ids("
+                                        + std::to_string(v.value)
+                                        + ")";
+                        return {fail, false};
+                    }
+                }
+            }
+
+        }
+
+        // TODO: use some concept for bidirectional graphs as well.
+
+        // Check out_edge_ids(v)
+        if constexpr (directed)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & e : tv.out_edge_ids(v))
+            {
+                seen.insert(e);
+            }
+
+            for (const auto & e : graph.in_edge_ids(v))
+            {
+                bool match = seen.contains(e);
+
+                if (!match)
+                {
+                    std::string fail = "tv.out_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ") is missing EdgeID "
+                                    + std::to_string(e.value)
+                                    + " from graph.in_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // Check in_edges(v)
+        if constexpr (directed)
+        {
+            EdgeIDSet seen;
+
+            for (const auto & e : tv.in_edge_ids(v))
+            {
+                seen.insert(e);
+            }
+
+            for (const auto & e : graph.out_edge_ids(v))
+            {
+                bool match = seen.contains(e);
+
+                if (!match)
+                {
+                    std::string fail = "tv.in_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ") is missing EdgeID "
+                                    + std::to_string(e.value)
+                                    + " from graph.out_edge_ids("
+                                    + std::to_string(v.value)
+                                    + ")";
+                    return {fail, false};
+                }
+            }
+        }
+
+        // TODO: degree checks, other checks (look over TransposeView)
+    }
+
+    return {std::string(), true};
+}
+
 using namespace libproject::graphs;
 
 using TestGraphs = ::testing::Types
@@ -1527,7 +2057,14 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
                                     << res.first;
         }
 
-        // TODO: more tests.
+        {
+            auto res = assert_transpose_view(graph, edges);
+
+            ASSERT_TRUE(res.second) << "Graph "
+                                    << i
+                                    << ": assert_transpose_view failed; "
+                                    << res.first;
+        }
 
         continue;
     }
