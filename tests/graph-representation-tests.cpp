@@ -169,8 +169,6 @@ using TestRepresentations = ::testing::Types
     AdjacencyList<false>
 >;
 
-// TODO: make another test suite with each permutation
-//       for some |V| = N
 template <typename Rep>
 class RepresentationCore : public ::testing::Test
 {

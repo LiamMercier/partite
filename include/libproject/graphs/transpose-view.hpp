@@ -240,6 +240,11 @@ public:
         return graph_->has_self_loop(v);
     }
 
+    decltype(auto) has_self_loops() const
+    {
+        return graph_->has_self_loops();
+    }
+
     decltype(auto) valid_vertex(VertexID v) const
     {
         return graph_->valid_vertex(v);

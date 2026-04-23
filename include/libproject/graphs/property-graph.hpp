@@ -1581,7 +1581,6 @@ public:
         };
     }
 
-    // TODO: requires clause, impl
     // Return a lightweight transposed view of the graph.
     [[nodiscard]] decltype(auto) transpose_view() const &
     {

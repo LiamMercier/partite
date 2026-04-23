@@ -1,6 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "test-utils.hpp"
+#include <libproject/graphs/graph-concepts.hpp>
 #include <libproject/graphs/property-graph.hpp>
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
@@ -1277,6 +1278,51 @@ SubtestResultPair
         }
     }
 
+    EdgeViewSet evs;
+    EdgeIDSet e_ids;
+
+    for (const auto & ev : tv.edges())
+    {
+        evs.insert(EdgeView{ev.to, ev.from, ev.id});
+    }
+
+    for (const auto & e : tv.edge_ids())
+    {
+        e_ids.insert(e);
+    }
+
+    for (const auto & ev : graph.edges())
+    {
+        bool match = evs.contains(ev);
+
+        if (!match)
+        {
+            std::string fail = "tv.edges() is missing edge view (from: "
+                               + std::to_string(ev.from.value)
+                               + ", to: "
+                               + std::to_string(ev.to.value)
+                               + ", id: "
+                               + std::to_string(ev.id.value)
+                               + ")";
+            return {fail, false};
+        }
+    }
+
+    for (const auto & e : graph.edge_ids())
+    {
+        bool match = e_ids.contains(e);
+
+        if (!match)
+        {
+            std::string fail = "tv.edge_ids() is missing edge ID "
+                               + std::to_string(e.value)
+                               + " from graph.edge_ids()";
+            return {fail, false};
+        }
+    }
+
+    VertexIDSet graph_vertices(graph.vertex_count());
+
     // Now, vertex neighborhood functions.
     for (const auto & v : tv.vertices())
     {
@@ -1340,10 +1386,8 @@ SubtestResultPair
 
         }
 
-        // TODO: use some concept for bidirectional graphs as well.
-
         // Check out_neighbors(v)
-        if constexpr (directed)
+        if constexpr (directed && InAdjacencyGraph<Graph>)
         {
             VertexIDSet seen;
 
@@ -1371,7 +1415,7 @@ SubtestResultPair
         }
 
         // Check in_neighbors(v)
-        if constexpr (directed)
+        if constexpr (directed && AdjacencyGraph<Graph>)
         {
             VertexIDSet seen;
 
@@ -1456,10 +1500,8 @@ SubtestResultPair
 
         }
 
-        // TODO: use some concept for bidirectional graphs as well.
-
         // Check out_edges(v)
-        if constexpr (directed)
+        if constexpr (directed && InIncidenceGraph<Graph>)
         {
             IncidentEdgeSet seen;
 
@@ -1490,7 +1532,7 @@ SubtestResultPair
         }
 
         // Check in_edges(v)
-        if constexpr (directed)
+        if constexpr (directed && IncidenceGraph<Graph>)
         {
             IncidentEdgeSet seen;
 
@@ -1572,10 +1614,9 @@ SubtestResultPair
 
         }
 
-        // TODO: use some concept for bidirectional graphs as well.
-
         // Check out_edge_ids(v)
-        if constexpr (directed)
+        if constexpr (directed && requires(const Graph & g, VertexID v)
+                                          {graph.in_edge_ids(v);})
         {
             EdgeIDSet seen;
 
@@ -1603,7 +1644,8 @@ SubtestResultPair
         }
 
         // Check in_edges(v)
-        if constexpr (directed)
+        if constexpr (directed && requires(const Graph & g, VertexID v)
+                                          {graph.out_edge_ids(v);})
         {
             EdgeIDSet seen;
 
@@ -1630,7 +1672,159 @@ SubtestResultPair
             }
         }
 
-        // TODO: degree checks, other checks (look over TransposeView)
+        if constexpr (DegreeGraph<Graph>)
+        {
+            auto t_deg = tv.degree(v);
+            auto valid_deg = graph.degree(v);
+
+            bool match = (t_deg == valid_deg);
+
+            if (!match)
+            {
+                std::string fail = "degree("
+                                    + std::to_string(v.value)
+                                    + ") returned "
+                                    + std::to_string(t_deg)
+                                    + "; expected "
+                                    + std::to_string(valid_deg);
+                return {fail, false};
+            }
+        }
+
+        if constexpr (directed && InDegreeGraph<Graph>)
+        {
+            auto t_out_deg = tv.out_degree(v);
+            auto valid_out_deg = graph.in_degree(v);
+
+            bool match = (t_out_deg == valid_out_deg);
+
+            if (!match)
+            {
+                std::string fail = "out_degree("
+                                    + std::to_string(v.value)
+                                    + ") returned "
+                                    + std::to_string(t_out_deg)
+                                    + "; expected "
+                                    + std::to_string(valid_out_deg);
+                return {fail, false};
+            }
+        }
+
+        if constexpr (directed && OutDegreeGraph<Graph>)
+        {
+            auto t_in_deg = tv.in_degree(v);
+            auto valid_in_deg = graph.out_degree(v);
+
+            bool match = (t_in_deg == valid_in_deg);
+
+            if (!match)
+            {
+                std::string fail = "in_degree("
+                                    + std::to_string(v.value)
+                                    + ") returned "
+                                    + std::to_string(t_in_deg)
+                                    + "; expected "
+                                    + std::to_string(valid_in_deg);
+                return {fail, false};
+            }
+        }
+
+        if constexpr (Graph::has_vertex_data)
+        {
+            auto t_vdata = tv.vertex_data(v);
+            auto valid_vdata = graph.vertex_data(v);
+
+            bool match = (t_vdata == valid_vdata);
+
+            if (!match)
+            {
+                std::string fail = "vertex_data("
+                                + std::to_string(v.value)
+                                + ") was not equal to graph.vertex_data("
+                                + std::to_string(v.value)
+                                + ")";
+                return {fail, false};
+            }
+
+            auto t_vdata_op = tv[v];
+            auto valid_vdata_op = graph[v];
+
+            match = (t_vdata_op == valid_vdata_op);
+
+            if (!match)
+            {
+                std::string fail = "vertex data from transpose_view["
+                                + std::to_string(v.value)
+                                + "] was not equal to graph["
+                                + std::to_string(v.value)
+                                + "]";
+                return {fail, false};
+            }
+        }
+
+        auto t_self_loop = tv.has_self_loop(v);
+        auto valid_self_loop = graph.has_self_loop(v);
+
+        bool match = (t_self_loop == valid_self_loop);
+
+        if (!match)
+        {
+            std::string fail = "has_self_loop("
+                                + std::to_string(v.value)
+                                + ") returned "
+                                + std::to_string(t_self_loop)
+                                + "; expected "
+                                + std::to_string(valid_self_loop);
+            return {fail, false};
+        }
+
+        graph_vertices.insert(v);
+    }
+
+    for (const auto & v : tv.vertices())
+    {
+        bool match = graph_vertices.contains(v);
+
+        if (!match)
+        {
+            std::string fail = "tv.vertices() is missing vertex "
+                               + std::to_string(v.value)
+                               + " from graph.vertices()";
+            return {fail, false};
+        }
+    }
+
+    bool match = (tv.vertex_count() == graph.vertex_count());
+
+    if (!match)
+    {
+        std::string fail = "vertex_count() returned "
+                           + std::to_string(tv.vertex_count())
+                           + "; expected "
+                           + std::to_string(graph.vertex_count());
+        return {fail, false};
+    }
+
+    match = (tv.edge_count() == graph.edge_count());
+
+    if (!match)
+    {
+        std::string fail = "edge_count() returned "
+                           + std::to_string(tv.edge_count())
+                           + "; expected "
+                           + std::to_string(graph.edge_count());
+        return {fail, false};
+    }
+
+    match = (tv.has_self_loops() == graph.has_self_loops());
+
+    if (!match)
+    {
+        std::string fail = "has_self_loops() returned "
+                           + std::to_string(tv.has_self_loops())
+                           + "; expected "
+                           + std::to_string(graph.has_self_loops());
+        return {fail, false};
     }
 
     return {std::string(), true};
