@@ -656,7 +656,7 @@ public:
                           ", source = " + std::to_string(source(e_id).value) +
                           ", target = " + std::to_string(target(e_id).value));
 
-        return {source(e_id), target(e_id)};
+        return EdgePair{source(e_id), target(e_id)};
     }
 
     // For returning a reference to the EdgeData of an edge.

@@ -4,6 +4,9 @@
 namespace libproject::graphs
 {
 
+// TODO <feature>: asserts for the transpose view instead of
+//                 using the property graph asserts.
+
 // A lightweight view of a graph as its transpose.
 //
 // By definition, E^T = {(u, v) | (v, u) \in E}.
