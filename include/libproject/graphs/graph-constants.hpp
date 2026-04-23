@@ -11,22 +11,38 @@
 
 namespace libproject::graphs
 {
+    struct VertexID;
+    struct EdgeID;
+
     struct VertexID
     {
-        static constexpr GRAPH_VERTEX_ID_TYPE max = std::numeric_limits<GRAPH_VERTEX_ID_TYPE>::max();
-        static constexpr GRAPH_VERTEX_ID_TYPE empty = max;
+        using underlying_type = GRAPH_VERTEX_ID_TYPE;
 
-        VertexID(GRAPH_VERTEX_ID_TYPE v)
+        static constexpr underlying_type max = std::numeric_limits<underlying_type>::max();
+        static constexpr underlying_type empty = max;
+
+        constexpr VertexID() noexcept
+        :value(empty)
+        {}
+
+        constexpr VertexID(underlying_type v) noexcept
         :value(v)
         {}
 
-        VertexID()
-        :value(0)
-        {}
+        // explicitly remove EdgeID -> VertexID conversions.
+        constexpr VertexID(const EdgeID &) = delete;
+        constexpr VertexID & operator=(const EdgeID &) = delete;
+
+        // Allow underlying_type -> VertexID conversions.
+        constexpr VertexID& operator=(underlying_type rhs) noexcept
+        {
+            value = rhs;
+            return *this;
+        }
 
         constexpr auto operator<=>(const VertexID & other) const = default;
 
-        GRAPH_VERTEX_ID_TYPE value;
+        underlying_type value;
     };
 
     static_assert(std::is_trivially_copyable_v<VertexID>);
@@ -34,22 +50,55 @@ namespace libproject::graphs
 
     struct EdgeID
     {
-        static constexpr GRAPH_EDGE_ID_TYPE max = std::numeric_limits<GRAPH_EDGE_ID_TYPE>::max();
-        static constexpr GRAPH_EDGE_ID_TYPE empty = max;
+        using underlying_type = GRAPH_EDGE_ID_TYPE;
 
-        EdgeID(GRAPH_EDGE_ID_TYPE v)
+        static constexpr underlying_type max = std::numeric_limits<underlying_type>::max();
+        static constexpr underlying_type empty = max;
+
+        constexpr EdgeID() noexcept
+        :value(empty)
+        {}
+
+        constexpr EdgeID(underlying_type v) noexcept
         :value(v)
         {}
 
-        EdgeID()
-        :value(0)
-        {}
+        // explicitly remove VertexID -> EdgeID conversions.
+        constexpr EdgeID(const VertexID &) = delete;
+        constexpr EdgeID & operator=(const VertexID &) = delete;
+
+        // Allow underlying_type -> EdgeID conversions.
+        constexpr EdgeID& operator=(underlying_type rhs) noexcept
+        {
+            value = rhs;
+            return *this;
+        }
 
         constexpr auto operator<=>(const EdgeID & other) const = default;
 
-        GRAPH_EDGE_ID_TYPE value;
+        underlying_type value;
     };
 
     static_assert(std::is_trivially_copyable_v<EdgeID>);
     static_assert(sizeof(EdgeID) == sizeof(GRAPH_EDGE_ID_TYPE));
+
+    // For global views over all edges
+    struct EdgeView
+    {
+        VertexID from;
+        VertexID to;
+        EdgeID id;
+    };
+
+    static_assert(std::is_trivially_copyable_v<EdgeView>);
+
+    // For views which already have the input vertex
+    struct IncidentEdge
+    {
+        VertexID neighbor;
+        EdgeID id;
+    };
+
+    static_assert(std::is_trivially_copyable_v<IncidentEdge>);
+
 };

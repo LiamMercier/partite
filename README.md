@@ -2,10 +2,13 @@
 
 Draft of a mathematics library
 
-## API decisions (subject to change)
+### Backlog
 
-TODO: make this proper documentation
+- Fill the backlog with missing tasks (ironic)
+- Safe PropertyGraph wrapper
+- Snapshot variants of our lazy ranges (i.e neighbors_snapshot(v)) for people who need to modify the graph during iteration
+- Convert unit tests for particular classes to test suites
+- Graph Concepts
+- Representation class template for users who want to make their own
 
-- Each GraphRepresentation compatible class exposes "is_directed" as a bool for consumers
-- Each GraphRepresentation provides add_edge(from, to, edge_id) to add edges
-- Each GraphRepresentation provides find_edge(from, to) and has_edge(from, to)
+- Standardize asserts to be one format for ease of reading

@@ -11,7 +11,7 @@ TEST(GraphConstants, VertexIDConstruction)
 {
     {
         VertexID id;
-        EXPECT_EQ(id.value, 0);
+        EXPECT_EQ(id.value, VertexID::empty);
     }
 
     {
@@ -25,7 +25,7 @@ TEST(GraphConstants, EdgeIDConstruction)
 {
     {
         EdgeID id;
-        EXPECT_EQ(id.value, 0);
+        EXPECT_EQ(id.value, EdgeID::empty);
     }
 
     {

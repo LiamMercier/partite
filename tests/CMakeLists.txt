@@ -1,6 +1,7 @@
 add_executable(unit-tests
     graph-constant-tests.cpp
     property-graph-tests.cpp
+    property-graph-exhaustive-tests.cpp
     graph-representation-tests.cpp
 )
 
