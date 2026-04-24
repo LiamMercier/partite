@@ -11,66 +11,6 @@ using namespace libproject::graphs;
 // Typed test for different graph types on neighbor functions.
 //
 
-// Tests for a graph type combination.
-using TestGraphs = ::testing::Types
-<
-    // Simple graph (no VertexData or EdgeData)
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>>,
-                std::monostate,
-                std::monostate>,
-
-    // EdgeData but no VertexData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
-                int,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int>,
-                int,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>, int>,
-                int,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>, int>,
-                int,
-                std::monostate>,
-
-    // EdgeData and VertexData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int, int>,
-                int,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int, int>,
-                int,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>, int, int>,
-                int,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>, int, int>,
-                int,
-                int>,
-
-    // VertexData but no EdgeData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
-                std::monostate,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::monostate, int>,
-                std::monostate,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>, std::monostate, int>,
-                std::monostate,
-                int>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>, std::monostate, int>,
-                std::monostate,
-                int>
->;
-
 template <typename Config>
 class PropertyGraphTest : public ::testing::Test
 {
