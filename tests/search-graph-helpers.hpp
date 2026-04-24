@@ -20,12 +20,14 @@ public:
                 return Graph(0, edges);
             }
 
-            size_t n = (1ULL << (h+1)) - 1;
+            using id_type = VertexID::underlying_type;
 
-            for (size_t i = 0; i < n; i++)
+            id_type n = (1ULL << (h+1)) - 1;
+
+            for (id_type i = 0; i < n; i++)
             {
-                size_t left = 2*i + 1;
-                size_t right = 2*i + 2;
+                id_type left = 2*i + 1;
+                id_type right = 2*i + 2;
 
                 if (left < n)
                 {
@@ -35,11 +37,13 @@ public:
                                             + "-"
                                             + std::to_string(left);
 
-                        edges.push_back({i, left, std::move(label)});
+                        edges.push_back({VertexID{i},
+                                         VertexID{left},
+                                         std::move(label)});
                     }
                     else
                     {
-                        edges.push_back({i, left});
+                        edges.push_back({VertexID{i}, VertexID{left}});
                     }
                 }
 
@@ -51,11 +55,13 @@ public:
                                             + "-"
                                             + std::to_string(right);
 
-                        edges.push_back({i, right, std::move(label)});
+                        edges.push_back({VertexID{i},
+                                         VertexID{right},
+                                         std::move(label)});
                     }
                     else
                     {
-                        edges.push_back({i, right});
+                        edges.push_back({VertexID{i}, VertexID{right}});
                     }
                 }
             }

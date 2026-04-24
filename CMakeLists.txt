@@ -26,7 +26,7 @@ target_include_directories(libproject
 
 add_subdirectory(include/libproject/graphs)
 
-if(LIBPROJECT_BUILD_TESTS)
+if(GRAPH_BUILD_TESTS)
     include(FetchContent)
 
     FetchContent_Declare(

@@ -16,15 +16,21 @@ namespace libproject::graphs
     // be fine as we already use Theta(|V|) memory for
     // the seen set, and we do not have to pay the cost
     // of reallocating or reordering vertices on removal.
-    template <typename SeenType>
+    template <typename SeenType = uint16_t>
     struct BFSWorkspace
     {
+        using seen_type = SeenType;
+
+        BFSWorkspace(size_t num_vertices)
+        :seen(num_vertices)
+        {}
+
         std::vector<SeenType> seen;
         std::vector<VertexID> queue;
 
         // Generation based IDs so we can avoid overwriting the seen
         // set every time we use the workspace again.
-        SeenType visit_id{0};
+        seen_type visit_id{0};
 
         void next()
         {
@@ -41,6 +47,19 @@ namespace libproject::graphs
         }
     };
 
+    template <typename W>
+    concept BFSWorkspaceCompatible = requires (W & w)
+    {
+        typename W::seen_type;
+        { w.seen };
+        { w.queue };
+        { w.visit_id };
+        { w.next() };
+    };
+
+    // TODO: how do we actually make this a useful function? it visits stuff but
+    //       it does not actually do anytihng meaningful?
+
     template <typename Graph>
     void bfs(const Graph & graph, VertexID source)
     {
@@ -50,7 +69,7 @@ namespace libproject::graphs
     }
 
     // BFS for standard graphs.
-    template <typename Graph, typename Workspace>
+    template <typename Graph, BFSWorkspaceCompatible Workspace>
     void bfs(const Graph & graph,
              VertexID source,
              Workspace & workspace)
@@ -76,7 +95,7 @@ namespace libproject::graphs
             head++;
 
             // Iterate over each neighbor
-            for (const auto & v : graph.neighbors(u))
+            for (const VertexID & v : graph.neighbors(u))
             {
                 // If we haven't seen this vertex
                 if (seen[v.value] != visit_id)
