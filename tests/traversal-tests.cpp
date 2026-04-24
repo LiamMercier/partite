@@ -9,4 +9,5 @@ TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 
 TYPED_TEST(SearchGraphFixture, BFS)
 {
+    auto graph = TestFixture::perfect_binary_tree(4);
 }
