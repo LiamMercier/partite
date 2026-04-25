@@ -57,15 +57,35 @@ namespace libproject::graphs
         { w.next() };
     };
 
+    enum class BFSAction
+    {
+        ContinueSearch,
+        Skip,
+        StopSearch
+    };
+
     template <typename V>
     concept BFSVisitor = requires(V & visitor, VertexID u, VertexID v)
     {
+        { visitor.source_vertex(u) };
         { visitor.discover_vertex(u) };
         { visitor.expand_vertex(u) };
         { visitor.examine_edge(u, v) };
         { visitor.tree_edge(u, v) };
         { visitor.non_tree_edge(u, v) };
         { visitor.finish_vertex(u) };
+    };
+
+    template <typename V>
+    concept BFSDiscoverControl= requires (V & visitor, VertexID u)
+    {
+        { visitor.discover_vertex(u) } -> std::same_as<BFSAction>;
+    };
+
+    template <typename V>
+    concept BFSExamineControl = requires (V & visitor, VertexID u, VertexID v)
+    {
+        { visitor.examine_edge(u, v) } -> std::same_as<BFSAction>;
     };
 
     // BFS for standard graphs.
@@ -86,7 +106,31 @@ namespace libproject::graphs
 
         // Push the source.
         seen[source.value] = visit_id;
-        visitor.discover_vertex(source);
+        visitor.source_vertex(source);
+
+        // If our visitor does vertex control flow, use
+        // its early stopping or pruning rules.
+        if constexpr (BFSDiscoverControl<V>)
+        {
+            BFSAction action = visitor.discover_vertex(source);
+
+            if (action == BFSAction::Skip)
+            {
+                // Skipping here ends the traversal immediately
+                // since there are no vertices in the queue.
+                return;
+            }
+            else if (action == BFSAction::StopSearch)
+            {
+                return;
+            }
+        }
+        // Otherwise, simply inform the visitor.
+        else
+        {
+            visitor.discover_vertex(source);
+        }
+
         queue.push_back(source);
 
         // While the queue is not empty (head is not at the end)
@@ -100,8 +144,29 @@ namespace libproject::graphs
 
             for (const VertexID & v : graph.neighbors(u))
             {
-                // Before we classify an edge, notify.
-                visitor.examine_edge(u, v);
+                // Before we classify an edge, tell our visitor.
+
+                // If our visitor prunes or stops on edges, inform
+                // it that we have found a new edge for it to do
+                // early filtering on.
+                if constexpr (BFSExamineControl<V>)
+                {
+                    BFSAction action = visitor.examine_edge(u, v);
+
+                    if (action == BFSAction::Skip)
+                    {
+                        continue;
+                    }
+                    else if (action == BFSAction::StopSearch)
+                    {
+                        return;
+                    }
+                }
+                // Otherwise, simply inform the visitor.
+                else
+                {
+                    visitor.examine_edge(u, v);
+                }
 
                 // If we haven't seen this vertex
                 if (seen[v.value] != visit_id)
@@ -111,7 +176,28 @@ namespace libproject::graphs
 
                     // Mark it as seen and push it into the queue.
                     seen[v.value] = visit_id;
-                    visitor.discover_vertex(v);
+
+                    // If our visitor does vertex control flow, use
+                    // its early stopping or pruning rules.
+                    if constexpr (BFSDiscoverControl<V>)
+                    {
+                        BFSAction action = visitor.discover_vertex(v);
+
+                        if (action == BFSAction::Skip)
+                        {
+                            continue;
+                        }
+                        else if (action == BFSAction::StopSearch)
+                        {
+                            return;
+                        }
+                    }
+                    // Otherwise, simply inform the visitor.
+                    else
+                    {
+                        visitor.discover_vertex(v);
+                    }
+
                     queue.push_back(v);
                 }
                 else
@@ -144,6 +230,9 @@ namespace libproject::graphs
 
     struct NoOpBFSVisitor
     {
+        void source_vertex(VertexID u)
+        {}
+
         void discover_vertex(VertexID u)
         {}
 
