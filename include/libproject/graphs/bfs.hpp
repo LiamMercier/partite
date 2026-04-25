@@ -57,22 +57,25 @@ namespace libproject::graphs
         { w.next() };
     };
 
-    // TODO: how do we actually make this a useful function? it visits stuff but
-    //       it does not actually do anytihng meaningful?
-
-    template <typename Graph>
-    void bfs(const Graph & graph, VertexID source)
+    template <typename V>
+    concept BFSVisitor = requires(V & visitor, VertexID u, VertexID v)
     {
-        // we will do this later, just create a temporary workspace
-        // and call the other function for users who do not care about
-        // managing or reusing their own memory.
-    }
+        { visitor.discover_vertex(u) };
+        { visitor.expand_vertex(u) };
+        { visitor.examine_edge(u, v) };
+        { visitor.tree_edge(u, v) };
+        { visitor.non_tree_edge(u, v) };
+        { visitor.finish_vertex(u) };
+    };
 
     // BFS for standard graphs.
-    template <typename Graph, BFSWorkspaceCompatible Workspace>
+    template <typename Graph,
+              BFSWorkspaceCompatible Workspace,
+              BFSVisitor V>
     void bfs(const Graph & graph,
              VertexID source,
-             Workspace & workspace)
+             Workspace & workspace,
+             V&& visitor)
     {
         auto & seen = workspace.seen;
         auto & queue = workspace.queue;
@@ -81,11 +84,10 @@ namespace libproject::graphs
         // Track the start of the queue.
         size_t head = 0;
 
-        // Insert source into the queue.
-        queue.push_back(source);
-
-        // Mark this vertex as seen.
+        // Push the source.
         seen[source.value] = visit_id;
+        visitor.discover_vertex(source);
+        queue.push_back(source);
 
         // While the queue is not empty (head is not at the end)
         while (head < queue.size())
@@ -94,17 +96,86 @@ namespace libproject::graphs
             VertexID u = queue[head];
             head++;
 
-            // Iterate over each neighbor
+            visitor.expand_vertex(u);
+
             for (const VertexID & v : graph.neighbors(u))
             {
+                // Before we classify an edge, notify.
+                visitor.examine_edge(u, v);
+
                 // If we haven't seen this vertex
                 if (seen[v.value] != visit_id)
                 {
+                    // Then, this is a tree edge.
+                    visitor.tree_edge(u, v);
+
                     // Mark it as seen and push it into the queue.
                     seen[v.value] = visit_id;
+                    visitor.discover_vertex(v);
                     queue.push_back(v);
                 }
+                else
+                {
+                    // Otherwise, v is already discovered, so this
+                    // was not a tree edge.
+                    visitor.non_tree_edge(u, v);
+                }
             }
+
+            visitor.finish_vertex(u);
         }
     }
+
+    // Overload that creates a temporary workspace for users who
+    // do not care about reusing memory.
+    template <typename Graph, BFSVisitor V>
+    void bfs(const Graph & graph, VertexID source, V&& visitor)
+    {
+        BFSWorkspace workspace(graph.vertex_count());
+        workspace.queue.reserve(graph.vertex_count());
+        workspace.next();
+
+        bfs(graph, source, workspace, std::forward<V>(visitor));
+    }
+
+    //
+    // Some visitor setups that can be reused.
+    //
+
+    struct NoOpBFSVisitor
+    {
+        void discover_vertex(VertexID u)
+        {}
+
+        void expand_vertex(VertexID u)
+        {}
+
+        void examine_edge(VertexID u, VertexID v)
+        {}
+
+        void tree_edge(VertexID u, VertexID v)
+        {}
+
+        void non_tree_edge(VertexID u, VertexID v)
+        {}
+
+        void finish_vertex(VertexID u)
+        {}
+    };
+
+    // The maximum distance in a graph is |V| - 1 so this is a safe default.
+    template <typename Numeric = VertexID::underlying_type>
+    struct DistanceBFSVisitor : NoOpBFSVisitor
+    {
+        DistanceBFSVisitor(std::vector<Numeric> & input_dists)
+        :distances(input_dists)
+        {}
+
+        void tree_edge(VertexID u, VertexID v)
+        {
+            distances[v.value] = distances[u.value] + 1;
+        }
+
+        std::vector<Numeric> & distances;
+    };
 };
