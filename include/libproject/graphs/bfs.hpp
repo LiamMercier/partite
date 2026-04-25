@@ -88,6 +88,10 @@ namespace libproject::graphs
         { visitor.examine_edge(u, v) } -> std::same_as<BFSAction>;
     };
 
+    //
+    // BFS function bodies.
+    //
+
     // BFS for standard graphs.
     template <typename Graph,
               BFSWorkspaceCompatible Workspace,
@@ -225,7 +229,7 @@ namespace libproject::graphs
     }
 
     //
-    // Some visitor setups that can be reused.
+    // Visitor setups that can be reused.
     //
 
     struct NoOpBFSVisitor
@@ -252,10 +256,15 @@ namespace libproject::graphs
         {}
     };
 
-    // The maximum distance in a graph is |V| - 1 so this is a safe default.
+    // The maximum distance in a graph is |V| - 1 so
+    // setting Numeric = VertexID::underlying_type is a safe default.
+    //
+    // If a user knows distances are shorter, they can use a shorter type.
     template <typename Numeric = VertexID::underlying_type>
     struct DistanceBFSVisitor : NoOpBFSVisitor
     {
+        using DistanceStorage = std::vector<Numeric>;
+
         DistanceBFSVisitor(std::vector<Numeric> & input_dists)
         :distances(input_dists)
         {}
@@ -267,4 +276,44 @@ namespace libproject::graphs
 
         std::vector<Numeric> & distances;
     };
+
+    // TODO: early stopping visitor
+
+    //
+    // BFS utility functions.
+    //
+
+    // For users who want to find shortest distances without
+    // bothering with creating their own visitor.
+    template <typename Graph, BFSWorkspaceCompatible Workspace>
+    auto bfs_distances(const Graph & graph,
+                       VertexID source,
+                       Workspace & workspace)
+    {
+        using Visitor = DistanceBFSVisitor<VertexID::underlying_type>;
+
+        // Allocate memory and give visitor a reference.
+        size_t V_count = graph.vertex_count();
+        Visitor::DistanceStorage distances(V_count);
+        Visitor visitor(distances);
+
+        bfs(graph, source, workspace, visitor);
+
+        return std::move(distances);
+    }
+
+    // Temporary workspace overload.
+    template <typename Graph>
+    auto bfs_distances(const Graph & graph, VertexID source)
+    {
+        size_t V_count = graph.vertex_count();
+
+        // Setup workspace for this epoch.
+        BFSWorkspace workspace(V_count);
+        workspace.queue.reserve(V_count);
+        workspace.next();
+
+        return std::move(bfs_distances(graph, source, workspace));
+    }
+
 };
