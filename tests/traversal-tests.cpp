@@ -10,6 +10,8 @@ using namespace libproject::graphs;
 
 TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 
+// TODO: should we split this into BFS_visits_all and BFS_distances_correct
+//       or something similar?
 TYPED_TEST(SearchGraphFixture, BFS)
 {
     auto graph = TestFixture::perfect_binary_tree(4);
@@ -22,13 +24,21 @@ TYPED_TEST(SearchGraphFixture, BFS)
     // Setup memory for our distance visitor.
     std::vector<VertexID::underlying_type> distances(graph.vertex_count());
 
-    bfs(graph, VertexID{0}, workspace, DistanceBFSVisitor{distances});
-
-    // In a binary tree, we expect every node to be seen from the root.
-    for (size_t i = 0; i < graph.vertex_count(); i++)
     {
-        EXPECT_EQ(workspace.seen[i], workspace.visit_id);
+        bfs(graph, VertexID{0}, workspace, DistanceBFSVisitor{distances});
+
+        // In a binary tree, we expect every node to be seen from the root.
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(workspace.seen[i], workspace.visit_id);
+        }
     }
+
+    // Lets also test our bfs_distances functions.
+    auto d2 = bfs_distances(graph, 0);
+
+    workspace.next();
+    auto d3 = bfs_distances(graph, 0, workspace);
 
     // A perfect binary tree has 2^d nodes at depth d,
     // and each depth layer has 2^d - 1 nodes above it.
@@ -51,11 +61,7 @@ TYPED_TEST(SearchGraphFixture, BFS)
     {
         size_t depth = std::bit_width(v + 1) - 1;
         EXPECT_EQ(distances[v], depth);
+        EXPECT_EQ(d2[v], depth);
+        EXPECT_EQ(d3[v], depth);
     }
-
-    EXPECT_EQ(distances[0], 0);
-    EXPECT_EQ(distances[1], 1);
-    EXPECT_EQ(distances[3], 2);
-    EXPECT_EQ(distances[7], 3);
-    EXPECT_EQ(distances[15], 4);
 }
