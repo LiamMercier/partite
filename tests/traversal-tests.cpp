@@ -10,22 +10,16 @@ using namespace libproject::graphs;
 
 TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 
-// TODO: should we split this into BFS_visits_all and BFS_distances_correct
-//       or something similar?
-TYPED_TEST(SearchGraphFixture, BFS)
+TYPED_TEST(SearchGraphFixture, BFSTraversal)
 {
     auto graph = TestFixture::perfect_binary_tree(4);
 
-    // Setup a workspace.
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
     workspace.next();
 
-    // Setup memory for our distance visitor.
-    std::vector<VertexID::underlying_type> distances(graph.vertex_count());
-
     {
-        bfs(graph, VertexID{0}, workspace, DistanceBFSVisitor{distances});
+        bfs(graph, VertexID{0}, workspace, NoOpBFSVisitor{});
 
         // In a binary tree, we expect every node to be seen from the root.
         for (size_t i = 0; i < graph.vertex_count(); i++)
@@ -33,6 +27,18 @@ TYPED_TEST(SearchGraphFixture, BFS)
             EXPECT_EQ(workspace.seen[i], workspace.visit_id);
         }
     }
+}
+
+TYPED_TEST(SearchGraphFixture, BFSDistances)
+{
+    auto graph = TestFixture::perfect_binary_tree(4);
+
+    BFSWorkspace workspace(graph.vertex_count());
+    workspace.queue.reserve(graph.vertex_count());
+    workspace.next();
+
+    std::vector<VertexID::underlying_type> distances(graph.vertex_count());
+    bfs(graph, VertexID{0}, workspace, DistanceBFSVisitor{distances});
 
     // Lets also test our bfs_distances functions.
     auto d2 = bfs_distances(graph, 0);
