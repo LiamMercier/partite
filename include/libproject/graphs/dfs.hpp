@@ -8,6 +8,8 @@ namespace libproject::graphs
     // Optional struct for reusing memory across DFS calls.
     struct DFSWorkspace
     {
+        DFSWorkspace() = default;
+
         struct DFSWorkspaceStack
         {
             void push(VertexID u)
@@ -55,6 +57,7 @@ namespace libproject::graphs
         Black
     };
 
+    // Workspace with a color array included.
     struct DFSColorWorkspace : DFSWorkspace
     {
         DFSColorWorkspace(size_t num_vertices)
@@ -103,6 +106,8 @@ namespace libproject::graphs
         { visitor.finish_vertex(u) };
     };
 
+    // TODO: discovery / examine filtering
+
     template <typename Graph,
               DFSWorkspaceCompatible Workspace,
               DFSVisitor Visitor>
@@ -112,6 +117,11 @@ namespace libproject::graphs
              Visitor&& visitor)
     {
         auto & stack = workspace.stack;
+
+        visitor.source_vertex(source);
+
+        visitor.discover_vertex(source);
+
         stack.push(source);
 
         // While the stack has vertices to visit.
@@ -119,46 +129,48 @@ namespace libproject::graphs
         {
             // Pop the next vertex
             VertexID u = stack.pop();
+            visitor.expand_vertex(u);
 
             for (const VertexID & v : graph.neighbors(u))
             {
-                bool seen = false;
+                // TODO: filtering via actions + constexpr
+                visitor.examine_edge(u, v);
 
-                // If the visitor exposes .color
-                // then we can use this instead of forcing
-                // every user to allocate a third color array.
+                // Check if this vertex has been seen or not.
+                bool seen = false;
                 if constexpr (TracksColorState<Visitor>)
                 {
                     seen = (visitor.color(v) != DFSColorState::White);
                 }
-                // Otherwise, the workspace should have a color array.
                 else if constexpr (TracksColorState<Workspace>)
                 {
                     seen = (workspace.color(v) != DFSColorState::White);
                 }
                 else
                 {
-                    static_assert(!TracksColorState<Visitor>
-                                  && TracksColorState<Workspace>,
-                                  "DFS: Expected Visitor or Workspace to "
-                                  "expose a .color(v) method.");
+                    static_assert(TracksColorState<Visitor>
+                                  || TracksColorState<Workspace>,
+                                  "dfs(graph, source, workspace, visitor): "
+                                  "Expected either workspace or visitor to "
+                                  "expose .color(v)");
                 }
 
-                // If unseen
                 if (!seen)
                 {
-
+                    visitor.tree_edge(u, v);
 
                     if constexpr (TracksColorState<Workspace>)
                     {
                         workspace.set_color(v, DFSColorState::Grey);
                     }
 
+                    visitor.discover_vertex(v);
+
                     stack.push(v);
                 }
                 else
                 {
-                    // TODO: visitor logic (later)
+                    visitor.non_tree_edge(u, v);
                 }
             }
 
@@ -167,6 +179,8 @@ namespace libproject::graphs
             {
                 workspace.set_color(u, DFSColorState::Black);
             }
+
+            visitor.finish_vertex(u);
         }
     }
 
@@ -210,6 +224,9 @@ namespace libproject::graphs
     {
         using TimerStorage = std::vector<Numeric>;
 
+        static constexpr Numeric NUMERIC_MAX
+            = std::numeric_limits<Numeric>::max();
+
         TimerDFSVisitor(TimerStorage & d,
                         TimerStorage & f)
         :discovered(d),
@@ -228,7 +245,7 @@ namespace libproject::graphs
 
         // For returning the color state information
         // that DFS needs during is traversal.
-        DFSColorState color(VertexID u)
+        DFSColorState color(VertexID u) const
         {
             // If discovered[u] == NUMERIC_MAX then we have
             // never visited this node during our traversal.
@@ -246,11 +263,15 @@ namespace libproject::graphs
             }
         }
 
+        size_t time() const
+        {
+            return timer;
+        }
+
+    private:
         size_t timer{0};
         TimerStorage & discovered;
         TimerStorage & finished;
-        static constexpr Numeric NUMERIC_MAX
-            = std::numeric_limits<Numeric>::max();
     };
 
 };
