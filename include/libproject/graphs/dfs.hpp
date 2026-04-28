@@ -2,6 +2,7 @@
 
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
+#include <libproject/graphs/search-visitor.hpp>
 
 namespace libproject::graphs
 {
@@ -10,6 +11,7 @@ namespace libproject::graphs
     {
         DFSWorkspace() = default;
 
+        // Basic vector based stack structure.
         struct DFSWorkspaceStack
         {
             void push(VertexID u)
@@ -87,47 +89,16 @@ namespace libproject::graphs
     };
 
     // For checking if a workspace or visitor has a .color(u)
-    // method to determine the state of the node.
+    // method to determine the state of a node.
     template <typename T>
     concept TracksColorState = requires (T & t, VertexID u)
     {
         { t.color(u) } -> std::convertible_to<DFSColorState>;
     };
 
-    enum class DFSAction
-    {
-        ContinueSearch,
-        Skip,
-        StopSearch
-    };
-
-    template <typename V>
-    concept DFSVisitor = requires(V & visitor, VertexID u, VertexID v)
-    {
-        { visitor.source_vertex(u) };
-        { visitor.discover_vertex(u) };
-        { visitor.expand_vertex(u) };
-        { visitor.examine_edge(u, v) };
-        { visitor.tree_edge(u, v) };
-        { visitor.non_tree_edge(u, v) };
-        { visitor.finish_vertex(u) };
-    };
-
-    template <typename V>
-    concept DFSDiscoverControl= requires (V & visitor, VertexID u)
-    {
-        { visitor.discover_vertex(u) } -> std::same_as<DFSAction>;
-    };
-
-    template <typename V>
-    concept DFSExamineControl = requires (V & visitor, VertexID u, VertexID v)
-    {
-        { visitor.examine_edge(u, v) } -> std::same_as<DFSAction>;
-    };
-
     template <typename Graph,
               DFSCompatibleWorkspace Workspace,
-              DFSVisitor Visitor>
+              SearchVisitor Visitor>
     void dfs(const Graph & graph,
              VertexID source,
              Workspace & workspace,
@@ -137,17 +108,16 @@ namespace libproject::graphs
 
         visitor.source_vertex(source);
 
-        if constexpr (DFSDiscoverControl<Visitor>)
+        if constexpr (DiscoverControllable<Visitor>)
         {
-            DFSAction action = visitor.discover_vertex(source);
+            ControlAction action = visitor.discover_vertex(source);
 
-            if (action == DFSAction::Skip)
+            if (action == ControlAction::Skip)
             {
-                // Skipping here ends the traversal immediately
-                // since there are no vertices in the queue.
+                // Stack would be empty, return.
                 return;
             }
-            else if (action == DFSAction::StopSearch)
+            else if (action == ControlAction::Stop)
             {
                 return;
             }
@@ -169,15 +139,15 @@ namespace libproject::graphs
             for (const VertexID & v : graph.neighbors(u))
             {
                 // Apply any filtering rules.
-                if constexpr (DFSExamineControl<Visitor>)
+                if constexpr (ExamineControllable<Visitor>)
                 {
-                    DFSAction action = visitor.examine_edge(u, v);
+                    ControlAction action = visitor.examine_edge(u, v);
 
-                    if (action == DFSAction::Skip)
+                    if (action == ControlAction::Skip)
                     {
                         continue;
                     }
-                    else if (action == DFSAction::StopSearch)
+                    else if (action == ControlAction::Stop)
                     {
                         return;
                     }
@@ -215,22 +185,20 @@ namespace libproject::graphs
                         workspace.set_color(v, DFSColorState::Grey);
                     }
 
-                    // If our visitor does vertex control flow, use
-                    // its early stopping or pruning rules.
-                    if constexpr (DFSDiscoverControl<Visitor>)
+                    // Apply any filtering rules.
+                    if constexpr (DiscoverControllable<Visitor>)
                     {
-                        DFSAction action = visitor.discover_vertex(v);
+                        ControlAction action = visitor.discover_vertex(v);
 
-                        if (action == DFSAction::Skip)
+                        if (action == ControlAction::Skip)
                         {
                             continue;
                         }
-                        else if (action == DFSAction::StopSearch)
+                        else if (action == ControlAction::Stop)
                         {
                             return;
                         }
                     }
-                    // Otherwise, simply inform the visitor.
                     else
                     {
                         visitor.discover_vertex(v);
@@ -258,39 +226,15 @@ namespace libproject::graphs
     // Visitor setups that can be reused.
     //
 
-    struct NoOpDFSVisitor
-    {
-        void source_vertex(VertexID u)
-        {}
-
-        void discover_vertex(VertexID u)
-        {}
-
-        void expand_vertex(VertexID u)
-        {}
-
-        void examine_edge(VertexID u, VertexID v)
-        {}
-
-        void tree_edge(VertexID u, VertexID v)
-        {}
-
-        void non_tree_edge(VertexID u, VertexID v)
-        {}
-
-        void finish_vertex(VertexID u)
-        {}
-    };
-
     // Since the timer can get to 2*|V| - 1, it could be
     // insufficient to set Numeric = VertexID::underlying_type
     // because the graph might be very deep.
     //
     // Instead, size_t should be able to easily hold the value
-    // as it is probably impossible to construct a graph large enough
+    // as it is infeasible to construct a graph large enough
     // that we overflow.
     template <typename Numeric = size_t>
-    struct TimerDFSVisitor : NoOpDFSVisitor
+    struct TimerDFSVisitor : NoOpSearchVisitor
     {
         using TimerStorage = std::vector<Numeric>;
 
@@ -314,7 +258,7 @@ namespace libproject::graphs
         }
 
         // For returning the color state information
-        // that DFS needs during is traversal.
+        // that DFS needs during its traversal.
         DFSColorState color(VertexID u) const
         {
             // If discovered[u] == NUMERIC_MAX then we have

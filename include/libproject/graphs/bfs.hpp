@@ -2,6 +2,7 @@
 
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
+#include <libproject/graphs/search-visitor.hpp>
 
 namespace libproject::graphs
 {
@@ -48,7 +49,7 @@ namespace libproject::graphs
     };
 
     template <typename W>
-    concept BFSWorkspaceCompatible = requires (W & w)
+    concept BFSCompatibleWorkspace = requires (W & w)
     {
         typename W::seen_type;
         { w.seen };
@@ -57,45 +58,14 @@ namespace libproject::graphs
         { w.next() };
     };
 
-    enum class BFSAction
-    {
-        ContinueSearch,
-        Skip,
-        StopSearch
-    };
-
-    template <typename V>
-    concept BFSVisitor = requires(V & visitor, VertexID u, VertexID v)
-    {
-        { visitor.source_vertex(u) };
-        { visitor.discover_vertex(u) };
-        { visitor.expand_vertex(u) };
-        { visitor.examine_edge(u, v) };
-        { visitor.tree_edge(u, v) };
-        { visitor.non_tree_edge(u, v) };
-        { visitor.finish_vertex(u) };
-    };
-
-    template <typename V>
-    concept BFSDiscoverControl= requires (V & visitor, VertexID u)
-    {
-        { visitor.discover_vertex(u) } -> std::same_as<BFSAction>;
-    };
-
-    template <typename V>
-    concept BFSExamineControl = requires (V & visitor, VertexID u, VertexID v)
-    {
-        { visitor.examine_edge(u, v) } -> std::same_as<BFSAction>;
-    };
-
     //
     // BFS function bodies.
     //
 
     // BFS for standard graphs.
     template <typename Graph,
-              BFSWorkspaceCompatible Workspace,
-              BFSVisitor V>
+              BFSCompatibleWorkspace Workspace,
+              SearchVisitor V>
     void bfs(const Graph & graph,
              VertexID source,
              Workspace & workspace,
@@ -108,28 +78,24 @@ namespace libproject::graphs
         // Track the start of the queue.
         size_t head = 0;
 
-        // Push the source.
         seen[source.value] = visit_id;
         visitor.source_vertex(source);
 
-        // If our visitor does vertex control flow, use
-        // its early stopping or pruning rules.
-        if constexpr (BFSDiscoverControl<V>)
+        // Apply any filtering rules.
+        if constexpr (DiscoverControllable<V>)
         {
-            BFSAction action = visitor.discover_vertex(source);
+            ControlAction action = visitor.discover_vertex(source);
 
-            if (action == BFSAction::Skip)
+            if (action == ControlAction::Skip)
             {
-                // Skipping here ends the traversal immediately
-                // since there are no vertices in the queue.
+                // The queue would be empty anyways
                 return;
             }
-            else if (action == BFSAction::StopSearch)
+            else if (action == ControlAction::Stop)
             {
                 return;
             }
         }
-        // Otherwise, simply inform the visitor.
         else
         {
             visitor.discover_vertex(source);
@@ -140,7 +106,6 @@ namespace libproject::graphs
         // While the queue is not empty (head is not at the end)
         while (head < queue.size())
         {
-            // Pop the next vertex by advancing the head index.
             VertexID u = queue[head];
             head++;
 
@@ -148,55 +113,47 @@ namespace libproject::graphs
 
             for (const VertexID & v : graph.neighbors(u))
             {
-                // Before we classify an edge, tell our visitor.
-
-                // If our visitor prunes or stops on edges, inform
-                // it that we have found a new edge for it to do
-                // early filtering on.
-                if constexpr (BFSExamineControl<V>)
+                // Apply any filtering rules.
+                if constexpr (ExamineControllable<V>)
                 {
-                    BFSAction action = visitor.examine_edge(u, v);
+                    ControlAction action = visitor.examine_edge(u, v);
 
-                    if (action == BFSAction::Skip)
+                    if (action == ControlAction::Skip)
                     {
                         continue;
                     }
-                    else if (action == BFSAction::StopSearch)
+                    else if (action == ControlAction::Stop)
                     {
                         return;
                     }
                 }
-                // Otherwise, simply inform the visitor.
                 else
                 {
                     visitor.examine_edge(u, v);
                 }
 
-                // If we haven't seen this vertex
+                // If we haven't seen this vertex, (u, v) is a
+                // tree edge.
                 if (seen[v.value] != visit_id)
                 {
-                    // Then, this is a tree edge.
                     visitor.tree_edge(u, v);
 
-                    // Mark it as seen and push it into the queue.
                     seen[v.value] = visit_id;
 
-                    // If our visitor does vertex control flow, use
-                    // its early stopping or pruning rules.
-                    if constexpr (BFSDiscoverControl<V>)
+                    // Apply any filtering rules.
+                    if constexpr (DiscoverControllable<V>)
                     {
-                        BFSAction action = visitor.discover_vertex(v);
+                        ControlAction action = visitor.discover_vertex(v);
 
-                        if (action == BFSAction::Skip)
+                        if (action == ControlAction::Skip)
                         {
                             continue;
                         }
-                        else if (action == BFSAction::StopSearch)
+                        else if (action == ControlAction::Stop)
                         {
                             return;
                         }
                     }
-                    // Otherwise, simply inform the visitor.
                     else
                     {
                         visitor.discover_vertex(v);
@@ -218,7 +175,7 @@ namespace libproject::graphs
 
     // Overload that creates a temporary workspace for users who
     // do not care about reusing memory.
-    template <typename Graph, BFSVisitor V>
+    template <typename Graph, SearchVisitor V>
     void bfs(const Graph & graph, VertexID source, V&& visitor)
     {
         BFSWorkspace workspace(graph.vertex_count());
@@ -232,36 +189,12 @@ namespace libproject::graphs
     // Visitor setups that can be reused.
     //
 
-    struct NoOpBFSVisitor
-    {
-        void source_vertex(VertexID u)
-        {}
-
-        void discover_vertex(VertexID u)
-        {}
-
-        void expand_vertex(VertexID u)
-        {}
-
-        void examine_edge(VertexID u, VertexID v)
-        {}
-
-        void tree_edge(VertexID u, VertexID v)
-        {}
-
-        void non_tree_edge(VertexID u, VertexID v)
-        {}
-
-        void finish_vertex(VertexID u)
-        {}
-    };
-
     // The maximum distance in a graph is |V| - 1 so
     // setting Numeric = VertexID::underlying_type is a safe default.
     //
     // If a user knows distances are shorter, they can use a shorter type.
     template <typename Numeric = VertexID::underlying_type>
-    struct DistanceBFSVisitor : NoOpBFSVisitor
+    struct DistanceBFSVisitor : NoOpSearchVisitor
     {
         using DistanceStorage = std::vector<Numeric>;
 
@@ -285,7 +218,7 @@ namespace libproject::graphs
 
     // For users who want to find shortest distances without
     // bothering with creating their own visitor.
-    template <typename Graph, BFSWorkspaceCompatible Workspace>
+    template <typename Graph, BFSCompatibleWorkspace Workspace>
     auto bfs_distances(const Graph & graph,
                        VertexID source,
                        Workspace & workspace)

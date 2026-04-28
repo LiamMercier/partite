@@ -24,7 +24,7 @@ TYPED_TEST(SearchGraphFixture, BFSTraversal)
     workspace.next();
 
     {
-        bfs(graph, VertexID{0}, workspace, NoOpBFSVisitor{});
+        bfs(graph, VertexID{0}, workspace, NoOpSearchVisitor{});
 
         // In a binary tree, we expect every node to be seen from the root.
         for (size_t i = 0; i < graph.vertex_count(); i++)
@@ -91,7 +91,7 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal)
         workspace.stack.reserve(graph.vertex_count());
         workspace.next();
 
-        dfs(graph, VertexID{0}, workspace, NoOpDFSVisitor{});
+        dfs(graph, VertexID{0}, workspace, NoOpSearchVisitor{});
 
         for (size_t i = 0; i < graph.vertex_count(); i++)
         {
