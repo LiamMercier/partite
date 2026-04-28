@@ -3,12 +3,17 @@
 #include "test-utils.hpp"
 #include "search-graph-helpers.hpp"
 #include <libproject/graphs/bfs.hpp>
+#include <libproject/graphs/dfs.hpp>
 
 #include <bit>
 
 using namespace libproject::graphs;
 
 TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
+
+//
+// BFS tests
+//
 
 TYPED_TEST(SearchGraphFixture, BFSTraversal)
 {
@@ -69,5 +74,76 @@ TYPED_TEST(SearchGraphFixture, BFSDistances)
         EXPECT_EQ(distances[v], depth);
         EXPECT_EQ(d2[v], depth);
         EXPECT_EQ(d3[v], depth);
+    }
+}
+
+//
+// DFS tests
+//
+
+TYPED_TEST(SearchGraphFixture, DFSTraversal)
+{
+    auto graph = TestFixture::perfect_binary_tree(4);
+
+    // Test dfs with a workspace that explicitly tracks color.
+    {
+        DFSColorWorkspace workspace(graph.vertex_count());
+        workspace.stack.reserve(graph.vertex_count());
+        workspace.next();
+
+        dfs(graph, VertexID{0}, workspace, NoOpDFSVisitor{});
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(workspace.color(i), DFSColorState::Black);
+        }
+    }
+
+    // Test dfs with a workspace that does not track color, but
+    // a visitor that implicitly does.
+    {
+        DFSWorkspace workspace;
+        workspace.stack.reserve(graph.vertex_count());
+        workspace.next();
+
+        std::vector<size_t> d(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        std::vector<size_t> f(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        TimerDFSVisitor visitor{d, f};
+
+        dfs(graph, VertexID{0}, workspace, visitor);
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(visitor.color(i), DFSColorState::Black);
+        }
+
+        // We assign 0, ..., 2*|V| - 1 to the nodes, and timer should
+        // thus end up equal to 2*|V| after the final increment.
+        EXPECT_EQ(visitor.time(), (2 * graph.vertex_count()));
+    }
+
+    // Test dfs with erroneous (memory wasted) setup.
+    {
+        DFSColorWorkspace workspace(graph.vertex_count());
+        workspace.stack.reserve(graph.vertex_count());
+        workspace.next();
+
+        std::vector<size_t> d(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        std::vector<size_t> f(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        TimerDFSVisitor visitor{d, f};
+
+        dfs(graph, VertexID{0}, workspace, visitor);
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(visitor.color(i), DFSColorState::Black);
+            EXPECT_EQ(visitor.color(i), workspace.color(i));
+        }
+
+        EXPECT_EQ(visitor.time(), (2 * graph.vertex_count()));
     }
 }
