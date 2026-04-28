@@ -78,7 +78,7 @@ namespace libproject::graphs
     };
 
     template <typename W>
-    concept DFSWorkspaceCompatible = requires (W & w, VertexID u)
+    concept DFSCompatibleWorkspace = requires (W & w, VertexID u)
     {
         { w.stack };
         { w.stack.push(u) };
@@ -87,11 +87,18 @@ namespace libproject::graphs
     };
 
     // For checking if a workspace or visitor has a .color(u)
-    // method for checking the state of the node.
+    // method to determine the state of the node.
     template <typename T>
     concept TracksColorState = requires (T & t, VertexID u)
     {
         { t.color(u) } -> std::convertible_to<DFSColorState>;
+    };
+
+    enum class DFSAction
+    {
+        ContinueSearch,
+        Skip,
+        StopSearch
     };
 
     template <typename V>
@@ -106,10 +113,20 @@ namespace libproject::graphs
         { visitor.finish_vertex(u) };
     };
 
-    // TODO: discovery / examine filtering
+    template <typename V>
+    concept DFSDiscoverControl= requires (V & visitor, VertexID u)
+    {
+        { visitor.discover_vertex(u) } -> std::same_as<DFSAction>;
+    };
+
+    template <typename V>
+    concept DFSExamineControl = requires (V & visitor, VertexID u, VertexID v)
+    {
+        { visitor.examine_edge(u, v) } -> std::same_as<DFSAction>;
+    };
 
     template <typename Graph,
-              DFSWorkspaceCompatible Workspace,
+              DFSCompatibleWorkspace Workspace,
               DFSVisitor Visitor>
     void dfs(const Graph & graph,
              VertexID source,
@@ -120,7 +137,25 @@ namespace libproject::graphs
 
         visitor.source_vertex(source);
 
-        visitor.discover_vertex(source);
+        if constexpr (DFSDiscoverControl<Visitor>)
+        {
+            DFSAction action = visitor.discover_vertex(source);
+
+            if (action == DFSAction::Skip)
+            {
+                // Skipping here ends the traversal immediately
+                // since there are no vertices in the queue.
+                return;
+            }
+            else if (action == DFSAction::StopSearch)
+            {
+                return;
+            }
+        }
+        else
+        {
+            visitor.discover_vertex(source);
+        }
 
         stack.push(source);
 
@@ -133,8 +168,24 @@ namespace libproject::graphs
 
             for (const VertexID & v : graph.neighbors(u))
             {
-                // TODO: filtering via actions + constexpr
-                visitor.examine_edge(u, v);
+                // Apply any filtering rules.
+                if constexpr (DFSExamineControl<Visitor>)
+                {
+                    DFSAction action = visitor.examine_edge(u, v);
+
+                    if (action == DFSAction::Skip)
+                    {
+                        continue;
+                    }
+                    else if (action == DFSAction::StopSearch)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    visitor.examine_edge(u, v);
+                }
 
                 // Check if this vertex has been seen or not.
                 bool seen = false;
@@ -164,7 +215,26 @@ namespace libproject::graphs
                         workspace.set_color(v, DFSColorState::Grey);
                     }
 
-                    visitor.discover_vertex(v);
+                    // If our visitor does vertex control flow, use
+                    // its early stopping or pruning rules.
+                    if constexpr (DFSDiscoverControl<Visitor>)
+                    {
+                        DFSAction action = visitor.discover_vertex(v);
+
+                        if (action == DFSAction::Skip)
+                        {
+                            continue;
+                        }
+                        else if (action == DFSAction::StopSearch)
+                        {
+                            return;
+                        }
+                    }
+                    // Otherwise, simply inform the visitor.
+                    else
+                    {
+                        visitor.discover_vertex(v);
+                    }
 
                     stack.push(v);
                 }
