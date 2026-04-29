@@ -189,3 +189,24 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal)
         EXPECT_EQ(visitor.time(), (2 * graph.vertex_count()));
     }
 }
+
+TYPED_TEST(SearchGraphFixture, DFSVertexSearch)
+{
+    auto graph = TestFixture::perfect_binary_tree(4);
+
+    DFSColorWorkspace workspace(graph.vertex_count());
+    workspace.stack.reserve(graph.vertex_count());
+    workspace.next();
+
+    VertexID target = 7;
+    VertexSearchVisitor visitor{
+        [target](VertexID v){ return v == target; }
+    };
+
+    {
+        dfs(graph, VertexID{0}, workspace, visitor);
+
+        // Check that we found the correct vertex.
+        EXPECT_EQ(visitor.target_found, target);
+    }
+}
