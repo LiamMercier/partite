@@ -77,6 +77,48 @@ TYPED_TEST(SearchGraphFixture, BFSDistances)
     }
 }
 
+TYPED_TEST(SearchGraphFixture, BFSVertexSearch)
+{
+    auto graph = TestFixture::perfect_binary_tree(4);
+
+    BFSWorkspace workspace(graph.vertex_count());
+    workspace.queue.reserve(graph.vertex_count());
+    workspace.next();
+
+    // Simple (and, functionally unnecessary) predicate that just
+    // looks for a VertexID during traversal. We just want to ensure
+    // we are able to do early stopping.
+    VertexID target = 7;
+    VertexSearchVisitor visitor{
+        [target](VertexID v){ return v == target; }
+    };
+
+    {
+        bfs(graph, VertexID{0}, workspace, visitor);
+
+        // Check that we found the correct vertex.
+        EXPECT_EQ(visitor.target_found, target);
+
+        // Every node from the previous level should be seen
+        // and the target is the first of a next level.
+        //
+        // It is possible we have seen N > target if N is
+        // of the same level, since graphs are not required to
+        // return neighbors in any order.
+        for (size_t i = 0; i <= target.value; i++)
+        {
+            EXPECT_EQ(workspace.seen[i], workspace.visit_id);
+        }
+
+        VertexID next_level = 15;
+
+        for (size_t i = next_level.value; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(workspace.seen[i], 0);
+        }
+    }
+}
+
 //
 // DFS tests
 //

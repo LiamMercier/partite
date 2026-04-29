@@ -210,34 +210,6 @@ namespace libproject::graphs
         std::vector<Numeric> & distances;
     };
 
-    template <typename SearchPredicate>
-    struct SearchBFSVisitor : NoOpSearchVisitor
-    {
-        explicit SearchBFSVisitor(SearchPredicate p)
-        :found(std::move(p))
-        {}
-
-        ControlAction discover_vertex(VertexID v)
-            requires std::predicate<SearchPredicate, VertexID>
-        {
-            if (found(v))
-            {
-                target_found = v;
-                return ControlAction::Stop;
-            }
-
-            return ControlAction::Continue;
-        }
-
-        void discover_vertex(VertexID v)
-            requires (!std::predicate<SearchPredicate, VertexID>)
-        {
-        }
-
-        VertexID target_found{VertexID::empty};
-        SearchPredicate found;
-    };
-
     //
     // BFS utility functions.
     //
