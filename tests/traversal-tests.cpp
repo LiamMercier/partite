@@ -190,6 +190,68 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal)
     }
 }
 
+TYPED_TEST(SearchGraphFixture, DFSTimestamping)
+{
+    auto graph = TestFixture::perfect_binary_tree(4);
+
+    // Test timer dfs with workspace overload.
+    {
+        std::vector<size_t> d(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        std::vector<size_t> f(graph.vertex_count(),
+                              TimerDFSVisitor<>::NUMERIC_MAX);
+        TimerDFSVisitor visitor{d, f};
+
+        dfs(graph, VertexID{0}, visitor);
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_EQ(visitor.color(i), DFSColorState::Black);
+        }
+
+        // We assign 0, ..., 2*|V| - 1 to the nodes, and timer should
+        // thus end up equal to 2*|V| after the final increment.
+        EXPECT_EQ(visitor.time(), (2 * graph.vertex_count()));
+    }
+
+    auto NUMERIC_MAX = TimerDFSVisitor<>::NUMERIC_MAX;
+
+    // Test built in dfs timestamp overloads
+    {
+        DFSWorkspace workspace;
+        workspace.stack.reserve(graph.vertex_count());
+        workspace.next();
+
+        auto res = dfs_timestamps(graph, VertexID{0}, workspace);
+        auto d = res.first;
+        auto f = res.second;
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_TRUE(d[i] != NUMERIC_MAX
+                        && f[i] != NUMERIC_MAX)
+                        << "DFSTimestamping:perfect_binary_tree "
+                        << "d[" << i << "] = " << d[i]
+                        << " and f[" << i << "] = " << f[i];
+        }
+    }
+
+    {
+        auto res = dfs_timestamps(graph, VertexID{0});
+        auto d = res.first;
+        auto f = res.second;
+
+        for (size_t i = 0; i < graph.vertex_count(); i++)
+        {
+            EXPECT_TRUE(d[i] != NUMERIC_MAX
+                        && f[i] != NUMERIC_MAX)
+                        << "DFSTimestamping:perfect_binary_tree "
+                        << "d[" << i << "] = " << d[i]
+                        << " and f[" << i << "] = " << f[i];
+        }
+    }
+}
+
 TYPED_TEST(SearchGraphFixture, DFSVertexSearch)
 {
     auto graph = TestFixture::perfect_binary_tree(4);
