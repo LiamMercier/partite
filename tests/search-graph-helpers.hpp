@@ -2,6 +2,8 @@
 
 #include "test-utils.hpp"
 
+#include <unordered_map>
+
 template <typename Config>
 class SearchGraphFixture : public ::testing::Test
 {
@@ -12,63 +14,72 @@ public:
 
     static const Graph & perfect_binary_tree(size_t h)
     {
-        static Graph tree = [h]{
-            std::vector<EdgeInput<EdgeData>> edges;
+        static std::unordered_map<size_t, Graph> graphs;
 
-            if (h == 0)
-            {
-                return Graph(0, edges);
-            }
+        auto iter = graphs.find(h);
 
-            using id_type = VertexID::underlying_type;
+        if (iter == graphs.end())
+        {
+            auto graph = [h]{
+                std::vector<EdgeInput<EdgeData>> edges;
 
-            id_type n = (1ULL << (h+1)) - 1;
-
-            for (id_type i = 0; i < n; i++)
-            {
-                id_type left = 2*i + 1;
-                id_type right = 2*i + 2;
-
-                if (left < n)
+                if (h == 0)
                 {
-                    if constexpr (HasData<EdgeData>)
-                    {
-                        std::string label = std::to_string(i)
-                                            + "-"
-                                            + std::to_string(left);
+                    return Graph(0, edges);
+                }
 
-                        edges.push_back({VertexID{i},
-                                         VertexID{left},
-                                         std::move(label)});
-                    }
-                    else
+                using id_type = VertexID::underlying_type;
+
+                id_type n = (1ULL << (h+1)) - 1;
+
+                for (id_type i = 0; i < n; i++)
+                {
+                    id_type left = 2*i + 1;
+                    id_type right = 2*i + 2;
+
+                    if (left < n)
                     {
-                        edges.push_back({VertexID{i}, VertexID{left}});
+                        if constexpr (HasData<EdgeData>)
+                        {
+                            std::string label = std::to_string(i)
+                                                + "-"
+                                                + std::to_string(left);
+
+                            edges.push_back({VertexID{i},
+                                            VertexID{left},
+                                            std::move(label)});
+                        }
+                        else
+                        {
+                            edges.push_back({VertexID{i}, VertexID{left}});
+                        }
+                    }
+
+                    if (right < n)
+                    {
+                        if constexpr (HasData<EdgeData>)
+                        {
+                            std::string label = std::to_string(i)
+                                                + "-"
+                                                + std::to_string(right);
+
+                            edges.push_back({VertexID{i},
+                                            VertexID{right},
+                                            std::move(label)});
+                        }
+                        else
+                        {
+                            edges.push_back({VertexID{i}, VertexID{right}});
+                        }
                     }
                 }
 
-                if (right < n)
-                {
-                    if constexpr (HasData<EdgeData>)
-                    {
-                        std::string label = std::to_string(i)
-                                            + "-"
-                                            + std::to_string(right);
+                return Graph{n, edges};
+            }();
 
-                        edges.push_back({VertexID{i},
-                                         VertexID{right},
-                                         std::move(label)});
-                    }
-                    else
-                    {
-                        edges.push_back({VertexID{i}, VertexID{right}});
-                    }
-                }
-            }
+            iter = graphs.emplace(h, std::move(graph)).first;
+        }
 
-            return Graph{n, edges};
-        }();
-
-        return tree;
+        return iter->second;
     }
 };

@@ -15,9 +15,10 @@ TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 // BFS tests
 //
 
-TYPED_TEST(SearchGraphFixture, BFSTraversal)
+TYPED_TEST(SearchGraphFixture, BFSTraversal_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
@@ -34,9 +35,10 @@ TYPED_TEST(SearchGraphFixture, BFSTraversal)
     }
 }
 
-TYPED_TEST(SearchGraphFixture, BFSDistances)
+TYPED_TEST(SearchGraphFixture, BFSDistances_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
@@ -77,9 +79,10 @@ TYPED_TEST(SearchGraphFixture, BFSDistances)
     }
 }
 
-TYPED_TEST(SearchGraphFixture, BFSVertexSearch)
+TYPED_TEST(SearchGraphFixture, BFSVertexSearch_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
@@ -123,9 +126,10 @@ TYPED_TEST(SearchGraphFixture, BFSVertexSearch)
 // DFS tests
 //
 
-TYPED_TEST(SearchGraphFixture, DFSTraversal)
+TYPED_TEST(SearchGraphFixture, DFSTraversal_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     // Test dfs with a workspace that explicitly tracks color.
     {
@@ -190,9 +194,10 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal)
     }
 }
 
-TYPED_TEST(SearchGraphFixture, DFSTimestamping)
+TYPED_TEST(SearchGraphFixture, DFSTimestamping_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     // Test timer dfs with workspace overload.
     {
@@ -252,14 +257,17 @@ TYPED_TEST(SearchGraphFixture, DFSTimestamping)
     }
 }
 
-TYPED_TEST(SearchGraphFixture, DFSVertexSearch)
+TYPED_TEST(SearchGraphFixture, DFSVertexSearch_PBT)
 {
-    auto graph = TestFixture::perfect_binary_tree(4);
+    size_t h = 4;
+    auto graph = TestFixture::perfect_binary_tree(h);
 
     DFSColorWorkspace workspace(graph.vertex_count());
     workspace.stack.reserve(graph.vertex_count());
     workspace.next();
 
+    // Set the target as the first node of the
+    // layer at depth 3.
     VertexID target = 7;
     VertexSearchVisitor visitor{
         [target](VertexID v){ return v == target; }
