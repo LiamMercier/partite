@@ -222,6 +222,31 @@ namespace libproject::graphs
         }
     }
 
+    // Helper that creates a temporary workspace.
+    template <typename Graph,
+              SearchVisitor Visitor>
+    void dfs(const Graph & graph,
+             VertexID source,
+             Visitor&& visitor)
+    {
+        if constexpr (TracksColorState<Visitor>)
+        {
+            DFSWorkspace workspace;
+            workspace.stack.reserve(graph.vertex_count());
+            workspace.next();
+
+            dfs(graph, source, workspace, std::forward<Visitor>(visitor));
+        }
+        else
+        {
+            DFSColorWorkspace workspace(graph.vertex_count());
+            workspace.stack.reserve(graph.vertex_count());
+            workspace.next();
+
+            dfs(graph, source, workspace, std::forward<Visitor>(visitor));
+        }
+    }
+
     //
     // Visitor setups that can be reused.
     //
@@ -288,4 +313,41 @@ namespace libproject::graphs
         TimerStorage & finished;
     };
 
+    //
+    // DFS utility functions.
+    //
+
+    // For users who want a pair of {discovered, finished}
+    // arrays for DFS timestamps.
+    template <typename Graph,
+              DFSCompatibleWorkspace Workspace>
+    auto dfs_timestamps(const Graph & graph,
+                        VertexID source,
+                        Workspace & workspace)
+    {
+        using Visitor = TimerDFSVisitor<>;
+
+        size_t V_count = graph.vertex_count();
+        Visitor::TimerStorage d(V_count);
+        Visitor::TimerStorage f(V_count);
+
+        Visitor visitor(d, f);
+
+        dfs(graph, source, workspace, visitor);
+
+        return std::pair{d, f};
+    }
+
+    // Temporary workspace overload.
+    template <typename Graph>
+    auto dfs_timestamps(const Graph & graph, VertexID source)
+    {
+        size_t V_count = graph.vertex_count();
+
+        DFSWorkspace workspace;
+        workspace.stack.reserve(V_count);
+        workspace.next();
+
+        return std::move(dfs_timestamps(graph, source, workspace));
+    }
 };
