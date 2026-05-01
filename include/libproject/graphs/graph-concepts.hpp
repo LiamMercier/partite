@@ -12,29 +12,39 @@ namespace libproject::graphs
     template <typename Graph>
     concept UndirectedGraph = !DirectedGraph<Graph>;
 
+    template <typename Graph>
+    concept BasicGraph = requires (const Graph & g)
+    {
+        { Graph::directed } -> std::convertible_to<bool>;
+
+        { g.vertex_count() } -> std::convertible_to<size_t>;
+    };
+
     //
     // Concepts for neighborhood queries.
     //
 
     template <typename Graph>
-    concept AdjacencyGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.neighbors(v) } -> std::ranges::range;
+    concept AdjacencyGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.neighbors(v) } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.neighbors(v))>,
-                                VertexID>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.neighbors(v))>,
+                                    VertexID>;
+        };
 
     template <typename Graph>
-    concept InAdjacencyGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.in_neighbors(v) } -> std::ranges::range;
+    concept InAdjacencyGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.in_neighbors(v) } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.in_neighbors(v))>,
-                                VertexID>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.in_neighbors(v))>,
+                                    VertexID>;
+        };
 
     template <typename Graph>
     concept BidirectionalAdjacencyGraph = AdjacencyGraph<Graph>
@@ -42,24 +52,26 @@ namespace libproject::graphs
                                              || UndirectedGraph<Graph>);
 
     template <typename Graph>
-    concept IncidenceGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.incident_edges(v) } -> std::ranges::range;
+    concept IncidenceGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.incident_edges(v) } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.incident_edges(v))>,
-                                IncidentEdge>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.incident_edges(v))>,
+                                    IncidentEdge>;
+        };
 
     template <typename Graph>
-    concept InIncidenceGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.in_edges(v) } -> std::ranges::range;
+    concept InIncidenceGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.in_edges(v) } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.in_edges(v))>,
-                                IncidentEdge>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.in_edges(v))>,
+                                    IncidentEdge>;
+        };
 
     template <typename Graph>
     concept BidirectionalIncidenceGraph = IncidenceGraph<Graph>
@@ -67,22 +79,25 @@ namespace libproject::graphs
                                              || UndirectedGraph<Graph>);
 
     template <typename Graph>
-    concept DegreeGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.degree(v) } -> std::convertible_to<size_t>;
-    };
+    concept DegreeGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.degree(v) } -> std::convertible_to<size_t>;
+        };
 
     template <typename Graph>
-    concept OutDegreeGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.out_degree(v) } -> std::convertible_to<size_t>;
-    };
+    concept OutDegreeGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.out_degree(v) } -> std::convertible_to<size_t>;
+        };
 
     template <typename Graph>
-    concept InDegreeGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.in_degree(v) } -> std::convertible_to<size_t>;
-    };
+    concept InDegreeGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.in_degree(v) } -> std::convertible_to<size_t>;
+        };
 
     template <typename Graph>
     concept BidirectionalDegreeGraph = OutDegreeGraph<Graph>
@@ -90,37 +105,42 @@ namespace libproject::graphs
                                           || UndirectedGraph<Graph>);
 
     template <typename Graph>
-    concept VertexListGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.vertices() } -> std::ranges::range;
+    concept VertexListGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.vertices() } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.vertices())>,
-                                VertexID>;
-    };
-
-    template <typename Graph>
-    concept EdgeListGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.edges() } -> std::ranges::range;
-
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.edges())>,
-                                EdgeView>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.vertices())>,
+                                    VertexID>;
+        };
 
     template <typename Graph>
-    concept EdgeIDListGraph = requires (const Graph & g, VertexID v)
-    {
-        { g.edge_ids() } -> std::ranges::range;
+    concept EdgeListGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.edges() } -> std::ranges::range;
 
-        requires std::same_as<std::ranges::range_value_t
-                                <decltype(g.edge_ids())>,
-                                EdgeID>;
-    };
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.edges())>,
+                                    EdgeView>;
+        };
+
+    template <typename Graph>
+    concept EdgeIDListGraph = BasicGraph<Graph> &&
+        requires (const Graph & g, VertexID v)
+        {
+            { g.edge_ids() } -> std::ranges::range;
+
+            requires std::same_as<std::ranges::range_value_t
+                                    <decltype(g.edge_ids())>,
+                                    EdgeID>;
+        };
 
     template <typename Graph>
     concept VertexMutableGraph =
+        BasicGraph<Graph>
+        &&
         requires (Graph & g, VertexID v)
         {
             { g.remove_vertex(v) };
@@ -139,10 +159,11 @@ namespace libproject::graphs
         });
 
     template <typename Graph>
-    concept EdgeMutableGraph = requires (Graph & g, VertexID v)
-    {
-        { g.add_edge(v, v) } -> std::same_as<std::pair<EdgeID, bool>>;
-        { g.remove_edge(v, v) } -> std::same_as<bool>;
-    };
+    concept EdgeMutableGraph = BasicGraph<Graph> &&
+        requires (Graph & g, VertexID v)
+        {
+            { g.add_edge(v, v) } -> std::same_as<std::pair<EdgeID, bool>>;
+            { g.remove_edge(v, v) } -> std::same_as<bool>;
+        };
 
 };

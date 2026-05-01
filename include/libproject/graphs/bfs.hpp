@@ -63,7 +63,7 @@ namespace libproject::graphs
     //
 
     // BFS for standard graphs.
-    template <typename Graph,
+    template <AdjacencyGraph Graph,
               BFSCompatibleWorkspace Workspace,
               SearchVisitor V>
     void bfs(const Graph & graph,
@@ -175,7 +175,7 @@ namespace libproject::graphs
 
     // Overload that creates a temporary workspace for users who
     // do not care about reusing memory.
-    template <typename Graph, SearchVisitor V>
+    template <AdjacencyGraph Graph, SearchVisitor V>
     void bfs(const Graph & graph, VertexID source, V&& visitor)
     {
         BFSWorkspace workspace(graph.vertex_count());
@@ -216,7 +216,7 @@ namespace libproject::graphs
 
     // For users who want to find shortest distances without
     // bothering with creating their own visitor.
-    template <typename Graph, BFSCompatibleWorkspace Workspace>
+    template <AdjacencyGraph Graph, BFSCompatibleWorkspace Workspace>
     auto bfs_distances(const Graph & graph,
                        VertexID source,
                        Workspace & workspace)
@@ -234,7 +234,7 @@ namespace libproject::graphs
     }
 
     // Temporary workspace overload.
-    template <typename Graph>
+    template <AdjacencyGraph Graph>
     auto bfs_distances(const Graph & graph, VertexID source)
     {
         size_t V_count = graph.vertex_count();

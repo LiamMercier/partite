@@ -96,7 +96,7 @@ namespace libproject::graphs
         { t.color(u) } -> std::convertible_to<DFSColorState>;
     };
 
-    template <typename Graph,
+    template <AdjacencyGraph Graph,
               DFSCompatibleWorkspace Workspace,
               SearchVisitor Visitor>
     void dfs(const Graph & graph,
@@ -223,7 +223,7 @@ namespace libproject::graphs
     }
 
     // Helper that creates a temporary workspace.
-    template <typename Graph,
+    template <AdjacencyGraph Graph,
               SearchVisitor Visitor>
     void dfs(const Graph & graph,
              VertexID source,
@@ -319,7 +319,7 @@ namespace libproject::graphs
 
     // For users who want a pair of {discovered, finished}
     // arrays for DFS timestamps.
-    template <typename Graph,
+    template <AdjacencyGraph Graph,
               DFSCompatibleWorkspace Workspace>
     auto dfs_timestamps(const Graph & graph,
                         VertexID source,
@@ -339,7 +339,7 @@ namespace libproject::graphs
     }
 
     // Temporary workspace overload.
-    template <typename Graph>
+    template <AdjacencyGraph Graph>
     auto dfs_timestamps(const Graph & graph, VertexID source)
     {
         size_t V_count = graph.vertex_count();
