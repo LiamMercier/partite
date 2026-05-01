@@ -86,7 +86,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::filter(
                     [this, v_0 = v.value](size_t indx)
                     {
@@ -94,7 +94,9 @@ public:
                                 != EdgeID::empty;
                     })
                 | std::views::transform([this](size_t indx){
-                    return VertexID{indx};
+                    return VertexID{
+                        static_cast<VertexID::underlying_type>(indx)
+                    };
                 });
     }
 
@@ -106,7 +108,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::filter(
                     [this, v_0 = (v.value * vertex_count_)](size_t indx)
                     {
@@ -114,7 +116,9 @@ public:
                                 != EdgeID::empty;
                     })
                 | std::views::transform([this](size_t indx){
-                    return VertexID{indx};
+                    return VertexID{
+                        static_cast<VertexID::underlying_type>(indx)
+                    };
                 });
     }
 
@@ -156,7 +160,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::filter(
                     [this, v_0 = v.value](size_t u){
                         return adj_[v_0 + (vertex_count_ * u)]
@@ -165,7 +169,9 @@ public:
                 | std::views::transform(
                     [this, v_0 = v.value](size_t u){
                         return IncidentEdge{
-                            VertexID{u},
+                            VertexID{
+                                static_cast<VertexID::underlying_type>(u)
+                            },
                             adj_[v_0 + (vertex_count_ * u)]
                         };
                 });
@@ -179,7 +185,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::filter(
                     [this, v_0 = (v.value * vertex_count_)](size_t u){
                         return adj_[v_0 + u] != EdgeID::empty;
@@ -187,7 +193,9 @@ public:
                 | std::views::transform(
                     [this, v_0 = (v.value * vertex_count_)](size_t u){
                         return IncidentEdge{
-                            VertexID{u},
+                            VertexID{
+                                static_cast<VertexID::underlying_type>(u)
+                            },
                             adj_[v_0 + u]
                         };
                 });
@@ -254,7 +262,7 @@ public:
         // corresponding to column v. We can use the transformation:
         //
         // {0, ..., |V| - 1} -> {v, ..., v + |V| * i} where 0 <= i < |V|
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::transform(
                     [this, v_0 = v.value](size_t indx)
                     {
@@ -278,7 +286,7 @@ public:
         // corresponding to row v. We can use the transformation:
         //
         // {0, ..., |V| - 1} -> {v * |V|, ..., v * |V| + (|V| - 1)}
-        return std::views::iota(size_t{0}, vertex_count_)
+        return std::views::iota(size_t{0}, size_t{vertex_count_})
                 | std::views::transform(
                     [this, v_0 = (v.value * vertex_count_)](size_t indx)
                     {
@@ -818,7 +826,9 @@ private:
                     if constexpr (VertexInfo)
                     {
                         return IncidentEntry{
-                            VertexID{step_},
+                            VertexID{
+                                static_cast<VertexID::underlying_type>(step_)
+                            },
                             current_index_
                         };
                     }

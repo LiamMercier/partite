@@ -1832,73 +1832,6 @@ SubtestResultPair
 
 using namespace libproject::graphs;
 
-using TestGraphs = ::testing::Types
-<
-    // Simple graph (no VertexData or EdgeData)
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>>,
-                std::monostate,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>>,
-                std::monostate,
-                std::monostate>,
-
-    // EdgeData but no VertexData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::string>,
-                std::string,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::string>,
-                std::string,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>, std::string>,
-                std::string,
-                std::monostate>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>, std::string>,
-                std::string,
-                std::monostate>,
-
-    // EdgeData and VertexData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::string, std::string>,
-                std::string,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::string, std::string>,
-                std::string,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>, std::string, std::string>,
-                std::string,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>, std::string, std::string>,
-                std::string,
-                std::string>,
-
-    // VertexData but no EdgeData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>,
-                              std::monostate,
-                              std::string>,
-                std::monostate,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>,
-                              std::monostate,
-                              std::string>,
-                std::monostate,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>,
-                              std::monostate,
-                              std::string>,
-                std::monostate,
-                std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>,
-                              std::monostate,
-                              std::string>,
-                std::monostate,
-                std::string>
->;
-
 // Test suite for each permutation of a graph of 4 vertices.
 template <typename Config>
 class PropertyGraphExhaustiveTest : public ::testing::Test
@@ -2079,7 +2012,7 @@ public:
     }
 };
 
-TYPED_TEST_SUITE(PropertyGraphExhaustiveTest, TestGraphs);
+TYPED_TEST_SUITE(PropertyGraphExhaustiveTest, TestStringGraphs);
 
 TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
 {

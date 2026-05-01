@@ -322,13 +322,15 @@ public:
     decltype(auto) vertices() const
         requires (vertices_mutable)
     {
-        return std::views::iota(size_t(0),
-                                vertices_.size())
+        return std::views::iota(size_t{0},
+                                size_t(vertices_.size()))
                | std::views::filter([this](size_t indx){
                     return vertices_.alive(indx);
                 })
                | std::views::transform([](size_t indx){
-                   return VertexID{indx};
+                   return VertexID{
+                       static_cast<VertexID::underlying_type>(indx)
+                   };
             });
     }
 
@@ -336,10 +338,12 @@ public:
     decltype(auto) vertices() const
         requires (!vertices_mutable)
     {
-        return std::views::iota(size_t(0),
-                                vertex_count())
+        return std::views::iota(size_t{0},
+                                size_t(vertices_.size()))
                | std::views::transform([](size_t indx){
-                   return VertexID{indx};
+                   return VertexID{
+                       static_cast<VertexID::underlying_type>(indx)
+                   };
             });
     }
 

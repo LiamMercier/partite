@@ -4,6 +4,9 @@
 #include <unordered_set>
 
 #include <libproject/graphs/graph-constants.hpp>
+#include <libproject/graphs/property-graph.hpp>
+#include <libproject/graphs/adjacency-matrix.hpp>
+#include <libproject/graphs/adjacency-list.hpp>
 
 using namespace libproject::graphs;
 
@@ -14,6 +17,133 @@ struct GraphConfig
     using EdgeData = EdgeDataT;
     using VertexData = VertexDataT;
 };
+
+// Tests for a graph type combination.
+using TestGraphs = ::testing::Types
+<
+    // Simple graph (no VertexData or EdgeData)
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>>,
+                std::monostate,
+                std::monostate>,
+
+    // EdgeData but no VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, int>,
+                int,
+                std::monostate>,
+
+    // EdgeData and VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int, int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, int, int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, int, int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, int, int>,
+                int,
+                int>,
+
+    // VertexData but no EdgeData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, std::monostate, int>,
+                std::monostate,
+                int>
+>;
+
+using TestStringGraphs = ::testing::Types
+<
+    // Simple graph (no VertexData or EdgeData)
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>>,
+                std::monostate,
+                std::monostate>,
+
+    // EdgeData but no VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::string>,
+                std::string,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::string>,
+                std::string,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, std::string>,
+                std::string,
+                std::monostate>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, std::string>,
+                std::string,
+                std::monostate>,
+
+    // EdgeData and VertexData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::string, std::string>,
+                std::string,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>, std::string, std::string>,
+                std::string,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>, std::string, std::string>,
+                std::string,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>, std::string, std::string>,
+                std::string,
+                std::string>,
+
+    // VertexData but no EdgeData
+    GraphConfig<PropertyGraph<AdjacencyMatrix<true>,
+                              std::monostate,
+                              std::string>,
+                std::monostate,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyMatrix<false>,
+                              std::monostate,
+                              std::string>,
+                std::monostate,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyList<true>,
+                              std::monostate,
+                              std::string>,
+                std::monostate,
+                std::string>,
+    GraphConfig<PropertyGraph<AdjacencyList<false>,
+                              std::monostate,
+                              std::string>,
+                std::monostate,
+                std::string>
+>;
 
 struct PairHash
 {
