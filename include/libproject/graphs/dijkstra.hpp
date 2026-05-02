@@ -8,21 +8,24 @@ namespace libproject::graphs
     template <typename PQ, typename Numeric>
     concept DijkstraCompatiblePQ = requires (PQ & pq, VertexID v, Numeric dist)
     {
-        pq.insert(v, dist);
-        pq.extract_min() -> std::convertible_to<VertexID>;
-        pq.decrease_key(v, dist);
+        { pq.insert(v, dist) };
+        { pq.extract_min() } -> std::convertible_to<VertexID>;
+        { pq.decrease_key(v, dist) };
     };
 
     template <typename Numeric>
-    struct DijkstraDefaultHeap
+    struct DijkstraDefaultMinHeap
     {
         // TODO: later
     };
 
-    // Optional struct for reusing memory. Numeric's max
-    // must be able to store the maximum possible path length.
+    // Optional struct for a default usable workspace.
+    //
+    // Numeric's max must be able to store the maximum
+    // possible path length in the graph.
     template <typename Numeric,
-              DijkstraCompatiblePQ PQ = DijkstraDefaultHeap<Numeric>>
+              DijkstraCompatiblePQ<Numeric> PQ
+                  = DijkstraDefaultMinHeap<Numeric>>
     struct DijkstraWorkspace
     {
         using numeric_type = Numeric;
@@ -35,14 +38,14 @@ namespace libproject::graphs
     template <typename W>
     concept DijkstraCompatibleWorkspace = requires (W & workspace)
     {
-
+        typename W::numeric_type;
         { workspace.distance };
         { workspace.parent };
 
         // Check that workspace.pq is compatible.
         requires DijkstraCompatiblePQ<
             std::remove_reference_t<decltype(workspace.pq)>,
-            Numeric
+            typename W::numeric_type
         >;
     };
 
