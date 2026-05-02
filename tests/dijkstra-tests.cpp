@@ -67,6 +67,29 @@ TEST(DijkstraPrimitives, DefaultPQTests)
     }
 }
 
+// TODO: parent checks.
+template <typename WeightFunction, typename Numeric>
+struct TestLoggingVisitor : NoOpDijkstraVisitor
+{
+    TestLoggingVisitor(std::vector<VertexID> & p,
+                         std::vector<Numeric> & d,
+                         WeightFunction w_func)
+    :w(w_func),
+    parent(p),
+    distance(d)
+    {}
+
+    void edge_relaxed(VertexID u, VertexID v, EdgeID e)
+    {
+        distance[v.value] = distance[u.value]
+                            + w(e);
+    }
+
+    WeightFunction w;
+    std::vector<VertexID> & parent;
+    std::vector<Numeric> & distance;
+};
+
 TYPED_TEST_SUITE(DijkstraFixture, TestGraphs);
 
 TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
@@ -83,9 +106,7 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
 
         size_t h = 4;
         auto graph = TestFixture::perfect_binary_tree(h);
-
         VertexID source{0};
-        DijkstraWorkspace<size_t> workspace(graph.vertex_count());
 
         auto w = [&](EdgeID e) -> Numeric
         {
@@ -93,29 +114,70 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
             return weight;
         };
 
-        dijkstra(graph, source, w, workspace);
-
-        // Now that we have our distances, check they are correct.
-        //
-        // This fixture is designed so (u, v) has weight v.
-        for (size_t v = 0; v < graph.vertex_count(); v++)
+        // Test the generic function with the default NoOp visitor.
         {
-            size_t dist = 0;
-            size_t i = v;
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
 
-            while (i > 0)
+            dijkstra(graph, source, w, workspace);
+
+            // Now that we have our distances, check they are correct.
+            //
+            // This fixture is designed so (u, v) has weight v.
+            for (size_t v = 0; v < graph.vertex_count(); v++)
             {
-                dist += i;
+                size_t dist = 0;
+                size_t i = v;
 
-                // Parent in a perfect binary tree (i.e same as heap).
-                i = ((i - 1) / 2);
+                while (i > 0)
+                {
+                    dist += i;
+
+                    // Parent in a perfect binary tree (i.e same as heap).
+                    i = ((i - 1) / 2);
+                }
+
+                EXPECT_EQ(workspace.distance[v], dist)
+                        << "Incorrect distance for vertex "
+                        << v << ", expected dist = "
+                        << dist << ", workspace.distance["
+                        << v << "] = " << workspace.distance[v];
             }
+        }
 
-            EXPECT_EQ(workspace.distance[v], dist)
-                     << "Incorrect distance for vertex "
-                     << v << ", expected dist = "
-                     << dist << ", workspace.distance["
-                     << v << "] = " << workspace.distance[v];
+        // Test the generic function with temporary workspace.
+        //
+        // We need to provide a visitor, since otherwise the results
+        // are impossible to verify.
+        {
+            std::vector<VertexID> p(graph.vertex_count());
+            std::vector<Numeric> d(graph.vertex_count());
+
+            TestLoggingVisitor visitor(p, d, w);
+
+            dijkstra(graph, source, w, visitor);
+
+            // Now that we have our distances, check they are correct.
+            //
+            // This fixture is designed so (u, v) has weight v.
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                size_t dist = 0;
+                size_t i = v;
+
+                while (i > 0)
+                {
+                    dist += i;
+
+                    // Parent in a perfect binary tree (i.e same as heap).
+                    i = ((i - 1) / 2);
+                }
+
+                EXPECT_EQ(visitor.distance[v], dist)
+                        << "Incorrect distance for vertex "
+                        << v << ", expected dist = "
+                        << dist << ", visitor.distance["
+                        << v << "] = " << visitor.distance[v];
+            }
         }
     }
 }
