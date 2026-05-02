@@ -1,6 +1,6 @@
 #pragma once
 
-#include <libproject/graphs/control-action.hpp>
+#include <libproject/graphs/control-actions.hpp>
 
 namespace libproject::graphs
 {

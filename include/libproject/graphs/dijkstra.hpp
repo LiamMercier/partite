@@ -3,6 +3,7 @@
 #include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
+#include <libproject/graphs/control-actions.hpp>
 
 namespace libproject::graphs
 {
@@ -19,6 +20,8 @@ namespace libproject::graphs
         { pq.decrease_key(v, dist) };
     };
 
+    // A binary heap based priority queue with optimizations
+    // under the assumption of being used for dijkstra's algorithm.
     template <typename Numeric>
     struct DijkstraDefaultMinPQ
     {
@@ -211,7 +214,6 @@ namespace libproject::graphs
         >;
     };
 
-    // TODO: we need control flow.
     template <typename V>
     concept DijkstraVisitor = requires(V & visitor,
                                        VertexID u,
@@ -253,6 +255,10 @@ namespace libproject::graphs
         { w(e) } -> std::convertible_to<Numeric>;
         { dist + w(e) } -> std::convertible_to<Numeric>;
     };
+
+    //
+    // Dijkstra function bodies.
+    //
 
     // Generic dijkstra implementation.
     template <IncidenceGraph Graph,
@@ -304,11 +310,46 @@ namespace libproject::graphs
 
             // After a node has been extracted, it will never be
             // updated again, its SSSP distance has been determined.
-            visitor.expand_vertex(min);
+            //
+            // Apply any filtering or early stopping rules.
+            if constexpr (ExpandControllable<Visitor>)
+            {
+                ControlAction action = visitor.expand_vertex(min);
+
+                if (action == ControlAction::Skip)
+                {
+                    continue;
+                }
+                else if (action == ControlAction::Stop)
+                {
+                    return;
+                }
+            }
+            else
+            {
+                visitor.expand_vertex(min);
+            }
 
             for (const auto & [to, e] : graph.incident_edges(min))
             {
-                visitor.examine_edge(min, to, e);
+                // Apply any filtering rules.
+                if constexpr (ExamineControllable<Visitor>)
+                {
+                    ControlAction action = visitor.examine_edge(min, to, e);
+
+                    if (action == ControlAction::Skip)
+                    {
+                        continue;
+                    }
+                    else if (action == ControlAction::Stop)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    visitor.examine_edge(min, to, e);
+                }
 
                 auto candidate_w = distance[min.value] + w(e);
 
@@ -331,5 +372,48 @@ namespace libproject::graphs
             visitor.finish_vertex(min);
         }
     }
+
+    // Overload that creates a temporary workspace
+    // for users who just want a visitor to run.
+    //
+    // We let the weight function determine the Numeric
+    // type, since forcing dijkstra<NumericType>(...) as
+    // the syntax defeats the utility of this overload.
+    //
+    // Users who have large graphs or large weights should
+    // instead define the workspace themselves and ensure
+    // that the workspace Numeric is large enough to handle
+    // whatever type the weight function may add each time.
+    //
+    // For example, declaring a workspace with some 128-bit
+    // arithmetic for storage, but size_t as the weight type.
+    template <IncidenceGraph Graph,
+              typename WeightFunction,
+              DijkstraVisitor Visitor>
+    void dijkstra(Graph & graph,
+                  VertexID source,
+                  WeightFunction w,
+                  Visitor&& visitor)
+        requires (DijkstraWeightFunction
+                  <WeightFunction,
+                   std::remove_cvref_t<
+                        std::invoke_result_t<WeightFunction&, EdgeID>>
+                  >)
+    {
+        using WeightType = std::remove_cvref_t<
+                               std::invoke_result_t<WeightFunction, EdgeID>
+                           >;
+
+        DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
+        dijkstra(graph, source, w, workspace, visitor);
+    }
+
+    //
+    // Visitor setups that can be reused.
+    //
+
+    // TODO: A* search with consistent heuristic (need asserts).
+    //
+    //       Will need to review definitions for this one.
 
 };
