@@ -1,14 +1,9 @@
 #pragma once
 
+#include <libproject/graphs/control-action.hpp>
+
 namespace libproject::graphs
 {
-    enum class ControlAction
-    {
-        Continue,
-        Skip,
-        Stop
-    };
-
     template <typename V>
     concept SearchVisitor = requires(V & visitor,
                                      VertexID u,
@@ -22,22 +17,6 @@ namespace libproject::graphs
         { visitor.tree_edge(u, v, e) };
         { visitor.non_tree_edge(u, v, e) };
         { visitor.finish_vertex(u) };
-    };
-
-    template <typename V>
-    concept DiscoverControllable= requires (V & visitor,
-                                               VertexID u)
-    {
-        { visitor.discover_vertex(u) } -> std::same_as<ControlAction>;
-    };
-
-    template <typename V>
-    concept ExamineControllable = requires (V & visitor,
-                                            VertexID u,
-                                            VertexID v,
-                                            EdgeID e)
-    {
-        { visitor.examine_edge(u, v, e) } -> std::same_as<ControlAction>;
     };
 
     struct NoOpSearchVisitor
