@@ -181,6 +181,17 @@ namespace libproject::graphs
     {
         using numeric_type = Numeric;
 
+        DijkstraWorkspace(size_t vertex_count)
+        :distance(vertex_count),
+        parent(vertex_count)
+        {}
+
+        void resize(size_t N)
+        {
+            distance.resize(N);
+            parent.resize(N);
+        }
+
         PQ pq;
         std::vector<Numeric> distance;
         std::vector<VertexID> parent;
@@ -200,21 +211,120 @@ namespace libproject::graphs
         >;
     };
 
-    // TODO: fill in hook functions later once we sketch the algorithm
+    // TODO: we need control flow.
+    template <typename V>
+    concept DijkstraVisitor = requires(V & visitor, VertexID u, VertexID v)
+    {
+        { visitor.source_vertex(u) };
+        { visitor.expand_vertex(u) };
+        { visitor.examine_edge(u, v) };
+        { visitor.edge_relaxed(u, v) };
+        { visitor.edge_not_relaxed(u, v) };
+        { visitor.finish_vertex(u) };
+    };
+
     struct NoOpDijkstraVisitor
     {
-    };
-
-    template <DijkstraCompatibleWorkspace Workspace>
-    struct StandardDijkstraVisitor : NoOpDijkstraVisitor
-    {
-        StandardDijkstraVisitor(Workspace & w)
-        :workspace(w)
+        void source_vertex(u)
         {}
 
-        // TODO: relaxation hooks after sketch
+        void expand_vertex(u)
+        {}
 
-        Workspace & workspace;
+        void examine_edge(u, v)
+        {}
+
+        void edge_relaxed(u, v)
+        {}
+
+        void edge_not_relaxed(u, v)
+        {}
+
+        void finish_vertex(u)
+        {}
     };
+
+    // TODO: decide how we make sure the weight function is
+    //       able to be used, and is able to be added to the
+    //       workspace distance storage.
+    //
+    //       We should also consider if we should be doing w(u, v)
+    //       or instead passing w(EdgeID) instead.
+
+    // Generic dijkstra implementation.
+    template <typename Graph,
+              typename WeightFunction,
+              DijkstraCompatibleWorkspace Workspace,
+              typename Visitor>
+    void dijkstra(Graph & graph,
+                  VertexID source,
+                  WeightFunction w,
+                  Workspace & workspace,
+                  Visitor&& visitor)
+    {
+        auto & distance = workspace.distance;
+        auto & parent = workspace.parent;
+        auto & pq = workspace.pq;
+
+        // Initialize for single source shortest paths
+        for (const VertexID & v : graph.vertices())
+        {
+            distance[v.value] = std::numeric_limits<
+                                    Workspace::numeric_type
+                                >::max();
+            parent[v.value] = VertexID::empty;
+        }
+
+        distance[source.value] = 0;
+
+        // Gather data for our priority queue. We want two vectors,
+        // where heap_verts[i] and dist_copy[i] corresponds to
+        // some {VertexID, dist} in the heap.
+        //
+        // Initially, we have heap_verts[i] = VertexID{i} and
+        // dist_copy[i] = distance[i] = distance for VertexID{i}
+        std::vector<VertexID> heap_verts(graph.vertex_count());
+        std::iota(heap_verts.begin(), heap_verts.end(), 0);
+        auto dist_copy = workspace.distance;
+
+        // Build the priority queue from our {VertexID, Distance} data.
+        pq.build(heap_verts, dist_copy, source);
+
+        visitor.source_vertex(source);
+
+        // While the queue is not empty, extract
+        while (pq.size() > 0)
+        {
+            VertexID min = pq.extract_min();
+
+            // After a node has been extracted, it will never be
+            // updated again, its SSSP distance has been determined.
+            visitor.expand_vertex(min);
+
+            for (const VertexID & to : graph.neighbors(min))
+            {
+                visitor.examine_edge(min, to);
+
+                auto candidate_w = distance[min.value] + w(min, to)
+
+                // If shorter, relax.
+                if (distance[to.value] > candidate_w)
+                {
+                    distance[to.value] = candidate_w;
+                    parent[to.value] = min;
+
+                    visitor.edge_relaxed(min, to);
+
+                    pq.decrease_key(to, distance[to.value]);
+                }
+                else
+                {
+                    visitor.edge_not_relaxed(min, to);
+                }
+            }
+
+            visitor.finish_vertex(min);
+        }
+    }
 
 };

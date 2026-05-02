@@ -74,7 +74,7 @@ TYPED_TEST(SearchGraphFixture, DijkstraStandard_PBT)
     size_t h = 4;
     auto graph = TestFixture::perfect_binary_tree(h);
 
-    DijkstraWorkspace<size_t> workspace;
+    DijkstraWorkspace<size_t> workspace(graph.vertex_count());
     StandardDijkstraVisitor visitor(workspace);
 
     // TODO: call dijkstra when it exists
