@@ -96,7 +96,7 @@ namespace libproject::graphs
         { t.color(u) } -> std::convertible_to<DFSColorState>;
     };
 
-    template <AdjacencyGraph Graph,
+    template <IncidenceGraph Graph,
               DFSCompatibleWorkspace Workspace,
               SearchVisitor Visitor>
     void dfs(const Graph & graph,
@@ -136,12 +136,12 @@ namespace libproject::graphs
             VertexID u = stack.pop();
             visitor.expand_vertex(u);
 
-            for (const VertexID & v : graph.neighbors(u))
+            for (const auto & [v, e] : graph.incident_edges(u))
             {
                 // Apply any filtering rules.
                 if constexpr (ExamineControllable<Visitor>)
                 {
-                    ControlAction action = visitor.examine_edge(u, v);
+                    ControlAction action = visitor.examine_edge(u, v, e);
 
                     if (action == ControlAction::Skip)
                     {
@@ -154,7 +154,7 @@ namespace libproject::graphs
                 }
                 else
                 {
-                    visitor.examine_edge(u, v);
+                    visitor.examine_edge(u, v, e);
                 }
 
                 // Check if this vertex has been seen or not.
@@ -178,7 +178,7 @@ namespace libproject::graphs
 
                 if (!seen)
                 {
-                    visitor.tree_edge(u, v);
+                    visitor.tree_edge(u, v, e);
 
                     if constexpr (TracksColorState<Workspace>)
                     {
@@ -208,7 +208,7 @@ namespace libproject::graphs
                 }
                 else
                 {
-                    visitor.non_tree_edge(u, v);
+                    visitor.non_tree_edge(u, v, e);
                 }
             }
 

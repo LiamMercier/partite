@@ -255,7 +255,7 @@ namespace libproject::graphs
     };
 
     // Generic dijkstra implementation.
-    template <typename Graph,
+    template <IncidenceGraph Graph,
               typename WeightFunction,
               DijkstraCompatibleWorkspace Workspace,
               DijkstraVisitor Visitor = NoOpDijkstraVisitor>
