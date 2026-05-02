@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 
 #include "test-utils.hpp"
-#include "search-graph-helpers.hpp"
+#include "dijkstra-helpers.hpp"
 #include <libproject/graphs/dijkstra.hpp>
 
 using namespace libproject::graphs;
@@ -67,22 +67,55 @@ TEST(DijkstraPrimitives, DefaultPQTests)
     }
 }
 
-TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
+TYPED_TEST_SUITE(DijkstraFixture, TestGraphs);
 
-TYPED_TEST(SearchGraphFixture, DijkstraStandard_PBT)
+TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
 {
-    using Numeric = size_t;
+    using EdgeData = typename TestFixture::EdgeData;
 
-    size_t h = 4;
-    auto graph = TestFixture::perfect_binary_tree(h);
-
-    VertexID source{0};
-    DijkstraWorkspace<size_t> workspace(graph.vertex_count());
-
-    auto w = [](EdgeID e) -> Numeric
+    if constexpr (!HasData<EdgeData>)
     {
-        return 1;
-    };
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
 
-    dijkstra(graph, source, w, workspace);
+        size_t h = 4;
+        auto graph = TestFixture::perfect_binary_tree(h);
+
+        VertexID source{0};
+        DijkstraWorkspace<size_t> workspace(graph.vertex_count());
+
+        auto w = [&](EdgeID e) -> Numeric
+        {
+            unsigned int weight = graph.edge_data(e);
+            return weight;
+        };
+
+        dijkstra(graph, source, w, workspace);
+
+        // Now that we have our distances, check they are correct.
+        //
+        // This fixture is designed so (u, v) has weight v.
+        for (size_t v = 0; v < graph.vertex_count(); v++)
+        {
+            size_t dist = 0;
+            size_t i = v;
+
+            while (i > 0)
+            {
+                dist += i;
+
+                // Parent in a perfect binary tree (i.e same as heap).
+                i = ((i - 1) / 2);
+            }
+
+            EXPECT_EQ(workspace.distance[v], dist)
+                     << "Incorrect distance for vertex "
+                     << v << ", expected dist = "
+                     << dist << ", workspace.distance["
+                     << v << "] = " << workspace.distance[v];
+        }
+    }
 }
