@@ -1,5 +1,6 @@
 #pragma once
 
+#include <libproject/internal/libproject-assert.hpp>
 #include <libproject/graphs/graph-constants.hpp>
 #include <libproject/graphs/graph-concepts.hpp>
 
@@ -19,9 +20,9 @@ namespace libproject::graphs
     };
 
     template <typename Numeric>
-    struct DijkstraDefaultMinHeap
+    struct DijkstraDefaultMinPQ
     {
-        DijkstraDefaultMinHeap() = default;
+        DijkstraDefaultMinPQ() = default;
 
         size_t size() const
         {
@@ -51,8 +52,8 @@ namespace libproject::graphs
             std::swap(heap_distances[i],
                       heap_distances[j]);
 
-            std::swap(vertex_to_index[i],
-                      vertex_to_index[j]);
+            vertex_to_index[heap_vertices[i].value] = i;
+            vertex_to_index[heap_vertices[j].value] = j;
         }
 
         void heapify(size_t i)
@@ -64,14 +65,13 @@ namespace libproject::graphs
 
             size_t smallest = i;
 
-            if (l <= n && heap_distances[l] < heap_distances[i])
+            if (l < n && heap_distances[l] < heap_distances[smallest])
             {
                 smallest = l;
             }
-
-            if (r <= n && heap_distances[r] < heap_distances[i])
+            if (r < n && heap_distances[r] < heap_distances[smallest])
             {
-                smallest = l;
+                smallest = r;
             }
 
             if (smallest != i)
@@ -80,20 +80,6 @@ namespace libproject::graphs
                 heapify(smallest);
             }
         }
-
-        // void build()
-        // {
-        //     size_t n = size();
-        //
-        //     // floor(n / 2) + 1, ..., n are already roots of binary heaps,
-        //     // so we heapify from right to left, bottom to top, where each
-        //     // of the children of the heapify node are already roots of
-        //     // their own binary heap.
-        //     for (i = n / 2; i > 0; i--)
-        //     {
-        //         heapify(i);
-        //     }
-        // }
 
         void build(std::vector<VertexID> v,
                    std::vector<Numeric> d,
@@ -106,9 +92,10 @@ namespace libproject::graphs
             // Setup the identity map.
             vertex_to_index.resize(size());
 
-            std::iota(vertex_to_index.begin(),
-                      vertex_to_index.end(),
-                      0);
+            for (size_t i = 0; i < size(); i++)
+            {
+                vertex_to_index[heap_vertices[i].value] = i;
+            }
 
             // swap A[source] and A[0] since we know the source
             // is the root element and everything else is equal.
@@ -118,15 +105,33 @@ namespace libproject::graphs
         VertexID extract_min()
         {
             size_t n = size();
+
+            libproject_assert(n > 0,
+                              "DijkstraDefaultMinPQ::extract_min(): "
+                              "internal library error: tried to extract from "
+                              "an empty heap");
+
             VertexID min = heap_vertices[0];
 
-            heap_vertices[0] = heap_vertices[n];
-            heap_distances[0] = heap_distances[n];
+            if (n == 1)
+            {
+                heap_vertices.pop_back();
+                heap_distances.pop_back();
+
+                return min;
+            }
+
+            heap_vertices[0] = heap_vertices[n - 1];
+            heap_distances[0] = heap_distances[n - 1];
 
             heap_vertices.pop_back();
             heap_distances.pop_back();
 
-            heapify(n - 1);
+            // update the mapping for the vertex
+            // which hasn't been used yet.
+            vertex_to_index[heap_vertices[0].value] = 0;
+
+            heapify(0);
 
             return min;
         }
@@ -136,12 +141,20 @@ namespace libproject::graphs
             // find the index where v exists.
             size_t i = vertex_to_index[v.value];
 
+            libproject_assert(heap_distances[i] > dist,
+                              "DijkstraDefaultMinPQ::decrease_key(v, dist): "
+                              "internal library error: tried to decrease "
+                              "key to a larger key; previous key = "
+                              + std::to_string(heap_distances[i])
+                              + ", dist = "
+                              + std::to_string(dist));
+
             // update its key.
             heap_distances[i] = dist;
 
             // maintain the invariant.
             while ((i > 0)
-                   && (heap_distances[i] > heap_distances[parent(i)]))
+                   && (heap_distances[i] < heap_distances[parent(i)]))
             {
                 swap_nodes(i, parent(i));
                 i = parent(i);
@@ -163,7 +176,7 @@ namespace libproject::graphs
     // possible path length in the graph.
     template <typename Numeric,
               DijkstraCompatiblePQ<Numeric> PQ
-                  = DijkstraDefaultMinHeap<Numeric>>
+                  = DijkstraDefaultMinPQ<Numeric>>
     struct DijkstraWorkspace
     {
         using numeric_type = Numeric;
