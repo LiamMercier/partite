@@ -71,11 +71,18 @@ TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 
 TYPED_TEST(SearchGraphFixture, DijkstraStandard_PBT)
 {
+    using Numeric = size_t;
+
     size_t h = 4;
     auto graph = TestFixture::perfect_binary_tree(h);
 
+    VertexID source{0};
     DijkstraWorkspace<size_t> workspace(graph.vertex_count());
-    StandardDijkstraVisitor visitor(workspace);
 
-    // TODO: call dijkstra when it exists
+    auto w = [](EdgeID e) -> Numeric
+    {
+        return 1;
+    };
+
+    dijkstra(graph, source, w, workspace);
 }

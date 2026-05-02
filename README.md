@@ -10,5 +10,5 @@ Draft of a mathematics library
 - Convert unit tests for particular classes to test suites
 - Graph Concepts
 - Representation class template for users who want to make their own
-
-- Standardize asserts to be one format for ease of reading
+- Evaluate multigraph viability
+- Evaluate changing EdgeID and VertexID types outside of compilation (i.e template)

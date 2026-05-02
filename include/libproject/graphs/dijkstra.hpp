@@ -12,7 +12,7 @@ namespace libproject::graphs
                                              Numeric dist,
                                              std::vector<VertexID> vs,
                                              std::vector<Numeric> d,
-                                             size_t source)
+                                             VertexID source)
     {
         { pq.build(vs, d, source) };
         { pq.extract_min() } -> std::convertible_to<VertexID>;
@@ -83,7 +83,7 @@ namespace libproject::graphs
 
         void build(std::vector<VertexID> v,
                    std::vector<Numeric> d,
-                   size_t source)
+                   VertexID source)
         {
             // Move in the data arrays
             heap_vertices = std::move(v);
@@ -99,7 +99,7 @@ namespace libproject::graphs
 
             // swap A[source] and A[0] since we know the source
             // is the root element and everything else is equal.
-            swap_nodes(source, 0);
+            swap_nodes(static_cast<size_t>(source.value), 0);
         }
 
         VertexID extract_min()
@@ -213,54 +213,59 @@ namespace libproject::graphs
 
     // TODO: we need control flow.
     template <typename V>
-    concept DijkstraVisitor = requires(V & visitor, VertexID u, VertexID v)
+    concept DijkstraVisitor = requires(V & visitor,
+                                       VertexID u,
+                                       VertexID v,
+                                       EdgeID e)
     {
         { visitor.source_vertex(u) };
         { visitor.expand_vertex(u) };
-        { visitor.examine_edge(u, v) };
-        { visitor.edge_relaxed(u, v) };
-        { visitor.edge_not_relaxed(u, v) };
+        { visitor.examine_edge(u, v, e) };
+        { visitor.edge_relaxed(u, v, e) };
+        { visitor.edge_not_relaxed(u, v, e) };
         { visitor.finish_vertex(u) };
     };
 
     struct NoOpDijkstraVisitor
     {
-        void source_vertex(u)
+        void source_vertex(VertexID u)
         {}
 
-        void expand_vertex(u)
+        void expand_vertex(VertexID u)
         {}
 
-        void examine_edge(u, v)
+        void examine_edge(VertexID u, VertexID v, EdgeID e)
         {}
 
-        void edge_relaxed(u, v)
+        void edge_relaxed(VertexID u, VertexID v, EdgeID e)
         {}
 
-        void edge_not_relaxed(u, v)
+        void edge_not_relaxed(VertexID u, VertexID v, EdgeID e)
         {}
 
-        void finish_vertex(u)
+        void finish_vertex(VertexID u)
         {}
     };
 
-    // TODO: decide how we make sure the weight function is
-    //       able to be used, and is able to be added to the
-    //       workspace distance storage.
-    //
-    //       We should also consider if we should be doing w(u, v)
-    //       or instead passing w(EdgeID) instead.
+    template <typename W, typename Numeric>
+    concept DijkstraWeightFunction = requires (W & w, EdgeID e, Numeric dist)
+    {
+        { w(e) } -> std::convertible_to<Numeric>;
+        { dist + w(e) } -> std::convertible_to<Numeric>;
+    };
 
     // Generic dijkstra implementation.
     template <typename Graph,
               typename WeightFunction,
               DijkstraCompatibleWorkspace Workspace,
-              typename Visitor>
+              DijkstraVisitor Visitor = NoOpDijkstraVisitor>
     void dijkstra(Graph & graph,
                   VertexID source,
                   WeightFunction w,
                   Workspace & workspace,
-                  Visitor&& visitor)
+                  Visitor&& visitor = Visitor())
+        requires (DijkstraWeightFunction
+                  <WeightFunction, typename Workspace::numeric_type>)
     {
         auto & distance = workspace.distance;
         auto & parent = workspace.parent;
@@ -270,7 +275,7 @@ namespace libproject::graphs
         for (const VertexID & v : graph.vertices())
         {
             distance[v.value] = std::numeric_limits<
-                                    Workspace::numeric_type
+                                    typename Workspace::numeric_type
                                 >::max();
             parent[v.value] = VertexID::empty;
         }
@@ -301,11 +306,11 @@ namespace libproject::graphs
             // updated again, its SSSP distance has been determined.
             visitor.expand_vertex(min);
 
-            for (const VertexID & to : graph.neighbors(min))
+            for (const auto & [to, e] : graph.incident_edges(min))
             {
-                visitor.examine_edge(min, to);
+                visitor.examine_edge(min, to, e);
 
-                auto candidate_w = distance[min.value] + w(min, to)
+                auto candidate_w = distance[min.value] + w(e);
 
                 // If shorter, relax.
                 if (distance[to.value] > candidate_w)
@@ -313,13 +318,13 @@ namespace libproject::graphs
                     distance[to.value] = candidate_w;
                     parent[to.value] = min;
 
-                    visitor.edge_relaxed(min, to);
+                    visitor.edge_relaxed(min, to, e);
 
                     pq.decrease_key(to, distance[to.value]);
                 }
                 else
                 {
-                    visitor.edge_not_relaxed(min, to);
+                    visitor.edge_not_relaxed(min, to, e);
                 }
             }
 
