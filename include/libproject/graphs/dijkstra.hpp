@@ -14,10 +14,10 @@ namespace libproject::graphs
                                              std::vector<VertexID> vs,
                                              std::vector<Numeric> d,
                                              VertexID source,
-                                             const uint16_t & epoch)
+                                             const uint16_t & epoch,
+                                             std::vector<uint16_t> v_epochs)
     {
-        { PQ{size_t{0}, epoch} };
-        { pq.epoch_rollover() };
+        { PQ{size_t{0}, epoch, v_epochs} };
         { pq.should_push(v) } -> std::convertible_to<bool>;
         { pq.push(v, dist) };
         { pq.extract_min() } -> std::convertible_to<VertexID>;
@@ -33,9 +33,11 @@ namespace libproject::graphs
         static constexpr size_t OUTSIDE_HEAP
             = std::numeric_limits<size_t>::max();
 
-        DijkstraDefaultMinPQ(size_t v_count, const uint16_t & epoch)
+        DijkstraDefaultMinPQ(size_t v_count,
+                             const uint16_t & epoch,
+                             std::vector<uint16_t> & v_epochs)
         :vertex_to_index(v_count, OUTSIDE_HEAP),
-        vertex_epoch(v_count, 0),
+        vertex_epoch(v_epochs),
         current_epoch(epoch)
         {
             heap_vertices.reserve(v_count);
@@ -117,13 +119,6 @@ namespace libproject::graphs
         // Begin required functions.
         //
 
-        void epoch_rollover()
-        {
-            std::fill(vertex_epoch.begin(),
-                      vertex_epoch.end(),
-                      0);
-        }
-
         bool should_push(VertexID v) const
         {
             if (vertex_epoch[v.value] != current_epoch)
@@ -141,7 +136,6 @@ namespace libproject::graphs
             heap_distances.push_back(dist);
 
             vertex_to_index[v.value] = i;
-            vertex_epoch[v.value] = current_epoch;
 
             sift_up(i);
         }
@@ -236,7 +230,7 @@ namespace libproject::graphs
         // arrays, so this is reasonable for performance
         // versus using a map.
         std::vector<size_t> vertex_to_index;
-        std::vector<uint16_t> vertex_epoch;
+        std::vector<uint16_t> & vertex_epoch;
         const uint16_t & current_epoch{0};
     };
 
@@ -251,11 +245,15 @@ namespace libproject::graphs
     {
         using numeric_type = Numeric;
 
+        static constexpr numeric_type INF
+            = std::numeric_limits<numeric_type>::max();
+
         DijkstraWorkspace(size_t vertex_count)
-        :distance(vertex_count),
-        parent(vertex_count),
-        pq(vertex_count, current_epoch)
+        :vertex_epoch(vertex_count, 0),
+        pq(vertex_count, current_epoch, vertex_epoch)
         {
+            distance.reserve(vertex_count);
+            parent.reserve(vertex_count);
             next();
         }
 
@@ -265,25 +263,55 @@ namespace libproject::graphs
             parent.resize(N);
         }
 
+        void epoch_rollover()
+        {
+            std::fill(vertex_epoch.begin(),
+                      vertex_epoch.end(),
+                      0);
+        }
+
         void next()
         {
             current_epoch++;
 
             if (current_epoch == 0)
             {
-                pq.epoch_rollover();
+                epoch_rollover();
 
                 current_epoch = 1;
             }
         }
 
-        // TODO: O(V) preallocation logic if pure SSSP
-        void initialize_single_source()
+        // Theta(V) preallocation logic if pure SSSP
+        void initialize_single_source(size_t vertex_count)
         {
+            distance.assign(vertex_count, INF);
+            parent.assign(vertex_count, VertexID::empty);
+        }
 
+        Numeric & get_dist(VertexID v)
+        {
+            return distance[v.value];
+        }
+
+        Numeric & get_dist_lazy(VertexID v)
+        {
+            if (vertex_epoch[v.value] != current_epoch)
+            {
+                distance[v.value] = INF;
+                parent[v.value] = VertexID::empty;
+            }
+
+            return distance[v.value];
+        }
+
+        void mark_epoch(VertexID v)
+        {
+            vertex_epoch[v.value] = current_epoch;
         }
 
         uint16_t current_epoch{0};
+        std::vector<uint16_t> vertex_epoch;
         PQ pq;
         std::vector<Numeric> distance;
         std::vector<VertexID> parent;
@@ -294,7 +322,7 @@ namespace libproject::graphs
     {
         typename W::numeric_type;
         { workspace.next() };
-        { workspace.initialize_single_source() };
+        { workspace.initialize_single_source(size_t{0}) };
         { workspace.distance };
         { workspace.parent };
 
@@ -347,12 +375,21 @@ namespace libproject::graphs
         { dist + w(e) } -> std::convertible_to<Numeric>;
     };
 
+    enum class DijkstraInitMode : uint8_t
+    {
+        Lazy,
+        Eager
+    };
+
     //
     // Dijkstra function bodies.
     //
 
+    // TODO: automatic workspace epoch increments?
+
     // Generic dijkstra implementation.
-    template <IncidenceGraph Graph,
+    template <DijkstraInitMode Mode = DijkstraInitMode::Eager,
+              IncidenceGraph Graph,
               typename WeightFunction,
               DijkstraCompatibleWorkspace Workspace,
               DijkstraVisitor Visitor = NoOpDijkstraVisitor>
@@ -364,18 +401,32 @@ namespace libproject::graphs
         requires (DijkstraWeightFunction
                   <WeightFunction, typename Workspace::numeric_type>)
     {
+        using Numeric = typename Workspace::numeric_type;
+
         auto & distance = workspace.distance;
         auto & parent = workspace.parent;
         auto & pq = workspace.pq;
 
-        // Initialize for single source shortest paths
-        for (const VertexID & v : graph.vertices())
+        // If we are doing SSSP instead of SPSP we should
+        // initialize the entire array now instead of doing
+        // lazy initialization.
+        if constexpr (Mode == DijkstraInitMode::Eager)
         {
-            distance[v.value] = std::numeric_limits<
-                                    typename Workspace::numeric_type
-                                >::max();
-            parent[v.value] = VertexID::empty;
+            // Initialize for single source shortest paths
+            workspace.initialize_single_source(graph.vertex_count());
         }
+
+        auto dist = [&](VertexID v) -> Numeric &
+        {
+            if constexpr (Mode == DijkstraInitMode::Lazy)
+            {
+                return workspace.get_dist_lazy(v);
+            }
+            else
+            {
+                return workspace.get_dist(v);
+            }
+        };
 
         distance[source.value] = 0;
         pq.push(source, 0);
@@ -430,12 +481,23 @@ namespace libproject::graphs
                     visitor.examine_edge(min, to, e);
                 }
 
-                auto candidate_w = distance[min.value] + w(e);
+                // If min was popped, its distance is not infinite
+                // and its epoch was set to the current epoch, so
+                // we should always be able to use get_dist instead
+                // of the lazy variant that checks the epoch.
+                auto candidate_w = workspace.get_dist(min) + w(e);
+
+                // we may have never seen to before, so we should
+                // use the lazy variant if necessary.
+                //
+                // If we are using lazy init, then distance[to.value]
+                // is now infinite after any call to get_dist_lazy.
+                Numeric d_to = dist(to);
 
                 // If shorter, relax.
-                if (distance[to.value] > candidate_w)
+                if (d_to > candidate_w)
                 {
-                    distance[to.value] = candidate_w;
+                    workspace.get_dist(to) = candidate_w;
                     parent[to.value] = min;
 
                     visitor.edge_relaxed(min, to, e);
@@ -445,11 +507,13 @@ namespace libproject::graphs
                     // if we should decrease the key.
                     if (pq.should_push(to))
                     {
-                        pq.push(to, distance[to.value]);
+                        workspace.mark_epoch(to);
+
+                        pq.push(to, workspace.get_dist(to));
                     }
                     else
                     {
-                        pq.decrease_key(to, distance[to.value]);
+                        pq.decrease_key(to, workspace.get_dist(to));
                     }
                 }
                 else
@@ -461,21 +525,6 @@ namespace libproject::graphs
             visitor.finish_vertex(min);
         }
     }
-
-    // TODO <optimization>: We are inserting the entire |V| collection
-    //                      of vertices into the priority queue, but,
-    //                      in theory we can push the node into the PQ
-    //                      when we first see it (distance is infinity).
-    //
-    //                      Further, we are setting the distances to the
-    //                      sentinel value each time, but in reality we
-    //                      could instead hold an epoch array and only
-    //                      treat the distance value as valid if the epoch
-    //                      in the workspace is equal to the epoch value
-    //                      inside of the epoch array.
-    //
-    //                      But, this is slower for strictly SSSP, so we
-    //                      should probably put this into the workspace.
 
     // Overload that creates a temporary workspace
     // for users who just want a visitor to run.
@@ -569,7 +618,7 @@ namespace libproject::graphs
             [target](VertexID v){ return v == target; }
         );
 
-        dijkstra(graph, source, w, workspace, visitor);
+        dijkstra<DijkstraInitMode::Lazy>(graph, source, w, workspace, visitor);
     }
 
     // Temporary workspace overload.
@@ -593,7 +642,8 @@ namespace libproject::graphs
 
         dijkstra_single_pair(graph, source, target, w, workspace);
 
-        return std::pair{workspace.distance, workspace.parent};
+        return std::pair{std::move(workspace.distance),
+                         std::move(workspace.parent)};
     }
 
 };

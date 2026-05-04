@@ -35,7 +35,8 @@ TEST(DijkstraPrimitives, DefaultPQTests)
 
         // Build the priority queue.
         uint16_t fake_epoch{0};
-        DijkstraDefaultMinPQ<size_t> pq(n, fake_epoch);
+        std::vector<uint16_t> fake_vertex_epochs(n, 0);
+        DijkstraDefaultMinPQ<size_t> pq(n, fake_epoch, fake_vertex_epochs);
 
         for (size_t i = 0; i < n; i++)
         {
@@ -244,21 +245,6 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                               << dist << ", workspace.distance["
                               << v << "] = " << workspace.distance[v];
                 }
-                // Anything on a depth two lower than the target.
-                //
-                // Some elements at a depth one lower can have their distance
-                // set, since we might explore the same depth and not
-                // find the target yet.
-                else if (v >= 7)
-                {
-                    size_t dist = std::numeric_limits<size_t>::max();
-
-                    EXPECT_EQ(workspace.distance[v], dist)
-                              << "Incorrect distance for vertex "
-                              << v << ", expected dist = "
-                              << dist << ", workspace.distance["
-                              << v << "] = " << workspace.distance[v];
-                }
             }
 
             EXPECT_EQ(visitor.target_found, target);
@@ -294,21 +280,6 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                               << dist << ", workspace.distance["
                               << v << "] = " << workspace.distance[v];
                 }
-                // Anything on a depth two lower than the target.
-                //
-                // Some elements at a depth one lower can have their distance
-                // set, since we might explore the same depth and not
-                // find the target yet.
-                else if (v >= 7)
-                {
-                    size_t dist = std::numeric_limits<size_t>::max();
-
-                    EXPECT_EQ(workspace.distance[v], dist)
-                              << "Incorrect distance for vertex "
-                              << v << ", expected dist = "
-                              << dist << ", workspace.distance["
-                              << v << "] = " << workspace.distance[v];
-                }
             }
         }
 
@@ -334,21 +305,6 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                         // Parent in a perfect binary tree (i.e same as heap).
                         i = ((i - 1) / 2);
                     }
-
-                    EXPECT_EQ(distance[v], dist)
-                              << "Incorrect distance for vertex "
-                              << v << ", expected dist = "
-                              << dist << ", distance["
-                              << v << "] = " << distance[v];
-                }
-                // Anything on a depth two lower than the target.
-                //
-                // Some elements at a depth one lower can have their distance
-                // set, since we might explore the same depth and not
-                // find the target yet.
-                else if (v >= 7)
-                {
-                    size_t dist = std::numeric_limits<size_t>::max();
 
                     EXPECT_EQ(distance[v], dist)
                               << "Incorrect distance for vertex "
