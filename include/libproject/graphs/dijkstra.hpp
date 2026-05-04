@@ -408,12 +408,48 @@ namespace libproject::graphs
         dijkstra(graph, source, w, workspace, visitor);
     }
 
+    // TODO: bidirectional_dijkstra
+
     //
     // Visitor setups that can be reused.
     //
 
+    template <typename SearchPredicate>
+    struct TargetDijkstraVisitor : NoOpDijkstraVisitor
+    {
+        explicit TargetDijkstraVisitor(SearchPredicate p)
+        :found(std::move(p))
+        {}
+
+        // When a vertex is expanded, its distance is set in place.
+        ControlAction expand_vertex(VertexID v)
+            requires std::predicate<SearchPredicate, VertexID>
+        {
+            if (found(v))
+            {
+                target_found = v;
+                return ControlAction::Stop;
+            }
+
+            return ControlAction::Continue;
+        }
+
+        void expand_vertex(VertexID v)
+            requires (!std::predicate<SearchPredicate, VertexID>)
+        {
+        }
+
+        VertexID target_found{VertexID::empty};
+        SearchPredicate found;
+    };
+
     // TODO: A* search with consistent heuristic (need asserts).
     //
     //       Will need to review definitions for this one.
+
+    auto dijkstra_single_pair()
+    {
+
+    }
 
 };
