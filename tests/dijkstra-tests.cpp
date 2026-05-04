@@ -34,8 +34,13 @@ TEST(DijkstraPrimitives, DefaultPQTests)
         distances[source] = 0;
 
         // Build the priority queue.
-        DijkstraDefaultMinPQ<size_t> pq;
-        pq.build(vertices, distances, source);
+        uint16_t fake_epoch{0};
+        DijkstraDefaultMinPQ<size_t> pq(n, fake_epoch);
+
+        for (size_t i = 0; i < n; i++)
+        {
+            pq.push(vertices[i], distances[i]);
+        }
 
         // Create a vector of nodes for checks.
         std::vector<VertexID> popped;
@@ -117,6 +122,7 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
         // Test the generic function with the default NoOp visitor.
         {
             DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+            workspace.next();
 
             dijkstra(graph, source, w, workspace);
 
@@ -205,9 +211,12 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
             return weight;
         };
 
+        DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
         // Test the generic function with the search visitor.
         {
-            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+            workspace.next();
+
             DijkstraSearchVisitor visitor(
                 [target](VertexID v){ return v == target; }
             );
@@ -260,7 +269,8 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 
         // Do the same with the helper functions
         {
-            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+            workspace.next();
+
             dijkstra_single_pair(graph, source, target, w, workspace);
 
             // Now that we have our distances, check they are correct.

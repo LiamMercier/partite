@@ -15,9 +15,11 @@ namespace libproject::graphs
                                              std::vector<Numeric> d,
                                              VertexID source)
     {
-        { pq.build(vs, d, source) };
+        { pq.should_push(v) } -> std::convertible_to<bool>;
+        { pq.push(v, dist) };
         { pq.extract_min() } -> std::convertible_to<VertexID>;
         { pq.decrease_key(v, dist) };
+        { pq.size() } -> std::convertible_to<size_t>;
     };
 
     // A binary heap based priority queue with optimizations
@@ -25,7 +27,17 @@ namespace libproject::graphs
     template <typename Numeric>
     struct DijkstraDefaultMinPQ
     {
-        DijkstraDefaultMinPQ() = default;
+        static constexpr size_t OUTSIDE_HEAP
+            = std::numeric_limits<size_t>::max();
+
+        DijkstraDefaultMinPQ(size_t v_count, const uint16_t & epoch)
+        :vertex_to_index(v_count, OUTSIDE_HEAP),
+        vertex_epoch(v_count),
+        current_epoch(epoch)
+        {
+            heap_vertices.reserve(v_count);
+            heap_distances.reserve(v_count);
+        }
 
         size_t size() const
         {
@@ -59,6 +71,9 @@ namespace libproject::graphs
             vertex_to_index[heap_vertices[j].value] = j;
         }
 
+        // TODO <optimization>: this is tail recursive, but we
+        //                      should still probably convert to
+        //                      an iterative version.
         void heapify(size_t i)
         {
             size_t n = size();
@@ -84,25 +99,41 @@ namespace libproject::graphs
             }
         }
 
-        void build(std::vector<VertexID> v,
-                   std::vector<Numeric> d,
-                   VertexID source)
+        // TODO <optimization>: move into hole vs swap.
+        void sift_up(size_t i)
         {
-            // Move in the data arrays
-            heap_vertices = std::move(v);
-            heap_distances = std::move(d);
-
-            // Setup the identity map.
-            vertex_to_index.resize(size());
-
-            for (size_t i = 0; i < size(); i++)
+            while ((i > 0)
+                   && (heap_distances[i] < heap_distances[parent(i)]))
             {
-                vertex_to_index[heap_vertices[i].value] = i;
+                swap_nodes(i, parent(i));
+                i = parent(i);
+            }
+        }
+
+        //
+        // Begin required functions.
+        //
+
+        bool should_push(VertexID v) const
+        {
+            if (vertex_epoch[v.value] != current_epoch)
+            {
+                return true;
             }
 
-            // swap A[source] and A[0] since we know the source
-            // is the root element and everything else is equal.
-            swap_nodes(static_cast<size_t>(source.value), 0);
+            return false;
+        }
+
+        void push(VertexID v, Numeric dist)
+        {
+            size_t i = size();
+            heap_vertices.push_back(v);
+            heap_distances.push_back(dist);
+
+            vertex_to_index[v.value] = i;
+            vertex_epoch[v.value] = current_epoch;
+
+            sift_up(i);
         }
 
         VertexID extract_min()
@@ -120,6 +151,7 @@ namespace libproject::graphs
             {
                 heap_vertices.pop_back();
                 heap_distances.pop_back();
+                vertex_to_index[min.value] = OUTSIDE_HEAP;
 
                 return min;
             }
@@ -129,6 +161,7 @@ namespace libproject::graphs
 
             heap_vertices.pop_back();
             heap_distances.pop_back();
+            vertex_to_index[min.value] = OUTSIDE_HEAP;
 
             // update the mapping for the vertex
             // which hasn't been used yet.
@@ -144,6 +177,29 @@ namespace libproject::graphs
             // find the index where v exists.
             size_t i = vertex_to_index[v.value];
 
+            // Theoretically impossible, dijkstra will never try
+            // to decrease key on a node that was extracted since
+            // its SSSP was already found.
+            libproject_assert(i != OUTSIDE_HEAP,
+                              "DijkstraDefaultMinPQ::decrease_key(v, dist): "
+                              "tried to decrease key for vertex "
+                              "outside the heap; v = "
+                              + std::to_string(v.value)
+                              + "\nThis indicates:\n"
+                              "(1) a negative weight (invariant violation)\n"
+                              "(2) workspace reused without epoch increment "
+                              "(stale state).");
+
+            libproject_assert(i < size(),
+                              "DijkstraDefaultMinPQ::decrease_key(v, dist): "
+                              "internal library error: tried to access heap "
+                              "index out of bounds; v = "
+                              + std::to_string(v.value)
+                              + ", index = "
+                              + std::to_string(i)
+                              + ", size = "
+                              + std::to_string(size()));
+
             libproject_assert(heap_distances[i] > dist,
                               "DijkstraDefaultMinPQ::decrease_key(v, dist): "
                               "internal library error: tried to decrease "
@@ -156,12 +212,7 @@ namespace libproject::graphs
             heap_distances[i] = dist;
 
             // maintain the invariant.
-            while ((i > 0)
-                   && (heap_distances[i] < heap_distances[parent(i)]))
-            {
-                swap_nodes(i, parent(i));
-                i = parent(i);
-            }
+            sift_up(i);
         }
 
         std::vector<VertexID> heap_vertices;
@@ -171,6 +222,8 @@ namespace libproject::graphs
         // arrays, so this is reasonable for performance
         // versus using a map.
         std::vector<size_t> vertex_to_index;
+        std::vector<uint16_t> vertex_epoch;
+        const uint16_t & current_epoch{0};
     };
 
     // Optional struct for a default usable workspace.
@@ -186,7 +239,8 @@ namespace libproject::graphs
 
         DijkstraWorkspace(size_t vertex_count)
         :distance(vertex_count),
-        parent(vertex_count)
+        parent(vertex_count),
+        pq(vertex_count, current_epoch)
         {}
 
         void resize(size_t N)
@@ -195,6 +249,27 @@ namespace libproject::graphs
             parent.resize(N);
         }
 
+        void next()
+        {
+            current_epoch++;
+
+            if (current_epoch == 0)
+            {
+                std::fill(pq.vertex_epoch.begin(),
+                          pq.vertex_epoch.end(),
+                          0);
+
+                current_epoch = 1;
+            }
+        }
+
+        // TODO: O(V) preallocation logic if pure SSSP
+        void initialize_single_source()
+        {
+
+        }
+
+        uint16_t current_epoch{0};
         PQ pq;
         std::vector<Numeric> distance;
         std::vector<VertexID> parent;
@@ -204,6 +279,8 @@ namespace libproject::graphs
     concept DijkstraCompatibleWorkspace = requires (W & workspace)
     {
         typename W::numeric_type;
+        { workspace.next() };
+        { workspace.initialize_single_source() };
         { workspace.distance };
         { workspace.parent };
 
@@ -287,19 +364,7 @@ namespace libproject::graphs
         }
 
         distance[source.value] = 0;
-
-        // Gather data for our priority queue. We want two vectors,
-        // where heap_verts[i] and dist_copy[i] corresponds to
-        // some {VertexID, dist} in the heap.
-        //
-        // Initially, we have heap_verts[i] = VertexID{i} and
-        // dist_copy[i] = distance[i] = distance for VertexID{i}
-        std::vector<VertexID> heap_verts(graph.vertex_count());
-        std::iota(heap_verts.begin(), heap_verts.end(), 0);
-        auto dist_copy = workspace.distance;
-
-        // Build the priority queue from our {VertexID, Distance} data.
-        pq.build(heap_verts, dist_copy, source);
+        pq.push(source, 0);
 
         visitor.source_vertex(source);
 
@@ -361,7 +426,17 @@ namespace libproject::graphs
 
                     visitor.edge_relaxed(min, to, e);
 
-                    pq.decrease_key(to, distance[to.value]);
+                    // Decide if we should push this vertex
+                    // because we saw it for the first time, or
+                    // if we should decrease the key.
+                    if (pq.should_push(to))
+                    {
+                        pq.push(to, distance[to.value]);
+                    }
+                    else
+                    {
+                        pq.decrease_key(to, distance[to.value]);
+                    }
                 }
                 else
                 {
@@ -420,6 +495,8 @@ namespace libproject::graphs
                            >;
 
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
+        workspace.next();
+
         dijkstra(graph, source, w, workspace, visitor);
     }
 
@@ -500,6 +577,8 @@ namespace libproject::graphs
                            >;
 
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
+        workspace.next();
+
         dijkstra_single_pair(graph, source, target, w, workspace);
 
         return std::pair{workspace.distance, workspace.parent};
