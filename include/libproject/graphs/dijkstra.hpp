@@ -373,6 +373,21 @@ namespace libproject::graphs
         }
     }
 
+    // TODO <optimization>: We are inserting the entire |V| collection
+    //                      of vertices into the priority queue, but,
+    //                      in theory we can push the node into the PQ
+    //                      when we first see it (distance is infinity).
+    //
+    //                      Further, we are setting the distances to the
+    //                      sentinel value each time, but in reality we
+    //                      could instead hold an epoch array and only
+    //                      treat the distance value as valid if the epoch
+    //                      in the workspace is equal to the epoch value
+    //                      inside of the epoch array.
+    //
+    //                      But, this is slower for strictly SSSP, so we
+    //                      should probably put this into the workspace.
+
     // Overload that creates a temporary workspace
     // for users who just want a visitor to run.
     //
@@ -408,16 +423,16 @@ namespace libproject::graphs
         dijkstra(graph, source, w, workspace, visitor);
     }
 
-    // TODO: bidirectional_dijkstra
+    // TODO <feature>: bidirectional_dijkstra
 
     //
     // Visitor setups that can be reused.
     //
 
     template <typename SearchPredicate>
-    struct TargetDijkstraVisitor : NoOpDijkstraVisitor
+    struct DijkstraSearchVisitor : NoOpDijkstraVisitor
     {
-        explicit TargetDijkstraVisitor(SearchPredicate p)
+        explicit DijkstraSearchVisitor(SearchPredicate p)
         :found(std::move(p))
         {}
 
@@ -443,13 +458,51 @@ namespace libproject::graphs
         SearchPredicate found;
     };
 
-    // TODO: A* search with consistent heuristic (need asserts).
     //
-    //       Will need to review definitions for this one.
+    // dijkstra utility functions.
+    //
 
-    auto dijkstra_single_pair()
+    // For users who only care about the distance between
+    // a pair of points in the graph (single pair shortest distance).
+    template <IncidenceGraph Graph,
+              typename WeightFunction,
+              DijkstraCompatibleWorkspace Workspace>
+    void dijkstra_single_pair(Graph & graph,
+                              VertexID source,
+                              VertexID target,
+                              WeightFunction w,
+                              Workspace & workspace)
+        requires (DijkstraWeightFunction
+                  <WeightFunction, typename Workspace::numeric_type>)
     {
+        DijkstraSearchVisitor visitor(
+            [target](VertexID v){ return v == target; }
+        );
 
+        dijkstra(graph, source, w, workspace, visitor);
+    }
+
+    // Temporary workspace overload.
+    template <IncidenceGraph Graph,
+              typename WeightFunction>
+    auto dijkstra_single_pair(Graph & graph,
+                              VertexID source,
+                              VertexID target,
+                              WeightFunction w)
+        requires (DijkstraWeightFunction
+                  <WeightFunction,
+                   std::remove_cvref_t<
+                        std::invoke_result_t<WeightFunction&, EdgeID>>
+                  >)
+    {
+        using WeightType = std::remove_cvref_t<
+                               std::invoke_result_t<WeightFunction, EdgeID>
+                           >;
+
+        DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
+        dijkstra_single_pair(graph, source, target, w, workspace);
+
+        return std::pair{workspace.distance, workspace.parent};
     }
 
 };
