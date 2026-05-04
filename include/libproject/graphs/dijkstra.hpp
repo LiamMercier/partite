@@ -13,8 +13,11 @@ namespace libproject::graphs
                                              Numeric dist,
                                              std::vector<VertexID> vs,
                                              std::vector<Numeric> d,
-                                             VertexID source)
+                                             VertexID source,
+                                             const uint16_t & epoch)
     {
+        { PQ{size_t{0}, epoch} };
+        { pq.epoch_rollover() };
         { pq.should_push(v) } -> std::convertible_to<bool>;
         { pq.push(v, dist) };
         { pq.extract_min() } -> std::convertible_to<VertexID>;
@@ -32,7 +35,7 @@ namespace libproject::graphs
 
         DijkstraDefaultMinPQ(size_t v_count, const uint16_t & epoch)
         :vertex_to_index(v_count, OUTSIDE_HEAP),
-        vertex_epoch(v_count),
+        vertex_epoch(v_count, 0),
         current_epoch(epoch)
         {
             heap_vertices.reserve(v_count);
@@ -114,6 +117,13 @@ namespace libproject::graphs
         // Begin required functions.
         //
 
+        void epoch_rollover()
+        {
+            std::fill(vertex_epoch.begin(),
+                      vertex_epoch.end(),
+                      0);
+        }
+
         bool should_push(VertexID v) const
         {
             if (vertex_epoch[v.value] != current_epoch)
@@ -151,7 +161,9 @@ namespace libproject::graphs
             {
                 heap_vertices.pop_back();
                 heap_distances.pop_back();
+#ifndef NDEBUG
                 vertex_to_index[min.value] = OUTSIDE_HEAP;
+#endif
 
                 return min;
             }
@@ -161,8 +173,10 @@ namespace libproject::graphs
 
             heap_vertices.pop_back();
             heap_distances.pop_back();
-            vertex_to_index[min.value] = OUTSIDE_HEAP;
 
+#ifndef NDEBUG
+            vertex_to_index[min.value] = OUTSIDE_HEAP;
+#endif
             // update the mapping for the vertex
             // which hasn't been used yet.
             vertex_to_index[heap_vertices[0].value] = 0;
@@ -241,7 +255,9 @@ namespace libproject::graphs
         :distance(vertex_count),
         parent(vertex_count),
         pq(vertex_count, current_epoch)
-        {}
+        {
+            next();
+        }
 
         void resize(size_t N)
         {
@@ -255,9 +271,7 @@ namespace libproject::graphs
 
             if (current_epoch == 0)
             {
-                std::fill(pq.vertex_epoch.begin(),
-                          pq.vertex_epoch.end(),
-                          0);
+                pq.epoch_rollover();
 
                 current_epoch = 1;
             }
@@ -495,7 +509,6 @@ namespace libproject::graphs
                            >;
 
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
-        workspace.next();
 
         dijkstra(graph, source, w, workspace, visitor);
     }
@@ -577,7 +590,6 @@ namespace libproject::graphs
                            >;
 
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
-        workspace.next();
 
         dijkstra_single_pair(graph, source, target, w, workspace);
 

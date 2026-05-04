@@ -122,7 +122,6 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
         // Test the generic function with the default NoOp visitor.
         {
             DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
-            workspace.next();
 
             dijkstra(graph, source, w, workspace);
 
@@ -215,8 +214,6 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 
         // Test the generic function with the search visitor.
         {
-            workspace.next();
-
             DijkstraSearchVisitor visitor(
                 [target](VertexID v){ return v == target; }
             );
