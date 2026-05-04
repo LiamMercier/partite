@@ -181,3 +181,175 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
         }
     }
 }
+
+TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+
+        size_t h = 4;
+        auto graph = TestFixture::perfect_binary_tree(h);
+        VertexID source{0};
+        VertexID target{1};
+
+        auto w = [&](EdgeID e) -> Numeric
+        {
+            unsigned int weight = graph.edge_data(e);
+            return weight;
+        };
+
+        // Test the generic function with the search visitor.
+        {
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+            DijkstraSearchVisitor visitor(
+                [target](VertexID v){ return v == target; }
+            );
+
+            dijkstra(graph, source, w, workspace, visitor);
+
+            // Now that we have our distances, check they are correct.
+            //
+            // This fixture is designed so (u, v) has weight v.
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                if (v <= target.value)
+                {
+                    size_t dist = 0;
+                    size_t i = v;
+
+                    while (i > 0)
+                    {
+                        dist += i;
+
+                        // Parent in a perfect binary tree (i.e same as heap).
+                        i = ((i - 1) / 2);
+                    }
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+                // Anything on a depth two lower than the target.
+                //
+                // Some elements at a depth one lower can have their distance
+                // set, since we might explore the same depth and not
+                // find the target yet.
+                else if (v >= 7)
+                {
+                    size_t dist = std::numeric_limits<size_t>::max();
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+            }
+
+            EXPECT_EQ(visitor.target_found, target);
+        }
+
+        // Do the same with the helper functions
+        {
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+            dijkstra_single_pair(graph, source, target, w, workspace);
+
+            // Now that we have our distances, check they are correct.
+            //
+            // This fixture is designed so (u, v) has weight v.
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                if (v <= target.value)
+                {
+                    size_t dist = 0;
+                    size_t i = v;
+
+                    while (i > 0)
+                    {
+                        dist += i;
+
+                        // Parent in a perfect binary tree (i.e same as heap).
+                        i = ((i - 1) / 2);
+                    }
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+                // Anything on a depth two lower than the target.
+                //
+                // Some elements at a depth one lower can have their distance
+                // set, since we might explore the same depth and not
+                // find the target yet.
+                else if (v >= 7)
+                {
+                    size_t dist = std::numeric_limits<size_t>::max();
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+            }
+        }
+
+        {
+            auto res = dijkstra_single_pair(graph, source, target, w);
+            auto & distance = res.first;
+            auto & parent = res.second;
+
+            // Now that we have our distances, check they are correct.
+            //
+            // This fixture is designed so (u, v) has weight v.
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                if (v <= target.value)
+                {
+                    size_t dist = 0;
+                    size_t i = v;
+
+                    while (i > 0)
+                    {
+                        dist += i;
+
+                        // Parent in a perfect binary tree (i.e same as heap).
+                        i = ((i - 1) / 2);
+                    }
+
+                    EXPECT_EQ(distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", distance["
+                              << v << "] = " << distance[v];
+                }
+                // Anything on a depth two lower than the target.
+                //
+                // Some elements at a depth one lower can have their distance
+                // set, since we might explore the same depth and not
+                // find the target yet.
+                else if (v >= 7)
+                {
+                    size_t dist = std::numeric_limits<size_t>::max();
+
+                    EXPECT_EQ(distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", distance["
+                              << v << "] = " << distance[v];
+                }
+            }
+        }
+    }
+}
