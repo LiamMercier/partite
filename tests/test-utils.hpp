@@ -214,3 +214,56 @@ using IncidentEdgeSet = std::unordered_set<IncidentEdge,
                                            IncidentEdgeHash,
                                            IncidentEdgeEqual>;
 using EdgeViewSet = std::unordered_set<EdgeView, EdgeViewHash, EdgeViewEqual>;
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (h == 0)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    id_type n = (1ULL << (h+1)) - 1;
+
+    for (id_type i = 0; i < n; i++)
+    {
+        id_type left = 2*i + 1;
+        id_type right = 2*i + 2;
+
+        if (left < n)
+        {
+            if constexpr (HasData<EdgeData>)
+            {
+                edges.push_back({VertexID{i},
+                                VertexID{left},
+                                make_data(i, left)});
+            }
+            else
+            {
+                edges.push_back({VertexID{i}, VertexID{left}});
+            }
+        }
+
+        if (right < n)
+        {
+            if constexpr (HasData<EdgeData>)
+            {
+                edges.push_back({VertexID{i},
+                                VertexID{right},
+                                make_data(i, right)});
+            }
+            else
+            {
+                edges.push_back({VertexID{i}, VertexID{right}});
+            }
+        }
+    }
+
+    return Graph{n, edges};
+}

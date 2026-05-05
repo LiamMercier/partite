@@ -4,6 +4,7 @@
 #include <libproject/graphs/graph-concepts.hpp>
 #include <libproject/graphs/search-visitor.hpp>
 
+// TODO: evaluate automatic workspace bumps for DFS/BFS
 namespace libproject::graphs
 {
     // Optional struct for reusing memory across DFS calls.
