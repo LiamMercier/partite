@@ -267,3 +267,71 @@ Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
 
     return Graph{n, edges};
 }
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_grid_graph(size_t length, EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (length == 0)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // Create a grid of length * length nodes.
+    id_type v_count = length * length;
+
+    // For each row
+    for (id_type row = 0; row < length; row++)
+    {
+        // For each column
+        for (id_type col = 0; col < length; col++)
+        {
+            // Compute this vertex
+            id_type v = row * length + col;
+
+            // Ignore the last column, it has no right neighbor.
+            if ((v % length) != (length - 1))
+            {
+                // Connect this vertex to its right neighbor
+                id_type r = v + 1;
+
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{v},
+                                    VertexID{r},
+                                    make_data(v, r)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{v}, VertexID{r}});
+                }
+            }
+
+            // Ignore the last row, it has no lower neighbor.
+            if ((v / length) != (length - 1))
+            {
+                // Connect this vertex to its lower neighbor
+                id_type lower = v + length;
+
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{v},
+                                    VertexID{lower},
+                                    make_data(v, lower)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{v}, VertexID{lower}});
+                }
+            }
+
+        }
+    }
+
+    return Graph{v_count, edges};
+}
