@@ -318,11 +318,29 @@ namespace libproject::graphs
     };
 
     template <typename W>
-    concept DijkstraCompatibleWorkspace = requires (W & workspace)
+    concept DijkstraCompatibleWorkspace = requires (W & workspace,
+                                                    VertexID v)
     {
+        // Ensure the type can be used for addition.
         typename W::numeric_type;
+
+        requires requires (typename W::numeric_type a,
+                           typename W::numeric_type b)
+        {
+            { a + b } -> std::same_as<typename W::numeric_type>;
+        };
+
+        // Initialization functions
         { workspace.next() };
         { workspace.initialize_single_source(size_t{0}) };
+
+        // Accessors
+        { workspace.get_dist(v) } -> std::convertible_to<
+                                        typename W::numeric_type>;
+        { workspace.get_dist_lazy(v) } -> std::convertible_to<
+                                            typename W::numeric_type>;
+
+        // Necessary members.
         { workspace.distance };
         { workspace.parent };
 
