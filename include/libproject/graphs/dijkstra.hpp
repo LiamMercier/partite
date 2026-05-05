@@ -285,6 +285,7 @@ namespace libproject::graphs
         // Theta(V) preallocation logic if pure SSSP
         void initialize_single_source(size_t vertex_count)
         {
+            next();
             distance.assign(vertex_count, INF);
             parent.assign(vertex_count, VertexID::empty);
         }
@@ -403,8 +404,6 @@ namespace libproject::graphs
     // Dijkstra function bodies.
     //
 
-    // TODO: automatic workspace epoch increments?
-
     // Generic dijkstra implementation.
     template <DijkstraInitMode Mode = DijkstraInitMode::Eager,
               IncidenceGraph Graph,
@@ -432,6 +431,10 @@ namespace libproject::graphs
         {
             // Initialize for single source shortest paths
             workspace.initialize_single_source(graph.vertex_count());
+        }
+        else
+        {
+            workspace.next();
         }
 
         auto dist = [&](VertexID v) -> Numeric &

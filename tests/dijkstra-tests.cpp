@@ -252,8 +252,6 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 
         // Do the same with the helper functions
         {
-            workspace.next();
-
             dijkstra_single_pair(graph, source, target, w, workspace);
 
             // Now that we have our distances, check they are correct.
