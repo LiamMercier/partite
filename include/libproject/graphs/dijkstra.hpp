@@ -49,6 +49,17 @@ namespace libproject::graphs
             return heap_vertices.size();
         }
 
+        void resize(size_t N)
+        {
+            vertex_to_index.resize(N);
+        }
+
+        void clear()
+        {
+            heap_distances.clear();
+            heap_vertices.clear();
+        }
+
         size_t parent(size_t i) const
         {
             return (i - 1) / 2;
@@ -234,6 +245,8 @@ namespace libproject::graphs
         const uint16_t & current_epoch{0};
     };
 
+    // TODO: is this undefined behavior? what is the alternative?
+
     // Optional struct for a default usable workspace.
     //
     // Numeric's max must be able to store the maximum
@@ -261,6 +274,7 @@ namespace libproject::graphs
         {
             distance.resize(N);
             parent.resize(N);
+            pq.resize(N);
         }
 
         void epoch_rollover()
@@ -280,6 +294,8 @@ namespace libproject::graphs
 
                 current_epoch = 1;
             }
+
+            pq.clear();
         }
 
         // Theta(V) preallocation logic if pure SSSP
