@@ -71,6 +71,8 @@ namespace libproject::graphs
              Workspace & workspace,
              V&& visitor)
     {
+        workspace.next();
+
         auto & seen = workspace.seen;
         auto & queue = workspace.queue;
         const auto visit_id = workspace.visit_id;
@@ -180,7 +182,6 @@ namespace libproject::graphs
     {
         BFSWorkspace workspace(graph.vertex_count());
         workspace.queue.reserve(graph.vertex_count());
-        workspace.next();
 
         bfs(graph, source, workspace, std::forward<V>(visitor));
     }
@@ -242,7 +243,6 @@ namespace libproject::graphs
         // Setup workspace for this epoch.
         BFSWorkspace workspace(V_count);
         workspace.queue.reserve(V_count);
-        workspace.next();
 
         return std::move(bfs_distances(graph, source, workspace));
     }
