@@ -88,31 +88,34 @@ namespace libproject::graphs
             vertex_to_index[heap_vertices[j].value] = j;
         }
 
-        // TODO <optimization>: this is tail recursive, but we
-        //                      should still probably convert to
-        //                      an iterative version.
         void heapify(size_t i)
         {
             size_t n = size();
+            size_t curr = i;
 
-            size_t l = left(i);
-            size_t r = right(i);
-
-            size_t smallest = i;
-
-            if (l < n && heap_distances[l] < heap_distances[smallest])
+            while (true)
             {
-                smallest = l;
-            }
-            if (r < n && heap_distances[r] < heap_distances[smallest])
-            {
-                smallest = r;
-            }
+                size_t l = left(curr);
+                size_t r = right(curr);
 
-            if (smallest != i)
-            {
-                swap_nodes(i, smallest);
-                heapify(smallest);
+                size_t smallest = curr;
+
+                if (l < n && heap_distances[l] < heap_distances[smallest])
+                {
+                    smallest = l;
+                }
+                if (r < n && heap_distances[r] < heap_distances[smallest])
+                {
+                    smallest = r;
+                }
+
+                if (smallest == curr)
+                {
+                    break;
+                }
+
+                swap_nodes(curr, smallest);
+                curr = smallest;
             }
         }
 
