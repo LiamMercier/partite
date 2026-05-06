@@ -4,7 +4,6 @@
 #include <libproject/graphs/graph-concepts.hpp>
 #include <libproject/graphs/search-visitor.hpp>
 
-// TODO: evaluate automatic workspace bumps for DFS/BFS
 namespace libproject::graphs
 {
     // Optional struct for reusing memory across DFS calls.
@@ -106,6 +105,8 @@ namespace libproject::graphs
              Visitor&& visitor)
     {
         auto & stack = workspace.stack;
+
+        workspace.next();
 
         visitor.source_vertex(source);
 
@@ -234,7 +235,6 @@ namespace libproject::graphs
         {
             DFSWorkspace workspace;
             workspace.stack.reserve(graph.vertex_count());
-            workspace.next();
 
             dfs(graph, source, workspace, std::forward<Visitor>(visitor));
         }
@@ -242,7 +242,6 @@ namespace libproject::graphs
         {
             DFSColorWorkspace workspace(graph.vertex_count());
             workspace.stack.reserve(graph.vertex_count());
-            workspace.next();
 
             dfs(graph, source, workspace, std::forward<Visitor>(visitor));
         }
@@ -347,7 +346,6 @@ namespace libproject::graphs
 
         DFSWorkspace workspace;
         workspace.stack.reserve(V_count);
-        workspace.next();
 
         return std::move(dfs_timestamps(graph, source, workspace));
     }
