@@ -246,8 +246,6 @@ namespace libproject::graphs
         const uint16_t & current_epoch{0};
     };
 
-    // TODO: is this undefined behavior? what is the alternative?
-
     // Optional struct for a default usable workspace.
     //
     // Numeric's max must be able to store the maximum
@@ -263,19 +261,30 @@ namespace libproject::graphs
             = std::numeric_limits<numeric_type>::max();
 
         DijkstraWorkspace(size_t vertex_count)
-        :vertex_epoch(vertex_count, 0),
+        :current_capacity(vertex_count),
+        vertex_epoch(vertex_count, 0),
         pq(vertex_count, current_epoch, vertex_epoch)
         {
-            distance.reserve(vertex_count);
-            parent.reserve(vertex_count);
+            distance = std::make_unique_for_overwrite<Numeric[]>(vertex_count);
+            parent = std::make_unique_for_overwrite<VertexID[]>(vertex_count);
             next();
         }
 
         void resize(size_t N)
         {
-            distance.resize(N);
-            parent.resize(N);
+            if (N <= current_capacity)
+            {
+                return;
+            }
+
+            distance = std::make_unique_for_overwrite<Numeric[]>(N);
+            parent = std::make_unique_for_overwrite<VertexID[]>(N);
+
+            vertex_epoch.assign(N, 0);
             pq.resize(N);
+
+            current_capacity = N;
+            current_epoch = 0;
         }
 
         void epoch_rollover()
@@ -292,7 +301,6 @@ namespace libproject::graphs
             if (current_epoch == 0)
             {
                 epoch_rollover();
-
                 current_epoch = 1;
             }
 
@@ -303,8 +311,10 @@ namespace libproject::graphs
         void initialize_single_source(size_t vertex_count)
         {
             next();
-            distance.assign(vertex_count, INF);
-            parent.assign(vertex_count, VertexID::empty);
+
+            // nice utility instead of fill(ptr, ptr +  count, val)
+            std::fill_n(distance.get(), vertex_count, INF);
+            std::fill_n(parent.get(), vertex_count, VertexID::empty);
         }
 
         Numeric & get_dist(VertexID v)
@@ -328,11 +338,15 @@ namespace libproject::graphs
             vertex_epoch[v.value] = current_epoch;
         }
 
+        size_t current_capacity;
         uint16_t current_epoch{0};
         std::vector<uint16_t> vertex_epoch;
         PQ pq;
-        std::vector<Numeric> distance;
-        std::vector<VertexID> parent;
+
+        // To avoid having to run an O(V) initialization
+        // on this memory during construction.
+        std::unique_ptr<Numeric[]> distance;
+        std::unique_ptr<VertexID[]> parent;
     };
 
     template <typename W>
