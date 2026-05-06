@@ -450,6 +450,13 @@ namespace libproject::graphs
         };
 
         distance[source.value] = 0;
+
+        // If we are using lazy initialization, mark the epoch now.
+        if constexpr (Mode == DijkstraInitMode::Lazy)
+        {
+            workspace.mark_epoch(source);
+        }
+
         pq.push(source, 0);
 
         visitor.source_vertex(source);
