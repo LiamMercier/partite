@@ -23,6 +23,7 @@ namespace libproject::graphs
         { pq.extract_min() } -> std::convertible_to<VertexID>;
         { pq.decrease_key(v, dist) };
         { pq.size() } -> std::convertible_to<size_t>;
+        { pq.clear() };
     };
 
     // A binary heap based priority queue with optimizations
