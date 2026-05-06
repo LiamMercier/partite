@@ -188,6 +188,118 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
     }
 }
 
+TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+
+        size_t length = 3;
+        auto graph = TestFixture::grid_graph(length);
+        VertexID source{0};
+
+        auto w = [&](EdgeID e) -> Numeric
+        {
+            unsigned int weight = graph.edge_data(e);
+            return weight;
+        };
+
+        // Test the generic function with the default NoOp visitor.
+        {
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            dijkstra(graph, source, w, workspace);
+
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                size_t dist = 0;
+
+                // The shortest path in our fixture is obtained
+                // by taking the rightmost path, then going down.
+                size_t row = v / length;
+                size_t col = v % length;
+                size_t curr = 0;
+
+                // Move from vertex 0 to vertex col
+                while (curr < col)
+                {
+                    curr += 1;
+                    dist += curr;
+                }
+
+                // Move from vertex col to vertex v
+                while (curr < v)
+                {
+                    curr += length;
+                    dist += curr;
+                }
+
+                // Ensure no issue with test traversal.
+                ASSERT_EQ(curr, v);
+
+                EXPECT_EQ(workspace.distance[v], dist)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << dist << ", workspace.distance["
+                          << v << "] = " << workspace.distance[v];
+            }
+        }
+
+        // Test the generic function with temporary workspace.
+        //
+        // We need to provide a visitor, since otherwise the results
+        // are impossible to verify.
+        {
+            std::vector<VertexID> p(graph.vertex_count());
+            std::vector<Numeric> d(graph.vertex_count());
+
+            TestLoggingVisitor visitor(p, d, w);
+
+            dijkstra(graph, source, w, visitor);
+
+            for (size_t v = 0; v < graph.vertex_count(); v++)
+            {
+                size_t dist = 0;
+
+                // The shortest path in our fixture is obtained
+                // by taking the rightmost path, then going down.
+                size_t row = v / length;
+                size_t col = v % length;
+                size_t curr = 0;
+
+                // Move from vertex 0 to vertex col
+                while (curr < col)
+                {
+                    curr += 1;
+                    dist += curr;
+                }
+
+                // Move from vertex col to vertex v
+                while (curr < v)
+                {
+                    curr += length;
+                    dist += curr;
+                }
+
+                // Ensure no issue with test traversal.
+                ASSERT_EQ(curr, v);
+
+                EXPECT_EQ(visitor.distance[v], dist)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << dist << ", visitor.distance["
+                          << v << "] = " << visitor.distance[v];
+            }
+        }
+    }
+}
+
 TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 {
     using EdgeData = typename TestFixture::EdgeData;
@@ -303,6 +415,163 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                         // Parent in a perfect binary tree (i.e same as heap).
                         i = ((i - 1) / 2);
                     }
+
+                    EXPECT_EQ(distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", distance["
+                              << v << "] = " << distance[v];
+                }
+            }
+        }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Grid)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        using id_type = VertexID::underlying_type;
+
+        size_t length = 3;
+        auto graph = TestFixture::grid_graph(length);
+        VertexID source{0};
+
+        // Select a point in the middle of the graph.
+        std::pair<id_type, id_type> point = {static_cast<id_type>(length) / 2,
+                                             static_cast<id_type>(length) / 2};
+        VertexID target{static_cast<id_type>(length) * point.second
+                        + point.first};
+
+        auto w = [&](EdgeID e) -> Numeric
+        {
+            unsigned int weight = graph.edge_data(e);
+            return weight;
+        };
+
+        DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+        // Test the generic function with the search visitor.
+        {
+            DijkstraSearchVisitor visitor(
+                [target](VertexID v){ return v == target; }
+            );
+
+            dijkstra(graph, source, w, workspace, visitor);
+
+            for (id_type row = 0; row < point.second; row++)
+            {
+                for (id_type col = 0; col < point.first; col++)
+                {
+                    id_type v = row * length + col;
+
+                    size_t dist = 0;
+                    size_t curr = 0;
+
+                    // Move from vertex 0 to vertex col
+                    while (curr < col)
+                    {
+                        curr += 1;
+                        dist += curr;
+                    }
+
+                    // Move from vertex col to vertex v
+                    while (curr < v)
+                    {
+                        curr += length;
+                        dist += curr;
+                    }
+
+                    // Ensure no issue with test traversal.
+                    ASSERT_EQ(curr, v);
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+            }
+
+            EXPECT_EQ(visitor.target_found, target);
+        }
+
+        // Do the same with the helper functions
+        {
+            dijkstra_single_pair(graph, source, target, w, workspace);
+
+            for (id_type row = 0; row < point.second; row++)
+            {
+                for (id_type col = 0; col < point.first; col++)
+                {
+                    id_type v = row * length + col;
+
+                    size_t dist = 0;
+                    size_t curr = 0;
+
+                    // Move from vertex 0 to vertex col
+                    while (curr < col)
+                    {
+                        curr += 1;
+                        dist += curr;
+                    }
+
+                    // Move from vertex col to vertex v
+                    while (curr < v)
+                    {
+                        curr += length;
+                        dist += curr;
+                    }
+
+                    // Ensure no issue with test traversal.
+                    ASSERT_EQ(curr, v);
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+            }
+        }
+
+        {
+            auto res = dijkstra_single_pair(graph, source, target, w);
+            auto & distance = res.first;
+            auto & parent = res.second;
+
+            for (id_type row = 0; row < point.second; row++)
+            {
+                for (id_type col = 0; col < point.first; col++)
+                {
+                    id_type v = row * length + col;
+
+                    size_t dist = 0;
+                    size_t curr = 0;
+
+                    // Move from vertex 0 to vertex col
+                    while (curr < col)
+                    {
+                        curr += 1;
+                        dist += curr;
+                    }
+
+                    // Move from vertex col to vertex v
+                    while (curr < v)
+                    {
+                        curr += length;
+                        dist += curr;
+                    }
+
+                    // Ensure no issue with test traversal.
+                    ASSERT_EQ(curr, v);
 
                     EXPECT_EQ(distance[v], dist)
                               << "Incorrect distance for vertex "
