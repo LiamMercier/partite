@@ -73,7 +73,6 @@ TEST(DijkstraPrimitives, DefaultPQTests)
     }
 }
 
-// TODO: parent checks.
 template <typename WeightFunction, typename Numeric>
 struct TestLoggingVisitor : NoOpDijkstraVisitor
 {
@@ -89,6 +88,8 @@ struct TestLoggingVisitor : NoOpDijkstraVisitor
     {
         distance[v.value] = distance[u.value]
                             + w(e);
+
+        parent[v.value] = u;
     }
 
     WeightFunction w;
@@ -142,14 +143,22 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
                         dist += i;
 
                         // Parent in a perfect binary tree (i.e same as heap).
-                        i = ((i - 1) / 2);
+                        i = (i - 1) / 2;
                     }
 
                     EXPECT_EQ(workspace.distance[v], dist)
-                            << "Incorrect distance for vertex "
-                            << v << ", expected dist = "
-                            << dist << ", workspace.distance["
-                            << v << "] = " << workspace.distance[v];
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+
+                    size_t parent = (v - 1) / 2;
+
+                    EXPECT_EQ(workspace.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", workspace.parent["
+                              << v << "] = " << workspace.parent[v].value;
                 }
             }
 
@@ -178,14 +187,22 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
                         dist += i;
 
                         // Parent in a perfect binary tree (i.e same as heap).
-                        i = ((i - 1) / 2);
+                        i = (i - 1) / 2;
                     }
 
                     EXPECT_EQ(visitor.distance[v], dist)
-                            << "Incorrect distance for vertex "
-                            << v << ", expected dist = "
-                            << dist << ", visitor.distance["
-                            << v << "] = " << visitor.distance[v];
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", visitor.distance["
+                              << v << "] = " << visitor.distance[v];
+
+                    size_t parent = (v - 1) / 2;
+
+                    EXPECT_EQ(visitor.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", visitor.parent["
+                              << v << "] = " << visitor.parent[v].value;
                 }
             }
         }
@@ -250,10 +267,29 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
                     ASSERT_EQ(curr, v);
 
                     EXPECT_EQ(workspace.distance[v], dist)
-                            << "Incorrect distance for vertex "
-                            << v << ", expected dist = "
-                            << dist << ", workspace.distance["
-                            << v << "] = " << workspace.distance[v];
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+
+                    size_t parent;
+
+                    // If already at the top of the grid, go left
+                    if (row == 0)
+                    {
+                        parent = v - 1;
+                    }
+                    // Otherwise, move up.
+                    else
+                    {
+                        parent = v - length;
+                    }
+
+                    EXPECT_EQ(workspace.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", workspace.parent["
+                              << v << "] = " << workspace.parent[v].value;
                 }
             }
 
@@ -301,6 +337,25 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
                             << v << ", expected dist = "
                             << dist << ", visitor.distance["
                             << v << "] = " << visitor.distance[v];
+
+                    size_t parent;
+
+                    // If already at the top of the grid, go left
+                    if (row == 0)
+                    {
+                        parent = v - 1;
+                    }
+                    // Otherwise, move up.
+                    else
+                    {
+                        parent = v - length;
+                    }
+
+                    EXPECT_EQ(visitor.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", visitor.parent["
+                              << v << "] = " << visitor.parent[v].value;
                 }
             }
         }
@@ -358,14 +413,22 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                             dist += i;
 
                             // Parent in a perfect binary tree (i.e same as heap).
-                            i = ((i - 1) / 2);
+                            i = (i - 1) / 2;
                         }
 
                         EXPECT_EQ(workspace.distance[v], dist)
-                                << "Incorrect distance for vertex "
-                                << v << ", expected dist = "
-                                << dist << ", workspace.distance["
-                                << v << "] = " << workspace.distance[v];
+                                  << "Incorrect distance for vertex "
+                                  << v << ", expected dist = "
+                                  << dist << ", workspace.distance["
+                                  << v << "] = " << workspace.distance[v];
+
+                        size_t parent = (v - 1) / 2;
+
+                        EXPECT_EQ(workspace.parent[v], parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected parent = "
+                                  << parent << ", workspace.parent["
+                                  << v << "] = " << workspace.parent[v].value;
                     }
                 }
 
@@ -391,14 +454,22 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                             dist += i;
 
                             // Parent in a perfect binary tree (i.e same as heap).
-                            i = ((i - 1) / 2);
+                            i = (i - 1) / 2;
                         }
 
                         EXPECT_EQ(workspace.distance[v], dist)
-                                << "Incorrect distance for vertex "
-                                << v << ", expected dist = "
-                                << dist << ", workspace.distance["
-                                << v << "] = " << workspace.distance[v];
+                                  << "Incorrect distance for vertex "
+                                  << v << ", expected dist = "
+                                  << dist << ", workspace.distance["
+                                  << v << "] = " << workspace.distance[v];
+
+                        size_t parent = (v - 1) / 2;
+
+                        EXPECT_EQ(workspace.parent[v], parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected parent = "
+                                  << parent << ", workspace.parent["
+                                  << v << "] = " << workspace.parent[v].value;
                     }
                 }
             }
@@ -427,10 +498,18 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
                         }
 
                         EXPECT_EQ(distance[v], dist)
-                                << "Incorrect distance for vertex "
-                                << v << ", expected dist = "
-                                << dist << ", distance["
-                                << v << "] = " << distance[v];
+                                  << "Incorrect distance for vertex "
+                                  << v << ", expected dist = "
+                                  << dist << ", distance["
+                                  << v << "] = " << distance[v];
+
+                        size_t v_parent = (v - 1) / 2;
+
+                        EXPECT_EQ(parent[v], v_parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected v_parent = "
+                                  << v_parent << ", parent["
+                                  << v << "] = " << parent[v].value;
                     }
                 }
             }
@@ -508,10 +587,29 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Grid)
                         ASSERT_EQ(curr, v);
 
                         EXPECT_EQ(workspace.distance[v], dist)
-                                << "Incorrect distance for vertex "
-                                << v << ", expected dist = "
-                                << dist << ", workspace.distance["
-                                << v << "] = " << workspace.distance[v];
+                                  << "Incorrect distance for vertex "
+                                  << v << ", expected dist = "
+                                  << dist << ", workspace.distance["
+                                  << v << "] = " << workspace.distance[v];
+
+                        size_t parent;
+
+                        // If already at the top of the grid, go left
+                        if (row == 0)
+                        {
+                            parent = v - 1;
+                        }
+                        // Otherwise, move up.
+                        else
+                        {
+                            parent = v - length;
+                        }
+
+                        EXPECT_EQ(workspace.parent[v], parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected parent = "
+                                  << parent << ", workspace.parent["
+                                  << v << "] = " << workspace.parent[v].value;
                     }
                 }
 
@@ -553,6 +651,25 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Grid)
                                 << v << ", expected dist = "
                                 << dist << ", workspace.distance["
                                 << v << "] = " << workspace.distance[v];
+
+                        size_t parent;
+
+                        // If already at the top of the grid, go left
+                        if (row == 0)
+                        {
+                            parent = v - 1;
+                        }
+                        // Otherwise, move up.
+                        else
+                        {
+                            parent = v - length;
+                        }
+
+                        EXPECT_EQ(workspace.parent[v], parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected parent = "
+                                  << parent << ", workspace.parent["
+                                  << v << "] = " << workspace.parent[v].value;
                     }
                 }
             }
@@ -589,10 +706,29 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Grid)
                         ASSERT_EQ(curr, v);
 
                         EXPECT_EQ(distance[v], dist)
-                                << "Incorrect distance for vertex "
-                                << v << ", expected dist = "
-                                << dist << ", distance["
-                                << v << "] = " << distance[v];
+                                  << "Incorrect distance for vertex "
+                                  << v << ", expected dist = "
+                                  << dist << ", distance["
+                                  << v << "] = " << distance[v];
+
+                        size_t v_parent;
+
+                        // If already at the top of the grid, go left
+                        if (row == 0)
+                        {
+                            v_parent = v - 1;
+                        }
+                        // Otherwise, move up.
+                        else
+                        {
+                            v_parent = v - length;
+                        }
+
+                        EXPECT_EQ(parent[v], v_parent)
+                                  << "Incorrect parent for vertex "
+                                  << v << ", expected v_parent = "
+                                  << v_parent << ", parent["
+                                  << v << "] = " << parent[v].value;
                     }
                 }
             }
