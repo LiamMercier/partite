@@ -84,6 +84,11 @@ struct TestLoggingVisitor : NoOpDijkstraVisitor
     distance(d)
     {}
 
+    void source_vertex(VertexID u)
+    {
+        distance[u.value] = 0;
+    }
+
     void edge_relaxed(VertexID u, VertexID v, EdgeID e)
     {
         distance[v.value] = distance[u.value]
@@ -110,6 +115,7 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
     else
     {
         using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
 
         size_t MAX_LENGTH = 10;
 
@@ -167,8 +173,8 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_PBT)
             // We need to provide a visitor, since otherwise the results
             // are impossible to verify.
             {
-                std::vector<VertexID> p(graph.vertex_count());
-                std::vector<Numeric> d(graph.vertex_count());
+                std::vector<VertexID> p(graph.vertex_count(), VertexID::empty);
+                std::vector<Numeric> d(graph.vertex_count(), INF);
 
                 TestLoggingVisitor visitor(p, d, w);
 
@@ -220,6 +226,7 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
     else
     {
         using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
         size_t MAX_LENGTH = 10;
 
         for (size_t length : std::ranges::iota_view{size_t{3}, MAX_LENGTH + 1})
@@ -298,8 +305,8 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
             // We need to provide a visitor, since otherwise the results
             // are impossible to verify.
             {
-                std::vector<VertexID> p(graph.vertex_count());
-                std::vector<Numeric> d(graph.vertex_count());
+                std::vector<VertexID> p(graph.vertex_count(), VertexID::empty);
+                std::vector<Numeric> d(graph.vertex_count(), INF);
 
                 TestLoggingVisitor visitor(p, d, w);
 
@@ -357,6 +364,173 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Grid)
                               << parent << ", visitor.parent["
                               << v << "] = " << visitor.parent[v].value;
                 }
+            }
+        }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, DijkstraStandard_Clusters)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        using id_type = VertexID::underlying_type;
+
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+
+        size_t MAX_N = 25;
+        size_t MAX_k = 5;
+
+        for (size_t k : std::ranges::iota_view{size_t{2}, MAX_k + 1})
+        {
+            for (size_t N : std::ranges::iota_view{size_t{k}, MAX_N + 1})
+            {
+                auto graph = TestFixture::cluster_graph(N, k);
+
+                auto w = [&](EdgeID e) -> Numeric
+                {
+                    unsigned int weight = graph.edge_data(e);
+                    return weight;
+                };
+
+                DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+                size_t cluster_size = N / k;
+                size_t cluster_extra = N % k;
+                id_type curr_vertex_id = 0;
+
+                for (size_t c = 0; c < k; c++)
+                {
+                    VertexID source{curr_vertex_id};
+
+                    curr_vertex_id += (cluster_size - 1);
+
+                    if (cluster_extra > 0)
+                    {
+                        curr_vertex_id++;
+                        cluster_extra--;
+                    }
+
+                    curr_vertex_id++;
+
+                    // Default NoOpVisitor setup.
+                    dijkstra(graph, source, w, workspace);
+
+                    // Custom logging visitor setup.
+                    std::vector<VertexID> p(graph.vertex_count(),
+                                            VertexID::empty);
+                    std::vector<Numeric> d(graph.vertex_count(), INF);
+                    TestLoggingVisitor visitor(p, d, w);
+                    dijkstra(graph, source, w, visitor);
+
+                    // This fixture is designed so (u, v) has weight u.
+                    for (id_type v = 0; v < graph.vertex_count(); v++)
+                    {
+                        // If source, equals zero.
+                        if (v == source.value)
+                        {
+                            EXPECT_EQ(workspace.distance[v], 0)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << 0 << ", workspace.distance["
+                                      << v << "] = " << workspace.distance[v];
+
+                            EXPECT_EQ(workspace.parent[v], VertexID::empty)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << VertexID::empty
+                                      << ", workspace.parent["
+                                      << v << "] = "
+                                      << workspace.parent[v].value;
+
+                            EXPECT_EQ(visitor.distance[v], 0)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << 0 << ", visitor.distance["
+                                      << v << "] = " << visitor.distance[v];
+
+                            EXPECT_EQ(visitor.parent[v], VertexID::empty)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << VertexID::empty
+                                      << ", visitor.parent["
+                                      << v << "] = "
+                                      << visitor.parent[v].value;
+                        }
+                        // If in cluster, it equals the source.
+                        else if (v >= source.value && v < curr_vertex_id)
+                        {
+                            EXPECT_EQ(workspace.distance[v], source.value)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << source.value << ", workspace.distance["
+                                      << v << "] = " << workspace.distance[v];
+
+                            EXPECT_EQ(workspace.parent[v], source)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << source.value << ", workspace.parent["
+                                      << v << "] = "
+                                      << workspace.parent[v].value;
+
+                            EXPECT_EQ(visitor.distance[v], source.value)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << source.value << ", visitor.distance["
+                                      << v << "] = " << visitor.distance[v];
+
+                            EXPECT_EQ(visitor.parent[v], source)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << source.value << ", visitor.parent["
+                                      << v << "] = "
+                                      << visitor.parent[v].value;
+                        }
+                        else
+                        {
+                            EXPECT_EQ(workspace.distance[v], INF)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << INF << ", workspace.distance["
+                                      << v << "] = " << workspace.distance[v];
+
+                            EXPECT_EQ(workspace.parent[v], VertexID::empty)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << VertexID::empty
+                                      << ", workspace.parent["
+                                      << v << "] = "
+                                      << workspace.parent[v].value;
+
+                            EXPECT_EQ(visitor.distance[v], INF)
+                                      << "Incorrect distance for vertex "
+                                      << v << ", expected dist = "
+                                      << INF << ", visitor.distance["
+                                      << v << "] = " << visitor.distance[v];
+
+                            EXPECT_EQ(visitor.parent[v], VertexID::empty)
+                                      << "Incorrect parent for vertex "
+                                      << v
+                                      << ", expected v_parent = "
+                                      << VertexID::empty
+                                      << ", visitor.parent["
+                                      << v << "] = "
+                                      << visitor.parent[v].value;
+                        }
+                    }
+                }
+
             }
         }
     }
@@ -730,6 +904,136 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Grid)
                                   << v_parent << ", parent["
                                   << v << "] = " << parent[v].value;
                     }
+                }
+            }
+        }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Clusters)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        using id_type = VertexID::underlying_type;
+
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+
+        size_t MAX_N = 25;
+        size_t MAX_k = 5;
+
+        for (size_t k : std::ranges::iota_view{size_t{2}, MAX_k + 1})
+        {
+            for (size_t N : std::ranges::iota_view{size_t{2*k}, MAX_N + 1})
+            {
+                auto graph = TestFixture::cluster_graph(N, k);
+
+                auto w = [&](EdgeID e) -> Numeric
+                {
+                    unsigned int weight = graph.edge_data(e);
+                    return weight;
+                };
+
+                DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+                size_t cluster_size = N / k;
+                size_t cluster_extra = N % k;
+                id_type curr_vertex_id = 0;
+
+                for (size_t c = 0; c < k; c++)
+                {
+                    VertexID source{curr_vertex_id};
+                    VertexID target{source.value + 1};
+
+                    curr_vertex_id += (cluster_size - 1);
+
+                    if (cluster_extra > 0)
+                    {
+                        curr_vertex_id++;
+                        cluster_extra--;
+                    }
+
+                    curr_vertex_id++;
+
+                    DijkstraSearchVisitor visitor(
+                        [target](VertexID v){ return v == target; }
+                    );
+                    dijkstra(graph, source, w, workspace, visitor);
+
+                    EXPECT_EQ(workspace.distance[source.value], 0)
+                              << "Incorrect distance for vertex "
+                              << source.value << ", expected dist = "
+                              << 0 << ", workspace.distance["
+                              << source.value << "] = "
+                              << workspace.distance[source.value];
+
+                    EXPECT_EQ(workspace.distance[target.value], source.value)
+                              << "Incorrect distance for vertex "
+                              << target.value << ", expected dist = "
+                              << source.value << ", workspace.distance["
+                              << target.value << "] = "
+                              << workspace.distance[target.value];
+
+                    EXPECT_EQ(workspace.parent[target.value], source)
+                              << "Incorrect parent for vertex "
+                              << target.value << ", expected v_parent = "
+                              << source.value << ", workspace.parent["
+                              << target.value << "] = "
+                              << workspace.parent[target.value].value;
+
+                    dijkstra_single_pair(graph, source, target, w, workspace);
+
+                    EXPECT_EQ(workspace.distance[source.value], 0)
+                              << "Incorrect distance for vertex "
+                              << source.value << ", expected dist = "
+                              << 0 << ", workspace.distance["
+                              << source.value << "] = "
+                              << workspace.distance[source.value];
+
+                    EXPECT_EQ(workspace.distance[target.value], source.value)
+                              << "Incorrect distance for vertex "
+                              << target.value << ", expected dist = "
+                              << source.value << ", workspace.distance["
+                              << target.value << "] = "
+                              << workspace.distance[target.value];
+
+                    EXPECT_EQ(workspace.parent[target.value], source)
+                              << "Incorrect parent for vertex "
+                              << target.value << ", expected v_parent = "
+                              << source.value << ", workspace.parent["
+                              << target.value << "] = "
+                              << workspace.parent[target.value].value;
+
+                    auto res = dijkstra_single_pair(graph, source, target, w);
+                    auto & distance = res.first;
+                    auto & parent = res.second;
+
+                    EXPECT_EQ(distance[source.value], 0)
+                              << "Incorrect distance for vertex "
+                              << source.value << ", expected dist = "
+                              << 0 << ", distance["
+                              << source.value << "] = "
+                              << distance[source.value];
+
+                    EXPECT_EQ(distance[target.value], source.value)
+                              << "Incorrect distance for vertex "
+                              << target.value << ", expected dist = "
+                              << source.value << ", distance["
+                              << target.value << "] = "
+                              << distance[target.value];
+
+                    EXPECT_EQ(parent[target.value], source)
+                              << "Incorrect parent for vertex "
+                              << target.value << ", expected v_parent = "
+                              << source.value << ", parent["
+                              << target.value << "] = "
+                              << parent[target.value].value;
                 }
             }
         }
