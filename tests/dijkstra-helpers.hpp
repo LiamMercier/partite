@@ -70,4 +70,33 @@ public:
         return iter->second;
     }
 
+    static const Graph & cluster_graph(size_t N, size_t k)
+    {
+        static std::unordered_map<std::pair<size_t, size_t>,
+                                    Graph, PairHash> graphs;
+
+        auto iter = graphs.find({N, k});
+
+        if (iter == graphs.end())
+        {
+            auto graph = make_cluster_graph<Graph>(N, k,
+                            [](id_type from, id_type to) -> EdgeData
+                            {
+                                if constexpr (HasData<EdgeData>)
+                                {
+                                    return from;
+                                }
+                                else
+                                {
+                                    return EdgeData{};
+                                }
+                            }
+                         );
+
+            iter = graphs.emplace(std::pair{N, k}, std::move(graph)).first;
+        }
+
+        return iter->second;
+    }
+
 };

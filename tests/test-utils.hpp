@@ -149,8 +149,10 @@ struct PairHash
 {
     std::size_t operator()(const std::pair<size_t, size_t> & pair) const
     {
-        return std::hash<size_t>()(pair.first)
-               ^ std::hash<size_t>()(pair.second);
+        // boost hash combine constants to prevent collisions in new use case.
+        auto h1 = std::hash<size_t>()(pair.first);
+        auto h2 = std::hash<size_t>()(pair.second);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
     }
 };
 
@@ -334,4 +336,71 @@ Graph make_grid_graph(size_t length, EdgeDataFunction make_data)
     }
 
     return Graph{v_count, edges};
+}
+
+// Create a cluster graph (k disjoint clusters of N vertices).
+template <typename Graph, typename EdgeDataFunction>
+Graph make_cluster_graph(size_t N,
+                         size_t k,
+                         EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    // We need at least 1 vertex for each cluster.
+    if (N < k)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // Each cluster except the last gets N / k vertices
+    size_t cluster_size = N / k;
+
+    // We further have N % k vertices to distribute, starting
+    // from the first cluster.
+    size_t cluster_extra = N % k;
+
+    // Now, distribute.
+    id_type curr_vertex_id = 0;
+
+    for (size_t i = 0; i < k; i++)
+    {
+        id_type start = curr_vertex_id;
+
+        curr_vertex_id += (cluster_size - 1);
+
+        if (cluster_extra > 0)
+        {
+            curr_vertex_id++;
+            cluster_extra--;
+        }
+
+        id_type end = curr_vertex_id;
+
+        // Setup for next iteration.
+        curr_vertex_id++;
+
+        // Create an edge for each vertex between these nodes.
+        for (id_type from = start; from <= end; from++)
+        {
+            for (id_type to = start; to <= end; to++)
+            {
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{from},
+                                     VertexID{to},
+                                     make_data(from, to)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{from}, VertexID{to}});
+                }
+            }
+        }
+    }
+
+    return Graph{N, edges};
 }
