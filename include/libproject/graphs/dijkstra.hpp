@@ -119,15 +119,35 @@ namespace libproject::graphs
             }
         }
 
-        // TODO <optimization>: move into hole vs swap.
         void sift_up(size_t i)
         {
+            VertexID init_v = heap_vertices[i];
+            Numeric init_num = heap_distances[i];
+
             while ((i > 0)
-                   && (heap_distances[i] < heap_distances[parent(i)]))
+                   && (init_num < heap_distances[parent(i)]))
             {
-                swap_nodes(i, parent(i));
-                i = parent(i);
+                // swap_nodes(i, parent(i));
+                size_t p = parent(i);
+
+                VertexID p_vert = heap_vertices[p];
+                Numeric p_dist = heap_distances[p];
+
+                // Write the parent into the hole
+                heap_distances[i] = p_dist;
+                heap_vertices[i] = p_vert;
+
+                // The parent vertex now lives at the lower
+                // index in the heap.
+                vertex_to_index[p_vert.value] = i;
+
+                i = p;
             }
+
+            // Finally, place this item into its slot.
+            heap_distances[i] = init_num;
+            heap_vertices[i] = init_v;
+            vertex_to_index[init_v.value] = i;
         }
 
         //
@@ -623,8 +643,6 @@ namespace libproject::graphs
 
         dijkstra(graph, source, w, workspace, visitor);
     }
-
-    // TODO <feature>: bidirectional_dijkstra
 
     //
     // Visitor setups that can be reused.

@@ -14,4 +14,5 @@ This is mostly a personal consideration list for me to track different features 
 - Representation class template for users who want to make their own
 - Evaluate multigraph viability
 - Evaluate changing EdgeID and VertexID types outside of compilation (i.e template)
+- Bidirectional search, dijkstra, etc.
 - Consider graph algorithms with GPU dispatch (long term idea to look into)
