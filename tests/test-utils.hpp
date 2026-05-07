@@ -404,3 +404,111 @@ Graph make_cluster_graph(size_t N,
 
     return Graph{N, edges};
 }
+
+// Create a graph with three paths between source and target, where
+//
+// p1: source -> target, p1 has many low cost hops
+// p2: source -> target, p2 has a few high cost hops
+// p3: source -> target, p3 has a very high cost edge
+//
+// cost(p1) < cost(p2) < cost(p3)
+//
+// Any implementation that makes the greedy choice to pick the shortest
+// number of edges, will fail on this test.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_greedy_trap(size_t p1_hops,
+                       EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    // There should be at least three hops in the
+    // long but cheap path.
+    if (p1_hops < 3)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // There should be at least two hops in p2.
+    size_t p2_hops = (p1_hops / 10) + 2;
+
+    size_t p1_weight = 1;
+    size_t p2_weight = ((p1_hops * p1_weight) / p2_hops) * 2;
+    size_t p3_weight = (p2_hops * p2_weight * 3) / 2;
+
+    id_type source = 0;
+    id_type curr_vertex_id = 0;
+
+    for (size_t i = 0; i < p1_hops; i++)
+    {
+        id_type from = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type to = curr_vertex_id;
+
+        if constexpr (HasData<EdgeData>)
+        {
+            edges.push_back({VertexID{from},
+                             VertexID{to},
+                             make_data(p1_weight)});
+        }
+        else
+        {
+            edges.push_back({VertexID{from}, VertexID{to}});
+        }
+    }
+
+    id_type target = curr_vertex_id;
+
+    // For every hop except the last to the target
+    for (size_t i = 0; i < (p2_hops - 1); i++)
+    {
+        id_type from = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type to = curr_vertex_id;
+
+        if constexpr (HasData<EdgeData>)
+        {
+            edges.push_back({VertexID{from},
+                             VertexID{to},
+                             make_data(p2_weight)});
+        }
+        else
+        {
+            edges.push_back({VertexID{from}, VertexID{to}});
+        }
+    }
+
+    // Manually connect the last vertex to the target
+    if constexpr (HasData<EdgeData>)
+    {
+        edges.push_back({VertexID{curr_vertex_id},
+                         VertexID{target},
+                         make_data(p2_weight)});
+    }
+    else
+    {
+        edges.push_back({VertexID{curr_vertex_id}, VertexID{target}});
+    }
+
+    // Now, create p3.
+    if constexpr (HasData<EdgeData>)
+    {
+        edges.push_back({VertexID{source},
+                         VertexID{target},
+                         make_data(p3_weight)});
+    }
+    else
+    {
+        edges.push_back({VertexID{source}, VertexID{target}});
+    }
+
+
+    return Graph{curr_vertex_id + 1, edges};
+}
+
+// TODO: perhaps a graph that has a zero weight cycle

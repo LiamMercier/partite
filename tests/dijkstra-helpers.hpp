@@ -99,4 +99,32 @@ public:
         return iter->second;
     }
 
+    static const Graph & greedy_trap(size_t p1_hops)
+    {
+        static std::unordered_map<size_t, Graph> graphs;
+
+        auto iter = graphs.find(p1_hops);
+
+        if (iter == graphs.end())
+        {
+            auto graph = make_greedy_trap<Graph>(p1_hops,
+                            [](size_t weight) -> EdgeData
+                            {
+                                if constexpr (HasData<EdgeData>)
+                                {
+                                    return weight;
+                                }
+                                else
+                                {
+                                    return EdgeData{};
+                                }
+                            }
+                         );
+
+            iter = graphs.emplace(p1_hops, std::move(graph)).first;
+        }
+
+        return iter->second;
+    }
+
 };
