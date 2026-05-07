@@ -536,6 +536,76 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_Clusters)
     }
 }
 
+TYPED_TEST(DijkstraFixture, DijkstraStandard_GreedyTrap)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 100;
+
+        for (size_t p1_hops : std::ranges::iota_view{size_t{4}, MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::greedy_trap(p1_hops);
+            VertexID source{0};
+            VertexID target{static_cast<VertexID::underlying_type>(p1_hops)};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                unsigned int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            dijkstra(graph, source, w, workspace);
+
+            // Check the target has the correct path length, which
+            // is the long path each with weight 1.
+            EXPECT_EQ(workspace.distance[target.value], p1_hops)
+                      << "Incorrect distance for vertex "
+                      << target.value << ", expected dist = "
+                      << p1_hops << ", workspace.distance["
+                      << target.value << "] = "
+                      << workspace.distance[target.value];
+
+            EXPECT_EQ(workspace.parent[target.value], target.value - 1)
+                      << "Incorrect parent for vertex "
+                      << target.value << ", expected parent = "
+                      << target.value - 1 << ", workspace.parent["
+                      << target.value << "] = "
+                      << workspace.parent[target.value].value;
+
+            std::vector<VertexID> p(graph.vertex_count(), VertexID::empty);
+            std::vector<Numeric> d(graph.vertex_count(), INF);
+
+            TestLoggingVisitor visitor(p, d, w);
+
+            dijkstra(graph, source, w, visitor);
+
+            EXPECT_EQ(visitor.distance[target.value], p1_hops)
+                      << "Incorrect distance for vertex "
+                      << target.value << ", expected dist = "
+                      << p1_hops << ", visitor.distance["
+                      << target.value << "] = "
+                      << visitor.distance[target.value];
+
+            EXPECT_EQ(visitor.parent[target.value], target.value - 1)
+                      << "Incorrect parent for vertex "
+                      << target.value << ", expected parent = "
+                      << target.value - 1 << ", visitor.parent["
+                      << target.value << "] = "
+                      << visitor.parent[target.value].value;
+        }
+    }
+}
+
 TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 {
     using EdgeData = typename TestFixture::EdgeData;
@@ -1036,6 +1106,93 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_Clusters)
                               << parent[target.value].value;
                 }
             }
+        }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, DijkstraSinglePair_GreedyTrap)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 100;
+
+        for (size_t p1_hops : std::ranges::iota_view{size_t{4}, MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::greedy_trap(p1_hops);
+            VertexID source{0};
+            VertexID target{static_cast<VertexID::underlying_type>(p1_hops)};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                unsigned int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            // Visitor test.
+            DijkstraSearchVisitor visitor(
+                    [target](VertexID v){ return v == target; }
+                );
+            dijkstra(graph, source, w, workspace, visitor);
+
+            EXPECT_EQ(workspace.distance[target.value], p1_hops)
+                      << "Incorrect distance for vertex "
+                      << target.value << ", expected dist = "
+                      << p1_hops << ", workspace.distance["
+                      << target.value << "] = "
+                      << workspace.distance[target.value];
+
+            EXPECT_EQ(workspace.parent[target.value], target.value - 1)
+                      << "Incorrect parent for vertex "
+                      << target.value << ", expected parent = "
+                      << target.value - 1 << ", workspace.parent["
+                      << target.value << "] = "
+                      << workspace.parent[target.value].value;
+
+            // Helper test.
+            dijkstra_single_pair(graph, source, target, w, workspace);
+
+            EXPECT_EQ(workspace.distance[target.value], p1_hops)
+                      << "Incorrect distance for vertex "
+                      << target.value << ", expected dist = "
+                      << p1_hops << ", workspace.distance["
+                      << target.value << "] = "
+                      << workspace.distance[target.value];
+
+            EXPECT_EQ(workspace.parent[target.value], target.value - 1)
+                      << "Incorrect parent for vertex "
+                      << target.value << ", expected parent = "
+                      << target.value - 1 << ", workspace.parent["
+                      << target.value << "] = "
+                      << workspace.parent[target.value].value;
+
+            // Automatic workspace helper test.
+            auto res = dijkstra_single_pair(graph, source, target, w);
+            auto & distance = res.first;
+            auto & parent = res.second;
+
+            EXPECT_EQ(distance[target.value], p1_hops)
+                      << "Incorrect distance for vertex "
+                      << target.value << ", expected dist = "
+                      << p1_hops << ", distance["
+                      << target.value << "] = "
+                      << distance[target.value];
+
+            EXPECT_EQ(parent[target.value], target.value - 1)
+                      << "Incorrect parent for vertex "
+                      << target.value << ", expected parent = "
+                      << target.value - 1 << ", parent["
+                      << target.value << "] = "
+                      << parent[target.value].value;
         }
     }
 }
