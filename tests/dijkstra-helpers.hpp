@@ -127,4 +127,32 @@ public:
         return iter->second;
     }
 
+    static const Graph & zero_cycle_graph(size_t path_hops)
+    {
+        static std::unordered_map<size_t, Graph> graphs;
+
+        auto iter = graphs.find(path_hops);
+
+        if (iter == graphs.end())
+        {
+            auto graph = make_zero_cycle_graph<Graph>(path_hops,
+                            [](size_t weight) -> EdgeData
+                            {
+                                if constexpr (HasData<EdgeData>)
+                                {
+                                    return weight;
+                                }
+                                else
+                                {
+                                    return EdgeData{};
+                                }
+                            }
+                         );
+
+            iter = graphs.emplace(path_hops, std::move(graph)).first;
+        }
+
+        return iter->second;
+    }
+
 };
