@@ -606,6 +606,152 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_GreedyTrap)
     }
 }
 
+TYPED_TEST(DijkstraFixture, DijkstraStandard_ZeroCycleGraph)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 100;
+
+        for (size_t path_hops : std::ranges::iota_view{size_t{1},
+                                                       MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::zero_cycle_graph(path_hops);
+            VertexID source{0};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                unsigned int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            dijkstra(graph, source, w, workspace);
+
+            size_t curr_vertex_id = path_hops;
+
+            for (size_t v = 0; v <= path_hops; v++)
+            {
+                curr_vertex_id++;
+                size_t cycle_first = curr_vertex_id;
+
+                curr_vertex_id++;
+                size_t cycle_second = curr_vertex_id;
+
+                EXPECT_EQ(workspace.distance[v], v)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << v << ", workspace.distance["
+                          << v << "] = " << workspace.distance[v];
+
+                EXPECT_EQ(workspace.distance[cycle_first], v)
+                          << "Incorrect distance for vertex "
+                          << cycle_first << ", expected dist = "
+                          << v << ", workspace.distance["
+                          << cycle_first << "] = "
+                          << workspace.distance[cycle_first];
+
+                EXPECT_EQ(workspace.distance[cycle_second], v)
+                          << "Incorrect distance for vertex "
+                          << cycle_second << ", expected dist = "
+                          << v << ", workspace.distance["
+                          << cycle_second << "] = "
+                          << workspace.distance[cycle_second];
+
+                if (v != 0)
+                {
+                    EXPECT_EQ(workspace.parent[v], v - 1)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << v - 1
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+                else
+                {
+                    EXPECT_EQ(workspace.parent[v], VertexID::empty)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << VertexID::empty
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+
+            }
+
+            std::vector<VertexID> p(graph.vertex_count(), VertexID::empty);
+            std::vector<Numeric> d(graph.vertex_count(), INF);
+
+            TestLoggingVisitor visitor(p, d, w);
+
+            dijkstra(graph, source, w, visitor);
+
+            curr_vertex_id = path_hops;
+
+            for (size_t v = 0; v <= path_hops; v++)
+            {
+                curr_vertex_id++;
+                size_t cycle_first = curr_vertex_id;
+
+                curr_vertex_id++;
+                size_t cycle_second = curr_vertex_id;
+
+                EXPECT_EQ(visitor.distance[v], v)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << v << ", visitor.distance["
+                          << v << "] = " << visitor.distance[v];
+
+                EXPECT_EQ(visitor.distance[cycle_first], v)
+                          << "Incorrect distance for vertex "
+                          << cycle_first << ", expected dist = "
+                          << v << ", visitor.distance["
+                          << cycle_first << "] = "
+                          << visitor.distance[cycle_first];
+
+                EXPECT_EQ(visitor.distance[cycle_second], v)
+                          << "Incorrect distance for vertex "
+                          << cycle_second << ", expected dist = "
+                          << v << ", visitor.distance["
+                          << cycle_second << "] = "
+                          << visitor.distance[cycle_second];
+
+                if (v != 0)
+                {
+                    EXPECT_EQ(visitor.parent[v], v - 1)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << v - 1
+                              << ", visitor.parent["
+                              << v << "] = "
+                              << visitor.parent[v].value;
+                }
+                else
+                {
+                    EXPECT_EQ(visitor.parent[v], VertexID::empty)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << VertexID::empty
+                              << ", visitor.parent["
+                              << v << "] = "
+                              << visitor.parent[v].value;
+                }
+
+            }
+        }
+    }
+}
+
 TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 {
     using EdgeData = typename TestFixture::EdgeData;
@@ -1193,6 +1339,166 @@ TYPED_TEST(DijkstraFixture, DijkstraSinglePair_GreedyTrap)
                       << target.value - 1 << ", parent["
                       << target.value << "] = "
                       << parent[target.value].value;
+        }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, DijkstraSinglePair_ZeroCycleGraph)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 100;
+
+        for (size_t path_hops : std::ranges::iota_view{size_t{1},
+                                                       MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::zero_cycle_graph(path_hops);
+            VertexID source{0};
+            VertexID target{static_cast<VertexID::underlying_type>(path_hops)};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                unsigned int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            // Visitor test.
+            DijkstraSearchVisitor visitor(
+                    [target](VertexID v){ return v == target; }
+                );
+            dijkstra(graph, source, w, workspace, visitor);
+
+            size_t curr_vertex_id = path_hops;
+
+            for (size_t v = 0; v <= path_hops; v++)
+            {
+                curr_vertex_id++;
+                size_t cycle_first = curr_vertex_id;
+
+                curr_vertex_id++;
+                size_t cycle_second = curr_vertex_id;
+
+                EXPECT_EQ(workspace.distance[v], v)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << v << ", workspace.distance["
+                          << v << "] = " << workspace.distance[v];
+
+                if (v != 0)
+                {
+                    EXPECT_EQ(workspace.parent[v], v - 1)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << v - 1
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+                else
+                {
+                    EXPECT_EQ(workspace.parent[v], VertexID::empty)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << VertexID::empty
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+
+            }
+
+            dijkstra_single_pair(graph, source, target, w, workspace);
+
+            curr_vertex_id = path_hops;
+
+            for (size_t v = 0; v <= path_hops; v++)
+            {
+                curr_vertex_id++;
+                size_t cycle_first = curr_vertex_id;
+
+                curr_vertex_id++;
+                size_t cycle_second = curr_vertex_id;
+
+                EXPECT_EQ(workspace.distance[v], v)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << v << ", workspace.distance["
+                          << v << "] = " << workspace.distance[v];
+
+                if (v != 0)
+                {
+                    EXPECT_EQ(workspace.parent[v], v - 1)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << v - 1
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+                else
+                {
+                    EXPECT_EQ(workspace.parent[v], VertexID::empty)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << VertexID::empty
+                              << ", workspace.parent["
+                              << v << "] = "
+                              << workspace.parent[v].value;
+                }
+            }
+
+            auto res = dijkstra_single_pair(graph, source, target, w);
+            auto & distance = res.first;
+            auto & parent = res.second;
+
+            curr_vertex_id = path_hops;
+
+            for (size_t v = 0; v <= path_hops; v++)
+            {
+                curr_vertex_id++;
+                size_t cycle_first = curr_vertex_id;
+
+                curr_vertex_id++;
+                size_t cycle_second = curr_vertex_id;
+
+                EXPECT_EQ(distance[v], v)
+                          << "Incorrect distance for vertex "
+                          << v << ", expected dist = "
+                          << v << ", distance["
+                          << v << "] = " << distance[v];
+
+                if (v != 0)
+                {
+                    EXPECT_EQ(parent[v], v - 1)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << v - 1
+                              << ", parent["
+                              << v << "] = "
+                              << parent[v].value;
+                }
+                else
+                {
+                    EXPECT_EQ(parent[v], VertexID::empty)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected v_parent = "
+                              << VertexID::empty
+                              << ", parent["
+                              << v << "] = "
+                              << parent[v].value;
+                }
+            }
+
         }
     }
 }
