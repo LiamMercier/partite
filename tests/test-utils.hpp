@@ -568,6 +568,4 @@ Graph make_zero_cycle_graph(size_t path_hops,
     return Graph{curr_vertex_id + 1, edges};
 }
 
-// TODO: empty or singular graph tests?
-
 // TODO: negative weight tests?

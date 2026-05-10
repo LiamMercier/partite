@@ -462,6 +462,11 @@ namespace libproject::graphs
     // Dijkstra function bodies.
     //
 
+    // TODO <feature>: update init policy to be an execution policy
+    //                 to allow for safe negative edge checks in release
+    //                 without penalty for users who do not violate
+    //                 the dijkstra invariant.
+
     // Generic dijkstra implementation.
     template <DijkstraInitMode Mode = DijkstraInitMode::Eager,
               IncidenceGraph Graph,
@@ -477,6 +482,13 @@ namespace libproject::graphs
                   <WeightFunction, typename Workspace::numeric_type>)
     {
         using Numeric = typename Workspace::numeric_type;
+
+        libproject_assert(source < graph.vertex_count(),
+                          "dijkstra(graph, source, w, workspace, visitor): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
 
         auto & distance = workspace.distance;
         auto & parent = workspace.parent;
@@ -567,6 +579,16 @@ namespace libproject::graphs
                     visitor.examine_edge(min, to, e);
                 }
 
+                libproject_assert(w(e) >= 0,
+                                  "dijkstra(graph, source, w, workspace, "
+                                   "visitor): detected negative edge weight; "
+                                   "EdgeID = "
+                                   + std::to_string(e.value)
+                                   + ", w("
+                                   + std::to_string(e.value)
+                                   + ") = "
+                                   + std::to_string(w(e)));
+
                 // If min was popped, its distance is not infinite
                 // and its epoch was set to the current epoch, so
                 // we should always be able to use get_dist instead
@@ -643,6 +665,13 @@ namespace libproject::graphs
                                std::invoke_result_t<WeightFunction, EdgeID>
                            >;
 
+        libproject_assert(source < graph.vertex_count(),
+                          "dijkstra(graph, source, w, visitor): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
 
         dijkstra(graph, source, w, workspace, visitor);
@@ -698,6 +727,20 @@ namespace libproject::graphs
         requires (DijkstraWeightFunction
                   <WeightFunction, typename Workspace::numeric_type>)
     {
+        libproject_assert(source < graph.vertex_count(),
+                          "dijkstra(graph, source, target, w, workspace): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
+        libproject_assert(target < graph.vertex_count(),
+                          "dijkstra(graph, source, target, w, workspace): "
+                          "target vertex is invalid; target = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
         DijkstraSearchVisitor visitor(
             [target](VertexID v){ return v == target; }
         );
@@ -721,6 +764,20 @@ namespace libproject::graphs
         using WeightType = std::remove_cvref_t<
                                std::invoke_result_t<WeightFunction, EdgeID>
                            >;
+
+        libproject_assert(source < graph.vertex_count(),
+                          "dijkstra(graph, source, target, w): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
+        libproject_assert(target < graph.vertex_count(),
+                          "dijkstra(graph, source, target, w): "
+                          "target vertex is invalid; target = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
 
         DijkstraWorkspace<WeightType> workspace(graph.vertex_count());
 
