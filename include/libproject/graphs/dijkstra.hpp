@@ -5,10 +5,6 @@
 #include <libproject/graphs/graph-concepts.hpp>
 #include <libproject/graphs/control-actions.hpp>
 
-// TODO <feature>: decide if we should handle negative weight
-//                 graphs with some sort of exception or assume
-//                 users will not permit them.
-
 namespace libproject::graphs
 {
     template <typename PQ, typename Numeric>
