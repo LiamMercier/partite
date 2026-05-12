@@ -454,17 +454,35 @@ namespace libproject::graphs
         Eager
     };
 
+    struct DijkstraExecutionConfig
+    {
+        constexpr DijkstraExecutionConfig(DijkstraInitMode m,
+                                bool rta)
+        :mode(m),
+        runtime_asserts(rta)
+        {}
+
+        constexpr DijkstraExecutionConfig(DijkstraInitMode m)
+        :mode(m),
+        runtime_asserts(false)
+        {}
+
+        constexpr DijkstraExecutionConfig(bool rta)
+        :mode(DijkstraInitMode::Eager),
+        runtime_asserts(rta)
+        {}
+
+        DijkstraInitMode mode;
+        bool runtime_asserts;
+    };
+
     //
     // Dijkstra function bodies.
     //
 
-    // TODO <feature>: update init policy to be an execution policy
-    //                 to allow for safe negative edge checks in release
-    //                 without penalty for users who do not violate
-    //                 the dijkstra invariant.
-
     // Generic dijkstra implementation.
-    template <DijkstraInitMode Mode = DijkstraInitMode::Eager,
+    template <DijkstraExecutionConfig Config
+                  = DijkstraExecutionConfig{DijkstraInitMode::Eager, false},
               IncidenceGraph Graph,
               typename WeightFunction,
               DijkstraCompatibleWorkspace Workspace,
@@ -479,12 +497,22 @@ namespace libproject::graphs
     {
         using Numeric = typename Workspace::numeric_type;
 
+        if constexpr (Config.runtime_asserts)
+        {
+            if (source >= graph.vertex_count())
+            {
+                throw std::out_of_range("source vertex out of range");
+            }
+        }
+
         libproject_assert(source < graph.vertex_count(),
                           "dijkstra(graph, source, w, workspace, visitor): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
                           + ", graph.vertex_count() = "
                           + std::to_string(graph.vertex_count()));
+
+        auto & Mode = Config.mode;
 
         auto & distance = workspace.distance;
         auto & parent = workspace.parent;
@@ -575,15 +603,25 @@ namespace libproject::graphs
                     visitor.examine_edge(min, to, e);
                 }
 
+                if constexpr (Config.runtime_asserts)
+                {
+                    if (w(e) < 0)
+                    {
+                        throw std::invalid_argument("edge "
+                                                    + std::to_string(e.value)
+                                                    + " has negative weight");
+                    }
+                }
+
                 libproject_assert(w(e) >= 0,
-                                  "dijkstra(graph, source, w, workspace, "
-                                   "visitor): detected negative edge weight; "
-                                   "EdgeID = "
-                                   + std::to_string(e.value)
-                                   + ", w("
-                                   + std::to_string(e.value)
-                                   + ") = "
-                                   + std::to_string(w(e)));
+                                  "dijkstra(graph, source, w, "
+                                  "workspace, visitor): detected "
+                                  "negative edge weight; EdgeID = "
+                                  + std::to_string(e.value)
+                                  + ", w("
+                                  + std::to_string(e.value)
+                                  + ") = "
+                                  + std::to_string(w(e)));
 
                 // If min was popped, its distance is not infinite
                 // and its epoch was set to the current epoch, so
@@ -741,7 +779,8 @@ namespace libproject::graphs
             [target](VertexID v){ return v == target; }
         );
 
-        dijkstra<DijkstraInitMode::Lazy>(graph, source, w, workspace, visitor);
+        dijkstra<DijkstraExecutionConfig{DijkstraInitMode::Lazy, false}>
+            (graph, source, w, workspace, visitor);
     }
 
     // Temporary workspace overload.
