@@ -752,6 +752,56 @@ TYPED_TEST(DijkstraFixture, DijkstraStandard_ZeroCycleGraph)
     }
 }
 
+constexpr bool is_debug_build =
+#ifndef NDEBUG
+    true;
+#else
+    false;
+#endif
+
+TYPED_TEST(DijkstraFixture, Dijkstra_NegativeCycleGraph)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData> || is_debug_build)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = int;
+        auto INF = DijkstraWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 100;
+
+        for (size_t path_hops : std::ranges::iota_view{size_t{1},
+                                                       MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::negative_cycle_graph(path_hops);
+            VertexID source{0};
+            VertexID target{static_cast<VertexID::underlying_type>(path_hops)};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+            try
+            {
+                dijkstra<DijkstraExecutionConfig{true}>
+                    (graph, source, w, workspace);
+            }
+            // Ensure we catch properly.
+            catch (...)
+            {
+                EXPECT_TRUE(true);
+            }
+        }
+    }
+}
+
 TYPED_TEST(DijkstraFixture, DijkstraSinglePair_PBT)
 {
     using EdgeData = typename TestFixture::EdgeData;
