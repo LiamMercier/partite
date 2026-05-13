@@ -567,3 +567,58 @@ Graph make_zero_cycle_graph(size_t path_hops,
 
     return Graph{curr_vertex_id + 1, edges};
 }
+
+// Create a graph with a negative weight cycle.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_negative_cycle_graph(size_t path_hops,
+                                EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (path_hops < 1)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    for (size_t i = 0; i < path_hops; i++)
+    {
+        id_type source = i;
+        id_type target = i + 1;
+
+        edges.push_back({VertexID{source},
+                         VertexID{target},
+                         make_data(1)});
+    }
+
+    id_type curr_vertex_id = path_hops;
+
+    // Now, create negative cycles for each node.
+    for (size_t i = 0; i <= path_hops; i++)
+    {
+        id_type root = i;
+
+        curr_vertex_id++;
+        id_type first = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type second = curr_vertex_id;
+
+        edges.push_back({VertexID{root},
+                         VertexID{first},
+                         make_data(-1)});
+
+        edges.push_back({VertexID{first},
+                         VertexID{second},
+                         make_data(-1)});
+
+        edges.push_back({VertexID{second},
+                         VertexID{root},
+                         make_data(-1)});
+    }
+
+    return Graph{curr_vertex_id + 1, edges};
+}
