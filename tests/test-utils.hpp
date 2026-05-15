@@ -622,3 +622,113 @@ Graph make_negative_cycle_graph(size_t path_hops,
 
     return Graph{curr_vertex_id + 1, edges};
 }
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_negative_DAG(size_t depth,
+                        EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (depth == 0)
+    {
+        return Graph{0, edges};
+    }
+
+    edges.push_back({VertexID{0},
+                     VertexID{2},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{0},
+                     VertexID{3},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{4},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{5},
+                     make_data(-1)});
+
+    if (depth == 1)
+    {
+        return Graph{6, edges};
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    id_type curr_vertex_id = 5;
+
+    // For layer L_0,..., L_d
+    //
+    // L_0 = [0, 1]
+    // L_i = [4(i-1) + 2, 4(i) + 1]
+    // L_d = [4(d-1) + 2, 4(d) - 1]
+    //
+    // In each layer, alternate connecting:
+    // - k-th node in layer i-1 to k-th in layer i
+    // - k-th node in layer i-1 to k+1-th in layer i
+    for (size_t layer = 2; layer < depth; layer++)
+    {
+        id_type layer_min = curr_vertex_id + 1;
+        id_type layer_max = layer_min + 3;
+
+        // connect k to k
+        if (layer % 2 == 0)
+        {
+            for (id_type lower = layer_min; lower < layer_max; lower++)
+            {
+                id_type upper = lower - 4;
+
+                edges.push_back({VertexID{lower},
+                                 VertexID{upper},
+                                 make_data(-1)});
+            }
+        }
+        // connect k to k + 1 with wrap around
+        else
+        {
+            for (id_type lower = layer_min; lower < layer_max; lower++)
+            {
+                id_type upper;
+
+                if (lower == layer_min)
+                {
+                    upper = lower - 1;
+                }
+                else
+                {
+                    upper = lower - 5;
+                }
+
+                edges.push_back({VertexID{lower},
+                                 VertexID{upper},
+                                 make_data(-1)});
+            }
+        }
+
+        curr_vertex_id = layer_max;
+    }
+
+    // connect the last layer
+    id_type layer_min = curr_vertex_id + 1;
+    id_type layer_max = layer_min + 1;
+
+    edges.push_back({VertexID{layer_min - 4},
+                     VertexID{layer_min},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_min - 3},
+                     VertexID{layer_min},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_max - 2},
+                     VertexID{layer_max},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_max - 3},
+                     VertexID{layer_max},
+                     make_data(-1)});
+}
