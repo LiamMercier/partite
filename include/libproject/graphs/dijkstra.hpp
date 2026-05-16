@@ -462,21 +462,21 @@ namespace libproject::graphs
         constexpr DijkstraExecutionConfig(DijkstraInitMode m,
                                 bool rta)
         :mode(m),
-        runtime_asserts(rta)
+        release_checks(rta)
         {}
 
         constexpr DijkstraExecutionConfig(DijkstraInitMode m)
         :mode(m),
-        runtime_asserts(false)
+        release_checks(false)
         {}
 
         constexpr DijkstraExecutionConfig(bool rta)
         :mode(DijkstraInitMode::Eager),
-        runtime_asserts(rta)
+        release_checks(rta)
         {}
 
         DijkstraInitMode mode;
-        bool runtime_asserts;
+        bool release_checks;
     };
 
     //
@@ -500,7 +500,7 @@ namespace libproject::graphs
     {
         using Numeric = typename Workspace::numeric_type;
 
-        if constexpr (Config.runtime_asserts)
+        if constexpr (Config.release_checks)
         {
             if (source >= graph.vertex_count())
             {
@@ -606,7 +606,7 @@ namespace libproject::graphs
                     visitor.examine_edge(min, to, e);
                 }
 
-                if constexpr (Config.runtime_asserts)
+                if constexpr (Config.release_checks)
                 {
                     if (w(e) < 0)
                     {
