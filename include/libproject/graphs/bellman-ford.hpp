@@ -130,6 +130,7 @@ namespace libproject::graphs
         // Necessary members.
         { workspace.distance };
         { workspace.parent };
+        { W::INF } -> std::convertible_to<typename W::numeric_type>;
     };
 
     template <typename V>
@@ -203,7 +204,7 @@ namespace libproject::graphs
     // Generic bellman ford implementation.
     template <BellmanFordExecutionConfig Config
               = BellmanFordExecutionConfig{BellmanFordInitMode::Eager, false},
-              typename Graph,
+              EdgeListGraph Graph,
               typename WeightFunction,
               BellmanFordCompatibleWorkspace Workspace,
               BellmanFordVisitor Visitor = NoOpBellmanFordVisitor>
@@ -217,6 +218,112 @@ namespace libproject::graphs
     {
         using Numeric = typename Workspace::numeric_type;
 
+        if constexpr (Config.release_checks)
+        {
+            if (source >= graph.vertex_count())
+            {
+                throw std::out_of_range("source vertex out of range");
+            }
+        }
+
+        libproject_assert(source < graph.vertex_count(),
+                          "bellman_ford(graph, source, w, workspace, visitor): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
+        auto & Mode = Config.mode;
+
+        auto & distance = workspace.distance;
+        auto & parent = workspace.parent;
+
+        // If we are doing SSSP instead of SPSP we should
+        // initialize the entire array now instead of doing
+        // lazy initialization.
+        if constexpr (Mode == BellmanFordInitMode::Eager)
+        {
+            // Initialize for single source shortest paths
+            workspace.initialize_single_source(graph.vertex_count());
+        }
+        else
+        {
+            workspace.next();
+        }
+
+        auto dist = [&](VertexID v) -> Numeric &
+        {
+            if constexpr (Mode == BellmanFordInitMode::Lazy)
+            {
+                return workspace.get_dist_lazy(v);
+            }
+            else
+            {
+                return workspace.get_dist(v);
+            }
+        };
+
+        distance[source.value] = 0;
+
+        // If we are using lazy initialization, mark the epoch now.
+        if constexpr (Mode == BellmanFordInitMode::Lazy)
+        {
+            workspace.mark_epoch(source);
+        }
+
+        visitor.source_vertex(source);
+
+        // Do |V| - 1 iterations of relaxing each edge
+        for (size_t iter = 0; iter < graph.vertex_count(); iter++)
+        {
+            for (const auto & [from, to, e] : graph.edges())
+            {
+                // Apply any filtering rules.
+                if constexpr (ExamineControllable<Visitor>)
+                {
+                    ControlAction action = visitor.examine_edge(from, to, e);
+
+                    if (action == ControlAction::Skip)
+                    {
+                        continue;
+                    }
+                    else if (action == ControlAction::Stop)
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    visitor.examine_edge(from, to, e);
+                }
+
+                // Try to relax this edge. Either of these values
+                // might be INF so we need to ensure we do not overflow.
+                Numeric d_from = dist(from);
+                Numeric d_to = dist(to);
+
+                if (d_from == Workspace::INF)
+                {
+                    visitor.edge_not_relaxed(from, to, e);
+                    continue;
+                }
+
+                Numeric candidate_w = d_from + w(e);
+
+                if (d_to > candidate_w)
+                {
+                    workspace.get_dist(to) = candidate_w;
+                    parent[to.value] = from;
+
+                    visitor.edge_relaxed(from, to, e);
+                }
+                else
+                {
+                    visitor.edge_not_relaxed(from, to, e);
+                }
+
+            }
+        }
     }
 
 };

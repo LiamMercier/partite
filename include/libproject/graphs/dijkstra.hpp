@@ -483,6 +483,8 @@ namespace libproject::graphs
     // Dijkstra function bodies.
     //
 
+    // TODO <feature>: overflow checks
+
     // Generic dijkstra implementation.
     template <DijkstraExecutionConfig Config
                   = DijkstraExecutionConfig{DijkstraInitMode::Eager, false},
