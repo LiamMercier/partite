@@ -682,8 +682,8 @@ Graph make_negative_DAG(size_t depth,
             {
                 id_type upper = lower - 4;
 
-                edges.push_back({VertexID{lower},
-                                 VertexID{upper},
+                edges.push_back({VertexID{upper},
+                                 VertexID{lower},
                                  make_data(-1)});
             }
         }
@@ -703,8 +703,8 @@ Graph make_negative_DAG(size_t depth,
                     upper = lower - 5;
                 }
 
-                edges.push_back({VertexID{lower},
-                                 VertexID{upper},
+                edges.push_back({VertexID{upper},
+                                 VertexID{lower},
                                  make_data(-1)});
             }
         }
