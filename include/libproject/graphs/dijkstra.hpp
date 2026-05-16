@@ -395,6 +395,9 @@ namespace libproject::graphs
         { workspace.get_dist_lazy(v) } -> std::convertible_to<
                                             typename W::numeric_type>;
 
+        // Epoch setting function.
+        { workspace.mark_epoch(v) };
+
         // Necessary members.
         { workspace.distance };
         { workspace.parent };
