@@ -276,6 +276,9 @@ namespace libproject::graphs
         // Do |V| - 1 iterations of relaxing each edge
         for (size_t iter = 0; iter < graph.vertex_count(); iter++)
         {
+            // Track if we have relaxed any edge this iteration.
+            bool relaxed_edge = false;;
+
             for (const auto & [from, to, e] : graph.edges())
             {
                 // Apply any filtering rules.
@@ -316,6 +319,7 @@ namespace libproject::graphs
                     parent[to.value] = from;
 
                     visitor.edge_relaxed(from, to, e);
+                    relaxed_edge = true;
                 }
                 else
                 {
@@ -323,6 +327,12 @@ namespace libproject::graphs
                 }
 
             }
+
+            if (!relaxed_edge)
+            {
+                break;
+            }
+
         }
     }
 
