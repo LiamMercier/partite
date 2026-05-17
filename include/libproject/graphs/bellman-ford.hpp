@@ -137,9 +137,11 @@ namespace libproject::graphs
     concept BellmanFordVisitor = requires(V & visitor,
                                           VertexID u,
                                           VertexID v,
-                                          EdgeID e)
+                                          EdgeID e,
+                                          size_t iter)
     {
         { visitor.source_vertex(u) };
+        { visitor.iteration_start(iter) };
         { visitor.examine_edge(u, v, e) };
         { visitor.edge_relaxed(u, v, e) };
         { visitor.edge_not_relaxed(u, v, e) };
@@ -148,6 +150,9 @@ namespace libproject::graphs
     struct NoOpBellmanFordVisitor
     {
         void source_vertex(VertexID u)
+        {}
+
+        void iteration_start(size_t iter)
         {}
 
         void examine_edge(VertexID u, VertexID v, EdgeID e)
@@ -199,7 +204,7 @@ namespace libproject::graphs
     // Bellman-Ford function bodies.
     //
 
-    // TODO: graph constraints for graph types
+    // TODO: overflow asserts
 
     // Generic bellman ford implementation.
     template <BellmanFordExecutionConfig Config
@@ -276,6 +281,8 @@ namespace libproject::graphs
         // Do |V| - 1 iterations of relaxing each edge
         for (size_t iter = 0; iter < graph.vertex_count(); iter++)
         {
+            visitor.iteration_start(iter);
+
             // Track if we have relaxed any edge this iteration.
             bool relaxed_edge = false;;
 
