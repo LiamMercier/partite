@@ -336,4 +336,44 @@ namespace libproject::graphs
         }
     }
 
+    // Overload that creates a temporary workspace
+    // for users who just want a visitor to run.
+    //
+    // Users who have large graphs or large weights should
+    // instead define the workspace themselves and ensure
+    // that the workspace Numeric is large enough to handle
+    // whatever type the weight function may return.
+    //
+    // For example, the weight function could take two
+    // size_t values and return a Numeric type that is
+    // 128 bits for storage.
+    template <EdgeListGraph Graph,
+              typename WeightFunction,
+              BellmanFordVisitor Visitor>
+    void bellman_ford(Graph & graph,
+                      VertexID source,
+                      WeightFunction w,
+                      Visitor&& visitor)
+        requires (BellmanFordWeightFunction
+                  <WeightFunction,
+                   std::remove_cvref_t<
+                        std::invoke_result_t<WeightFunction&, EdgeID>>
+                  >)
+    {
+        using WeightType = std::remove_cvref_t<
+                               std::invoke_result_t<WeightFunction, EdgeID>
+                           >;
+
+        libproject_assert(source < graph.vertex_count(),
+                          "bellman_ford(graph, source, w, visitor): "
+                          "source vertex is invalid; source = "
+                          + std::to_string(source.value)
+                          + ", graph.vertex_count() = "
+                          + std::to_string(graph.vertex_count()));
+
+        BellmanFordWorkspace<WeightType> workspace(graph.vertex_count());
+
+        bellman_ford(graph, source, w, workspace, visitor);
+    }
+
 };
