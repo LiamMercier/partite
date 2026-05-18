@@ -140,3 +140,109 @@ TYPED_TEST(BellmanFordFixture, BellmanFordStandard_PBT)
         }
     }
 }
+
+TYPED_TEST(BellmanFordFixture, BellmanFordStandard_Grid)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = size_t;
+        auto INF = BellmanFordWorkspace<Numeric>::INF;
+        size_t MAX_LENGTH = 10;
+
+        for (size_t length : std::ranges::iota_view{size_t{3}, MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::grid_graph(length);
+            VertexID source{0};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                unsigned int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            {
+                BellmanFordWorkspace<Numeric> workspace(graph.vertex_count());
+
+                bellman_ford(graph, source, w, workspace);
+
+                std::vector<VertexID> p(graph.vertex_count(), VertexID::empty);
+                std::vector<Numeric> d(graph.vertex_count(), INF);
+
+                TestLoggingVisitor visitor(p, d, w);
+
+                bellman_ford(graph, source, w, visitor);
+
+                for (size_t v = 0; v < graph.vertex_count(); v++)
+                {
+                    size_t dist = 0;
+
+                    // The shortest path in our fixture is obtained
+                    // by taking the rightmost path, then going down.
+                    size_t row = v / length;
+                    size_t col = v % length;
+                    size_t curr = 0;
+
+                    // Move from vertex 0 to vertex col
+                    while (curr < col)
+                    {
+                        curr += 1;
+                        dist += curr;
+                    }
+
+                    // Move from vertex col to vertex v
+                    while (curr < v)
+                    {
+                        curr += length;
+                        dist += curr;
+                    }
+
+                    // Ensure no issue with test traversal.
+                    ASSERT_EQ(curr, v);
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+
+                    EXPECT_EQ(visitor.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", visitor.distance["
+                              << v << "] = " << visitor.distance[v];
+
+                    size_t parent;
+
+                    // If already at the top of the grid, go left
+                    if (row == 0)
+                    {
+                        parent = v - 1;
+                    }
+                    // Otherwise, move up.
+                    else
+                    {
+                        parent = v - length;
+                    }
+
+                    EXPECT_EQ(workspace.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", workspace.parent["
+                              << v << "] = " << workspace.parent[v].value;
+
+                    EXPECT_EQ(visitor.parent[v], parent)
+                              << "Incorrect parent for vertex "
+                              << v << ", expected parent = "
+                              << parent << ", visitor.parent["
+                              << v << "] = " << visitor.parent[v].value;
+                }
+            }
+        }
+    }
+}
