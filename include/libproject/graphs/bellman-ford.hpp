@@ -200,6 +200,13 @@ namespace libproject::graphs
         bool release_checks;
     };
 
+    enum class BellmanFordResult : uint8_t
+    {
+        Good,
+        StoppedEarly,
+        NegativeCycle
+    };
+
     //
     // Bellman-Ford function bodies.
     //
@@ -213,7 +220,7 @@ namespace libproject::graphs
               typename WeightFunction,
               BellmanFordCompatibleWorkspace Workspace,
               BellmanFordVisitor Visitor = NoOpBellmanFordVisitor>
-    void bellman_ford(Graph & graph,
+    auto bellman_ford(Graph & graph,
                       VertexID source,
                       WeightFunction w,
                       Workspace & workspace,
@@ -299,7 +306,7 @@ namespace libproject::graphs
                     }
                     else if (action == ControlAction::Stop)
                     {
-                        return;
+                        return BellmanFordResult::StoppedEarly;
                     }
                 }
                 else
@@ -337,10 +344,32 @@ namespace libproject::graphs
 
             if (!relaxed_edge)
             {
-                break;
+                return BellmanFordResult::Good;
+            }
+        }
+
+        // If we ran for |V| - 1 iterations, negative cycles are
+        // possible. We check now for any negative cycle.
+        for (const auto & [from, to, e] : graph.edges())
+        {
+            Numeric d_from = dist(from);
+            Numeric d_to = dist(to);
+
+            if (d_from == Workspace::INF)
+            {
+                continue;
             }
 
+            Numeric candidate_w = d_from + w(e);
+
+            if (d_to > candidate_w)
+            {
+                // Negative cycle detected.
+                return BellmanFordResult::NegativeCycle;
+            }
         }
+
+        return BellmanFordResult::Good;
     }
 
     // Overload that creates a temporary workspace
@@ -357,7 +386,7 @@ namespace libproject::graphs
     template <EdgeListGraph Graph,
               typename WeightFunction,
               BellmanFordVisitor Visitor>
-    void bellman_ford(Graph & graph,
+    auto bellman_ford(Graph & graph,
                       VertexID source,
                       WeightFunction w,
                       Visitor&& visitor)
@@ -380,7 +409,7 @@ namespace libproject::graphs
 
         BellmanFordWorkspace<WeightType> workspace(graph.vertex_count());
 
-        bellman_ford(graph, source, w, workspace, visitor);
+        return bellman_ford(graph, source, w, workspace, visitor);
     }
 
 };
