@@ -211,8 +211,6 @@ namespace libproject::graphs
     // Bellman-Ford function bodies.
     //
 
-    // TODO: overflow asserts
-
     // Generic bellman ford implementation.
     template <BellmanFordExecutionConfig Config
               = BellmanFordExecutionConfig{BellmanFordInitMode::Eager, false},
@@ -229,6 +227,8 @@ namespace libproject::graphs
                   <WeightFunction, typename Workspace::numeric_type>)
     {
         using Numeric = typename Workspace::numeric_type;
+        constexpr auto NumericLowest
+            = std::numeric_limits<Numeric>::lowest();
 
         if constexpr (Config.release_checks)
         {
@@ -325,7 +325,75 @@ namespace libproject::graphs
                     continue;
                 }
 
-                Numeric candidate_w = d_from + w(e);
+                auto w_e = w(e);
+
+                // Check for overflow or underflow.
+                if constexpr (Config.release_checks)
+                {
+                    // If d_from + w_e would have us hit INF or overflow.
+                    if (w_e > 0 && d_from >= Workspace::INF - w_e)
+                    {
+                        throw std::overflow_error(
+                            "edge (from, to, edge_id) = ("
+                            + std::to_string(from.value)
+                            + ", "
+                            + std::to_string(to.value)
+                            + ", "
+                            + std::to_string(e.value)
+                            + ") overflowed with values "
+                            "dist(from) = "
+                            + std::to_string(dist(from))
+                            + ", w(e) = "
+                            + std::to_string(w(e)));
+                    }
+                    else if (w_e < 0 && d_from < NumericLowest - w_e)
+                    {
+                        throw std::underflow_error(
+                            "edge (from, to, edge_id) = ("
+                            + std::to_string(from.value)
+                            + ", "
+                            + std::to_string(to.value)
+                            + ", "
+                            + std::to_string(e.value)
+                            + ") underflowed with values "
+                            "dist(from) = "
+                            + std::to_string(dist(from))
+                            + ", w(e) = "
+                            + std::to_string(w(e)));
+                    }
+                }
+
+                // Check for overflow and underflow.
+                libproject_assert(
+                    !(w_e > 0 && d_from >= Workspace::INF - w_e),
+                    "bellman_ford(graph, source, w, workspace, visitor): "
+                    "relaxation overflow detected; from = "
+                    + std::to_string(from.value)
+                    + ", to = "
+                    + std::to_string(to.value)
+                    + ", EdgeID e = "
+                    + std::to_string(e.value)
+                    + ", dist(from) = "
+                    + std::to_string(d_from)
+                    + ", w(e) = "
+                    + std::to_string(w(e)));
+
+                libproject_assert(
+                    !(w_e < 0 && d_from < NumericLowest - w_e),
+                    "bellman_ford(graph, source, w, workspace, visitor): "
+                    "relaxation underflow detected; from = "
+                    + std::to_string(from.value)
+                    + ", to = "
+                    + std::to_string(to.value)
+                    + ", EdgeID e = "
+                    + std::to_string(e.value)
+                    + ", dist(from) = "
+                    + std::to_string(d_from)
+                    + ", w(e) = "
+                    + std::to_string(w(e)));
+
+                // Compute the candidate relaxation after asserts.
+                Numeric candidate_w = d_from + w_e;
 
                 if (d_to > candidate_w)
                 {
