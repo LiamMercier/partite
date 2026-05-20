@@ -608,6 +608,14 @@ namespace libproject::graphs
                     visitor.examine_edge(min, to, e);
                 }
 
+                // If min was popped, its distance is not infinite
+                // and its epoch was set to the current epoch, so
+                // we should always be able to use get_dist instead
+                // of the lazy variant that checks the epoch.
+                Numeric d_min = workspace.get_dist(min);
+
+                auto w_e = w(e);
+
                 if constexpr (Config.release_checks)
                 {
                     if (w(e) < 0)
@@ -616,9 +624,27 @@ namespace libproject::graphs
                                                     + std::to_string(e.value)
                                                     + " has negative weight");
                     }
+
+                    // if the relaxation update would overflow or equal
+                    // INF, we should stop now.
+                    if (d_min >= Workspace::INF - w_e)
+                    {
+                        throw std::overflow_error(
+                            "edge (from, to, edge_id) = ("
+                            + std::to_string(min.value)
+                            + ", "
+                            + std::to_string(to.value)
+                            + ", "
+                            + std::to_string(e.value)
+                            + ") overflowed with values "
+                            "dist(from) = "
+                            + std::to_string(d_min)
+                            + ", w(e) = "
+                            + std::to_string(w_e));
+                    }
                 }
 
-                libproject_assert(w(e) >= 0,
+                libproject_assert(w_e >= 0,
                                   "dijkstra(graph, source, w, "
                                   "workspace, visitor): detected "
                                   "negative edge weight; EdgeID = "
@@ -626,13 +652,23 @@ namespace libproject::graphs
                                   + ", w("
                                   + std::to_string(e.value)
                                   + ") = "
-                                  + std::to_string(w(e)));
+                                  + std::to_string(w_e));
 
-                // If min was popped, its distance is not infinite
-                // and its epoch was set to the current epoch, so
-                // we should always be able to use get_dist instead
-                // of the lazy variant that checks the epoch.
-                auto candidate_w = workspace.get_dist(min) + w(e);
+                libproject_assert(
+                    !(d_min >= Workspace::INF - w_e),
+                    "dijkstra(graph, source, w, workspace, visitor): "
+                    "relaxation overflow detected; from = "
+                    + std::to_string(min.value)
+                    + ", to = "
+                    + std::to_string(to.value)
+                    + ", EdgeID e = "
+                    + std::to_string(e.value)
+                    + ", dist(from) = "
+                    + std::to_string(d_min)
+                    + ", w(e) = "
+                    + std::to_string(w_e));
+
+                auto candidate_w = d_min + w_e;
 
                 // we may have never seen to before, so we should
                 // use the lazy variant if necessary.

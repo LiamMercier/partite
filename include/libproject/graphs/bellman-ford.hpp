@@ -342,9 +342,9 @@ namespace libproject::graphs
                             + std::to_string(e.value)
                             + ") overflowed with values "
                             "dist(from) = "
-                            + std::to_string(dist(from))
+                            + std::to_string(d_from)
                             + ", w(e) = "
-                            + std::to_string(w(e)));
+                            + std::to_string(w_e));
                     }
                     else if (w_e < 0 && d_from < NumericLowest - w_e)
                     {
@@ -357,9 +357,9 @@ namespace libproject::graphs
                             + std::to_string(e.value)
                             + ") underflowed with values "
                             "dist(from) = "
-                            + std::to_string(dist(from))
+                            + std::to_string(d_from)
                             + ", w(e) = "
-                            + std::to_string(w(e)));
+                            + std::to_string(w_e));
                     }
                 }
 
@@ -376,7 +376,7 @@ namespace libproject::graphs
                     + ", dist(from) = "
                     + std::to_string(d_from)
                     + ", w(e) = "
-                    + std::to_string(w(e)));
+                    + std::to_string(w_e));
 
                 libproject_assert(
                     !(w_e < 0 && d_from < NumericLowest - w_e),
@@ -390,7 +390,7 @@ namespace libproject::graphs
                     + ", dist(from) = "
                     + std::to_string(d_from)
                     + ", w(e) = "
-                    + std::to_string(w(e)));
+                    + std::to_string(w_e));
 
                 // Compute the candidate relaxation after asserts.
                 Numeric candidate_w = d_from + w_e;
