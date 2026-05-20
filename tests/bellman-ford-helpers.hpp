@@ -183,4 +183,32 @@ public:
         return iter->second;
     }
 
+    static const Graph & negative_DAG(size_t layers)
+    {
+        static std::unordered_map<size_t, Graph> graphs;
+
+        auto iter = graphs.find(layers);
+
+        if (iter == graphs.end())
+        {
+            auto graph = make_negative_DAG<Graph>(layers,
+                            [](int weight) -> EdgeData
+                            {
+                                if constexpr (HasData<EdgeData>)
+                                {
+                                    return weight;
+                                }
+                                else
+                                {
+                                    return EdgeData{};
+                                }
+                            }
+                         );
+
+            iter = graphs.emplace(layers, std::move(graph)).first;
+        }
+
+        return iter->second;
+    }
+
 };

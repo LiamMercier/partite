@@ -695,4 +695,96 @@ TYPED_TEST(BellmanFordFixture, BellmanFord_NegativeCycleGraph)
     }
 }
 
-// TODO: negative DAG setup.
+TYPED_TEST(BellmanFordFixture, BellmanFord_NegativeDAG)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData>
+                  || is_debug_build
+                  || !TestFixture::Graph::directed)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = int;
+        auto INF = BellmanFordWorkspace<Numeric>::INF;
+        using id_type = VertexID::underlying_type;
+        size_t MAX_LENGTH = 25;
+
+        for (size_t depth : std::ranges::iota_view{size_t{4},
+                                                   MAX_LENGTH + 1})
+        {
+            auto graph = TestFixture::negative_DAG(depth);
+            VertexID source{0};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            BellmanFordWorkspace<Numeric> workspace(graph.vertex_count());
+
+            auto res = bellman_ford(graph, source, w, workspace);
+
+            EXPECT_EQ(res, BellmanFordResult::Good);
+
+            EXPECT_EQ(workspace.distance[0], 0)
+                      << "Incorrect distance for vertex "
+                      << 0 << ", expected dist = "
+                      << 0 << ", workspace.distance["
+                      << 0 << "] = " << workspace.distance[0];
+
+            // Check the first two vertices.
+            EXPECT_EQ(workspace.distance[1], -1)
+                      << "Incorrect distance for vertex "
+                      << 1 << ", expected dist = "
+                      << -1 << ", workspace.distance["
+                      << 1 << "] = " << workspace.distance[1];
+
+            EXPECT_EQ(workspace.distance[2], -1)
+                      << "Incorrect distance for vertex "
+                      << 2 << ", expected dist = "
+                      << -1 << ", workspace.distance["
+                      << 2 << "] = " << workspace.distance[2];
+
+            id_type curr_vertex_id = 2;
+
+            // Check each layer.
+            for (size_t layer = 1; layer < depth; layer++)
+            {
+                id_type layer_min = curr_vertex_id + 1;
+                id_type layer_max = layer_min + 3;
+
+                for (id_type v = layer_min; v <= layer_max; v++)
+                {
+                    Numeric dist = -1 * (layer + 1);
+
+                    EXPECT_EQ(workspace.distance[v], dist)
+                              << "Incorrect distance for vertex "
+                              << v << ", expected dist = "
+                              << dist << ", workspace.distance["
+                              << v << "] = " << workspace.distance[v];
+                }
+
+                curr_vertex_id = layer_max;
+            }
+
+            // Check the last two nodes.
+            id_type layer_min = curr_vertex_id + 1;
+            id_type layer_max = layer_min + 1;
+
+            for (id_type v = layer_min; v <= layer_max; v++)
+            {
+                Numeric dist = -(depth + 1);
+
+                EXPECT_EQ(workspace.distance[v], dist)
+                            << "Incorrect distance for vertex "
+                            << v << ", expected dist = "
+                            << dist << ", workspace.distance["
+                            << v << "] = " << workspace.distance[v];
+            }
+        }
+    }
+}
