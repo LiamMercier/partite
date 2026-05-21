@@ -211,4 +211,23 @@ public:
         return iter->second;
     }
 
+    static const Graph & overflow_graph()
+    {
+        static Graph graph = make_overflow_graph<Graph>(
+                            [](size_t weight) -> EdgeData
+                            {
+                                if constexpr (HasData<EdgeData>)
+                                {
+                                    return weight;
+                                }
+                                else
+                                {
+                                    return EdgeData{};
+                                }
+                            }
+                         );
+
+        return graph;
+    }
+
 };

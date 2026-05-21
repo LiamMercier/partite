@@ -483,8 +483,6 @@ namespace libproject::graphs
     // Dijkstra function bodies.
     //
 
-    // TODO <feature>: overflow checks
-
     // Generic dijkstra implementation.
     template <DijkstraExecutionConfig Config
                   = DijkstraExecutionConfig{DijkstraInitMode::Eager, false},
@@ -618,7 +616,7 @@ namespace libproject::graphs
 
                 if constexpr (Config.release_checks)
                 {
-                    if (w(e) < 0)
+                    if (w_e < 0)
                     {
                         throw std::invalid_argument("edge "
                                                     + std::to_string(e.value)

@@ -770,7 +770,6 @@ TYPED_TEST(DijkstraFixture, Dijkstra_NegativeCycleGraph)
     else
     {
         using Numeric = int;
-        auto INF = DijkstraWorkspace<Numeric>::INF;
         size_t MAX_LENGTH = 100;
 
         for (size_t path_hops : std::ranges::iota_view{size_t{1},
@@ -788,17 +787,39 @@ TYPED_TEST(DijkstraFixture, Dijkstra_NegativeCycleGraph)
 
             DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
 
-            try
-            {
-                dijkstra<DijkstraExecutionConfig{true}>
-                    (graph, source, w, workspace);
-            }
-            // Ensure we catch properly.
-            catch (...)
-            {
-                EXPECT_TRUE(true);
-            }
+            EXPECT_THROW(dijkstra<DijkstraExecutionConfig{true}>
+                            (graph, source, w, workspace),
+                         std::invalid_argument);
         }
+    }
+}
+
+TYPED_TEST(DijkstraFixture, Dijkstra_OverflowGraph)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData> || is_debug_build)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = int;
+
+        auto graph = TestFixture::overflow_graph();
+        VertexID source{0};
+
+        auto w = [&](EdgeID e) -> Numeric
+        {
+            int weight = graph.edge_data(e);
+            return weight;
+        };
+
+        DijkstraWorkspace<Numeric> workspace(graph.vertex_count());
+
+        EXPECT_THROW(dijkstra<DijkstraExecutionConfig{true}>
+                        (graph, source, w, workspace),
+                        std::overflow_error);
     }
 }
 

@@ -207,6 +207,16 @@ namespace libproject::graphs
         NegativeCycle
     };
 
+    // TODO <optimization>: For each template, we have to generate
+    //                      boilerplate for throwing if throwing
+    //                      is enabled. We could reduce icache usage
+    //                      by creating one function to throw the errors
+    //                      and reusing it.
+    //
+    //                      This is however only if the compiler decides
+    //                      not to inline the function, so it could be
+    //                      an unnecessary change.
+
     //
     // Bellman-Ford function bodies.
     //

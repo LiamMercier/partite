@@ -736,3 +736,24 @@ Graph make_negative_DAG(size_t layers,
 
     return Graph{layer_max + 1, edges};
 }
+
+// Create a graph with a zero weight cycle.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_overflow_graph(EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+    size_t V_count = 3;
+    size_t w_max = std::numeric_limits<int>::max();
+
+    edges.push_back({VertexID{0},
+                     VertexID{1},
+                     make_data(w_max)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{2},
+                     make_data(w_max)});
+
+    return Graph{V_count, edges};
+}

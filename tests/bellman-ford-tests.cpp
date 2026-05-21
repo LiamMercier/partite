@@ -788,3 +788,35 @@ TYPED_TEST(BellmanFordFixture, BellmanFord_NegativeDAG)
         }
     }
 }
+
+TYPED_TEST(BellmanFordFixture, BellmanFord_OverflowGraph)
+{
+    using EdgeData = typename TestFixture::EdgeData;
+
+    if constexpr (!HasData<EdgeData> || is_debug_build)
+    {
+        return;
+    }
+    else
+    {
+        using Numeric = int;
+        auto INF = BellmanFordWorkspace<Numeric>::INF;
+
+        {
+            auto graph = TestFixture::overflow_graph();
+            VertexID source{0};
+
+            auto w = [&](EdgeID e) -> Numeric
+            {
+                int weight = graph.edge_data(e);
+                return weight;
+            };
+
+            BellmanFordWorkspace<Numeric> workspace(graph.vertex_count());
+
+            EXPECT_THROW(bellman_ford<BellmanFordExecutionConfig{true}>
+                            (graph, source, w, workspace),
+                         std::overflow_error);
+        }
+    }
+}
