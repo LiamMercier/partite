@@ -149,8 +149,10 @@ struct PairHash
 {
     std::size_t operator()(const std::pair<size_t, size_t> & pair) const
     {
-        return std::hash<size_t>()(pair.first)
-               ^ std::hash<size_t>()(pair.second);
+        // boost hash combine constants to prevent collisions in new use case.
+        auto h1 = std::hash<size_t>()(pair.first);
+        auto h2 = std::hash<size_t>()(pair.second);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
     }
 };
 
@@ -214,3 +216,544 @@ using IncidentEdgeSet = std::unordered_set<IncidentEdge,
                                            IncidentEdgeHash,
                                            IncidentEdgeEqual>;
 using EdgeViewSet = std::unordered_set<EdgeView, EdgeViewHash, EdgeViewEqual>;
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (h == 0)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    id_type n = (1ULL << (h+1)) - 1;
+
+    for (id_type i = 0; i < n; i++)
+    {
+        id_type left = 2*i + 1;
+        id_type right = 2*i + 2;
+
+        if (left < n)
+        {
+            if constexpr (HasData<EdgeData>)
+            {
+                edges.push_back({VertexID{i},
+                                VertexID{left},
+                                make_data(i, left)});
+            }
+            else
+            {
+                edges.push_back({VertexID{i}, VertexID{left}});
+            }
+        }
+
+        if (right < n)
+        {
+            if constexpr (HasData<EdgeData>)
+            {
+                edges.push_back({VertexID{i},
+                                VertexID{right},
+                                make_data(i, right)});
+            }
+            else
+            {
+                edges.push_back({VertexID{i}, VertexID{right}});
+            }
+        }
+    }
+
+    return Graph{n, edges};
+}
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_grid_graph(size_t length, EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (length == 0)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // Create a grid of length * length nodes.
+    id_type v_count = length * length;
+
+    // For each row
+    for (id_type row = 0; row < length; row++)
+    {
+        // For each column
+        for (id_type col = 0; col < length; col++)
+        {
+            // Compute this vertex
+            id_type v = row * length + col;
+
+            // Ignore the last column, it has no right neighbor.
+            if ((v % length) != (length - 1))
+            {
+                // Connect this vertex to its right neighbor
+                id_type r = v + 1;
+
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{v},
+                                    VertexID{r},
+                                    make_data(v, r)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{v}, VertexID{r}});
+                }
+            }
+
+            // Ignore the last row, it has no lower neighbor.
+            if ((v / length) != (length - 1))
+            {
+                // Connect this vertex to its lower neighbor
+                id_type lower = v + length;
+
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{v},
+                                    VertexID{lower},
+                                    make_data(v, lower)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{v}, VertexID{lower}});
+                }
+            }
+
+        }
+    }
+
+    return Graph{v_count, edges};
+}
+
+// Create a cluster graph (k disjoint clusters of N vertices).
+template <typename Graph, typename EdgeDataFunction>
+Graph make_cluster_graph(size_t N,
+                         size_t k,
+                         EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    // We need at least 1 vertex for each cluster.
+    if (N < k)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // Each cluster except the last gets N / k vertices
+    size_t cluster_size = N / k;
+
+    // We further have N % k vertices to distribute, starting
+    // from the first cluster.
+    size_t cluster_extra = N % k;
+
+    // Now, distribute.
+    id_type curr_vertex_id = 0;
+
+    for (size_t i = 0; i < k; i++)
+    {
+        id_type start = curr_vertex_id;
+
+        curr_vertex_id += (cluster_size - 1);
+
+        if (cluster_extra > 0)
+        {
+            curr_vertex_id++;
+            cluster_extra--;
+        }
+
+        id_type end = curr_vertex_id;
+
+        // Setup for next iteration.
+        curr_vertex_id++;
+
+        // Create an edge for each vertex between these nodes.
+        for (id_type from = start; from <= end; from++)
+        {
+            for (id_type to = start; to <= end; to++)
+            {
+                if constexpr (HasData<EdgeData>)
+                {
+                    edges.push_back({VertexID{from},
+                                     VertexID{to},
+                                     make_data(from, to)});
+                }
+                else
+                {
+                    edges.push_back({VertexID{from}, VertexID{to}});
+                }
+            }
+        }
+    }
+
+    return Graph{N, edges};
+}
+
+// Create a graph with three paths between source and target, where
+//
+// p1: source -> target, p1 has many low cost hops
+// p2: source -> target, p2 has a few high cost hops
+// p3: source -> target, p3 has a very high cost edge
+//
+// cost(p1) < cost(p2) < cost(p3)
+//
+// Any implementation that makes the greedy choice to pick the shortest
+// number of edges, will fail on this test.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_greedy_trap(size_t p1_hops,
+                       EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    // There should be at least three hops in the
+    // long but cheap path.
+    if (p1_hops < 3)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    // There should be at least two hops in p2.
+    size_t p2_hops = (p1_hops / 10) + 2;
+
+    size_t p1_weight = 1;
+    size_t p2_weight = ((p1_hops * p1_weight) / p2_hops) * 2;
+    size_t p3_weight = (p2_hops * p2_weight * 3) / 2;
+
+    id_type source = 0;
+    id_type curr_vertex_id = 0;
+
+    for (size_t i = 0; i < p1_hops; i++)
+    {
+        id_type from = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type to = curr_vertex_id;
+
+        if constexpr (HasData<EdgeData>)
+        {
+            edges.push_back({VertexID{from},
+                             VertexID{to},
+                             make_data(p1_weight)});
+        }
+        else
+        {
+            edges.push_back({VertexID{from}, VertexID{to}});
+        }
+    }
+
+    id_type target = curr_vertex_id;
+
+    // For every hop except the last to the target
+    for (size_t i = 0; i < (p2_hops - 1); i++)
+    {
+        id_type from = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type to = curr_vertex_id;
+
+        if constexpr (HasData<EdgeData>)
+        {
+            edges.push_back({VertexID{from},
+                             VertexID{to},
+                             make_data(p2_weight)});
+        }
+        else
+        {
+            edges.push_back({VertexID{from}, VertexID{to}});
+        }
+    }
+
+    // Manually connect the last vertex to the target
+    if constexpr (HasData<EdgeData>)
+    {
+        edges.push_back({VertexID{curr_vertex_id},
+                         VertexID{target},
+                         make_data(p2_weight)});
+    }
+    else
+    {
+        edges.push_back({VertexID{curr_vertex_id}, VertexID{target}});
+    }
+
+    // Now, create p3.
+    if constexpr (HasData<EdgeData>)
+    {
+        edges.push_back({VertexID{source},
+                         VertexID{target},
+                         make_data(p3_weight)});
+    }
+    else
+    {
+        edges.push_back({VertexID{source}, VertexID{target}});
+    }
+
+
+    return Graph{curr_vertex_id + 1, edges};
+}
+
+// Create a graph with a zero weight cycle.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_zero_cycle_graph(size_t path_hops,
+                            EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    // There should be at least one hop in the
+    // path.
+    if (path_hops < 1)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    for (size_t i = 0; i < path_hops; i++)
+    {
+        id_type source = i;
+        id_type target = i + 1;
+
+        edges.push_back({VertexID{source},
+                         VertexID{target},
+                         make_data(1)});
+    }
+
+    id_type curr_vertex_id = path_hops;
+
+    // Now, create zero cycles for each node.
+    for (size_t i = 0; i <= path_hops; i++)
+    {
+        id_type root = i;
+
+        curr_vertex_id++;
+        id_type first = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type second = curr_vertex_id;
+
+        edges.push_back({VertexID{root},
+                         VertexID{first},
+                         make_data(0)});
+
+        edges.push_back({VertexID{first},
+                         VertexID{second},
+                         make_data(0)});
+
+        edges.push_back({VertexID{second},
+                         VertexID{root},
+                         make_data(0)});
+    }
+
+    return Graph{curr_vertex_id + 1, edges};
+}
+
+// Create a graph with a negative weight cycle.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_negative_cycle_graph(size_t path_hops,
+                                EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (path_hops < 1)
+    {
+        return Graph(0, edges);
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    for (size_t i = 0; i < path_hops; i++)
+    {
+        id_type source = i;
+        id_type target = i + 1;
+
+        edges.push_back({VertexID{source},
+                         VertexID{target},
+                         make_data(1)});
+    }
+
+    id_type curr_vertex_id = path_hops;
+
+    // Now, create negative cycles for each node.
+    for (size_t i = 0; i <= path_hops; i++)
+    {
+        id_type root = i;
+
+        curr_vertex_id++;
+        id_type first = curr_vertex_id;
+
+        curr_vertex_id++;
+        id_type second = curr_vertex_id;
+
+        edges.push_back({VertexID{root},
+                         VertexID{first},
+                         make_data(-1)});
+
+        edges.push_back({VertexID{first},
+                         VertexID{second},
+                         make_data(-1)});
+
+        edges.push_back({VertexID{second},
+                         VertexID{root},
+                         make_data(-1)});
+    }
+
+    return Graph{curr_vertex_id + 1, edges};
+}
+
+template <typename Graph, typename EdgeDataFunction>
+Graph make_negative_DAG(size_t layers,
+                        EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+
+    if (layers == 0)
+    {
+        return Graph{0, edges};
+    }
+
+    edges.push_back({VertexID{0},
+                     VertexID{1},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{0},
+                     VertexID{2},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{3},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{4},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{2},
+                     VertexID{5},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{2},
+                     VertexID{6},
+                     make_data(-1)});
+
+    if (layers == 1)
+    {
+        return Graph{7, edges};
+    }
+
+    using id_type = VertexID::underlying_type;
+
+    id_type curr_vertex_id = 6;
+
+    // In each layer, alternate connecting:
+    // - k-th node in layer i-1 to k-th in layer i
+    // - k-th node in layer i-1 to k+1-th in layer i
+    for (size_t layer = 2; layer < layers; layer++)
+    {
+        id_type layer_min = curr_vertex_id + 1;
+        id_type layer_max = layer_min + 3;
+
+        // connect k to k
+        if (layer % 2 == 0)
+        {
+            for (id_type lower = layer_min; lower <= layer_max; lower++)
+            {
+                id_type upper = lower - 4;
+
+                edges.push_back({VertexID{upper},
+                                 VertexID{lower},
+                                 make_data(-1)});
+            }
+        }
+        // connect k to k + 1 with wrap around
+        else
+        {
+            for (id_type lower = layer_min; lower <= layer_max; lower++)
+            {
+                id_type upper;
+
+                if (lower == layer_min)
+                {
+                    upper = lower - 1;
+                }
+                else
+                {
+                    upper = lower - 5;
+                }
+
+                edges.push_back({VertexID{upper},
+                                 VertexID{lower},
+                                 make_data(-1)});
+            }
+        }
+
+        curr_vertex_id = layer_max;
+    }
+
+    // connect the last layer
+    id_type layer_min = curr_vertex_id + 1;
+    id_type layer_max = layer_min + 1;
+
+    edges.push_back({VertexID{layer_min - 4},
+                     VertexID{layer_min},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_min - 3},
+                     VertexID{layer_min},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_max - 2},
+                     VertexID{layer_max},
+                     make_data(-1)});
+
+    edges.push_back({VertexID{layer_max - 3},
+                     VertexID{layer_max},
+                     make_data(-1)});
+
+    return Graph{layer_max + 1, edges};
+}
+
+// Create a graph with a zero weight cycle.
+template <typename Graph, typename EdgeDataFunction>
+Graph make_overflow_graph(EdgeDataFunction make_data)
+{
+    using EdgeData = typename Graph::EdgeDataType;
+
+    std::vector<EdgeInput<EdgeData>> edges;
+    size_t V_count = 3;
+    size_t w_max = std::numeric_limits<int>::max();
+
+    edges.push_back({VertexID{0},
+                     VertexID{1},
+                     make_data(w_max)});
+
+    edges.push_back({VertexID{1},
+                     VertexID{2},
+                     make_data(w_max)});
+
+    return Graph{V_count, edges};
+}

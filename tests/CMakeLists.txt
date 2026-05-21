@@ -3,6 +3,8 @@ add_executable(unit-tests
     property-graph-tests.cpp
     graph-representation-tests.cpp
     traversal-tests.cpp
+    dijkstra-tests.cpp
+    bellman-ford-tests.cpp
 )
 
 if (GRAPH_EXTENSIVE_TESTS)

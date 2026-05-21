@@ -22,7 +22,6 @@ TYPED_TEST(SearchGraphFixture, BFSTraversal_PBT)
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
-    workspace.next();
 
     {
         bfs(graph, VertexID{0}, workspace, NoOpSearchVisitor{});
@@ -42,7 +41,6 @@ TYPED_TEST(SearchGraphFixture, BFSDistances_PBT)
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
-    workspace.next();
 
     std::vector<VertexID::underlying_type> distances(graph.vertex_count());
     bfs(graph, VertexID{0}, workspace, DistanceBFSVisitor{distances});
@@ -50,7 +48,6 @@ TYPED_TEST(SearchGraphFixture, BFSDistances_PBT)
     // Lets also test our bfs_distances functions.
     auto d2 = bfs_distances(graph, 0);
 
-    workspace.next();
     auto d3 = bfs_distances(graph, 0, workspace);
 
     // A perfect binary tree has 2^d nodes at depth d,
@@ -86,7 +83,6 @@ TYPED_TEST(SearchGraphFixture, BFSVertexSearch_PBT)
 
     BFSWorkspace workspace(graph.vertex_count());
     workspace.queue.reserve(graph.vertex_count());
-    workspace.next();
 
     // Simple (and, functionally unnecessary) predicate that just
     // looks for a VertexID during traversal. We just want to ensure
@@ -135,7 +131,6 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal_PBT)
     {
         DFSColorWorkspace workspace(graph.vertex_count());
         workspace.stack.reserve(graph.vertex_count());
-        workspace.next();
 
         dfs(graph, VertexID{0}, workspace, NoOpSearchVisitor{});
 
@@ -150,7 +145,6 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal_PBT)
     {
         DFSWorkspace workspace;
         workspace.stack.reserve(graph.vertex_count());
-        workspace.next();
 
         std::vector<size_t> d(graph.vertex_count(),
                               TimerDFSVisitor<>::NUMERIC_MAX);
@@ -174,7 +168,6 @@ TYPED_TEST(SearchGraphFixture, DFSTraversal_PBT)
     {
         DFSColorWorkspace workspace(graph.vertex_count());
         workspace.stack.reserve(graph.vertex_count());
-        workspace.next();
 
         std::vector<size_t> d(graph.vertex_count(),
                               TimerDFSVisitor<>::NUMERIC_MAX);
@@ -225,7 +218,6 @@ TYPED_TEST(SearchGraphFixture, DFSTimestamping_PBT)
     {
         DFSWorkspace workspace;
         workspace.stack.reserve(graph.vertex_count());
-        workspace.next();
 
         auto res = dfs_timestamps(graph, VertexID{0}, workspace);
         auto d = res.first;
@@ -264,7 +256,6 @@ TYPED_TEST(SearchGraphFixture, DFSVertexSearch_PBT)
 
     DFSColorWorkspace workspace(graph.vertex_count());
     workspace.stack.reserve(graph.vertex_count());
-    workspace.next();
 
     // Set the target as the first node of the
     // layer at depth 3.

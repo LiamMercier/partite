@@ -63,7 +63,7 @@ namespace libproject::graphs
     //
 
     // BFS for standard graphs.
-    template <AdjacencyGraph Graph,
+    template <IncidenceGraph Graph,
               BFSCompatibleWorkspace Workspace,
               SearchVisitor V>
     void bfs(const Graph & graph,
@@ -71,6 +71,8 @@ namespace libproject::graphs
              Workspace & workspace,
              V&& visitor)
     {
+        workspace.next();
+
         auto & seen = workspace.seen;
         auto & queue = workspace.queue;
         const auto visit_id = workspace.visit_id;
@@ -111,12 +113,12 @@ namespace libproject::graphs
 
             visitor.expand_vertex(u);
 
-            for (const VertexID & v : graph.neighbors(u))
+            for (const auto & [v, e] : graph.incident_edges(u))
             {
                 // Apply any filtering rules.
                 if constexpr (ExamineControllable<V>)
                 {
-                    ControlAction action = visitor.examine_edge(u, v);
+                    ControlAction action = visitor.examine_edge(u, v, e);
 
                     if (action == ControlAction::Skip)
                     {
@@ -129,14 +131,14 @@ namespace libproject::graphs
                 }
                 else
                 {
-                    visitor.examine_edge(u, v);
+                    visitor.examine_edge(u, v, e);
                 }
 
                 // If we haven't seen this vertex, (u, v) is a
                 // tree edge.
                 if (seen[v.value] != visit_id)
                 {
-                    visitor.tree_edge(u, v);
+                    visitor.tree_edge(u, v, e);
 
                     seen[v.value] = visit_id;
 
@@ -165,7 +167,7 @@ namespace libproject::graphs
                 {
                     // Otherwise, v is already discovered, so this
                     // was not a tree edge.
-                    visitor.non_tree_edge(u, v);
+                    visitor.non_tree_edge(u, v, e);
                 }
             }
 
@@ -180,7 +182,6 @@ namespace libproject::graphs
     {
         BFSWorkspace workspace(graph.vertex_count());
         workspace.queue.reserve(graph.vertex_count());
-        workspace.next();
 
         bfs(graph, source, workspace, std::forward<V>(visitor));
     }
@@ -202,7 +203,7 @@ namespace libproject::graphs
         :distances(input_dists)
         {}
 
-        void tree_edge(VertexID u, VertexID v)
+        void tree_edge(VertexID u, VertexID v, EdgeID e)
         {
             distances[v.value] = distances[u.value] + 1;
         }
@@ -242,7 +243,6 @@ namespace libproject::graphs
         // Setup workspace for this epoch.
         BFSWorkspace workspace(V_count);
         workspace.queue.reserve(V_count);
-        workspace.next();
 
         return std::move(bfs_distances(graph, source, workspace));
     }
