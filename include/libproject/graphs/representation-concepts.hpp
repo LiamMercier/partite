@@ -15,6 +15,9 @@ concept GraphRepresentation = requires(const T rep)
     // Ensure we have properly set Directed.
     { T::directed } -> std::convertible_to<bool>;
 
+    // Ensure we know if the representation support multigraphs.
+    { T::multigraph } -> std::convertible_to<bool>;
+
     // Ensure we can query the max valid vertex.
     { rep.max_vertex_id() } -> std::integral;
 };

@@ -20,6 +20,12 @@ namespace libproject::graphs
         { g.vertex_count() } -> std::convertible_to<size_t>;
     };
 
+    template <typename Graph>
+    concept Multigraph = requires ()
+    {
+        { Graph::multigraph } -> std::convertible_to<bool>;
+    };
+
     //
     // Concepts for neighborhood queries.
     //

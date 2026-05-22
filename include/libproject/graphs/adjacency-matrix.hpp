@@ -17,7 +17,9 @@ class AdjacencyMatrix
 {
 public:
     static constexpr bool directed = Directed;
+    static constexpr bool multigraph = false;
 
+public:
     // Create an AdjacencyMatrix with all zero edges.
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)

@@ -40,6 +40,8 @@ public:
     using VertexDataType = VertexData;
 
     static constexpr bool directed = Representation::directed;
+    static constexpr bool multigraph = Representation::multigraph;
+
     static constexpr bool vertices_mutable = VertexMutable<Representation>;
     static constexpr bool edges_mutable = EdgeMutable<Representation>;
 
@@ -56,10 +58,6 @@ public:
 
     // For simplification of pair overloads.
     using EdgePair = std::pair<VertexID, VertexID>;
-
-    // TODO <feature>: should we maybe have representations
-    //                 expose "is_multigraph" and keep this
-    //                 as a generic container?
 
     // Empty graph constructor
     PropertyGraph(size_t num_vertices)

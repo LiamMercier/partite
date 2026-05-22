@@ -21,6 +21,7 @@ class AdjacencyList
 {
 public:
     static constexpr bool directed = Directed;
+    static constexpr bool multigraph = false;
 
 public:
     // Create an AdjacencyList with all zero edges.
