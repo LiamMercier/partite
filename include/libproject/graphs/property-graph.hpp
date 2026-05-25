@@ -626,7 +626,7 @@ public:
     // By default, return the EdgeID
     EdgeID find_edge(VertexID from, VertexID to) const
         noexcept(noexcept(representation_.find_edge(from, to)))
-        requires EdgeQueryable<Representation>
+        requires (!multigraph && EdgeQueryable<Representation>)
     {
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::find_edge(from, to): "
@@ -639,6 +639,13 @@ public:
                           + std::to_string(to.value));
 
         return representation_.find_edge(from, to);
+    }
+
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        noexcept(noexcept(representation_.find_edges(from, to)))
+        requires (multigraph && EdgeQueryable<Representation>)
+    {
+        return representation_.find_edges(from, to);
     }
 
     // Given an edge ID, find the vertices such that (u, v) has this ID.
@@ -760,6 +767,44 @@ public:
         return representation_.has_edge(from, to);
     }
 
+    bool has_edge(EdgeID e) const
+        noexcept(noexcept(representation_.has_edge(e)))
+        requires (multigraph && EdgeQueryable<Representation>)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::has_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        return representation_.has_edge(e);
+    }
+
+    // TODO: should we default to has_edge(e) if it exists?
+    bool has_edge(EdgeID e) const
+        noexcept(noexcept(representation_.has_edge(VertexID{}, VertexID{})))
+        requires (!multigraph && EdgeQueryable<Representation>)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::has_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        VertexID from = source(e);
+        VertexID to = target(e);
+
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::has_edge(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::has_edge(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return representation_.has_edge(from, to);
+    }
+
     // Add an edge to the graph.
     //
     // On success, return the new EdgeID as {new_id, true}
@@ -791,6 +836,14 @@ public:
 
             if constexpr (Policy == EdgeInsertPolicy::Unique)
             {
+                if constexpr (multigraph)
+                {
+                    static_assert(multigraph,
+                                  "PropertyGraph::add_edge_impl(from, to): "
+                                  "tried to enforce edge uniqueness "
+                                  "on multigraph");
+                }
+
                 // If we expose add_edge_unique then use this.
                 if constexpr (requires {representation_
                                             .add_edge_unique(from, to, e_id);})
@@ -876,6 +929,14 @@ public:
             // Representation insertion based on policy.
             if constexpr (Policy == EdgeInsertPolicy::Unique)
             {
+                if constexpr (multigraph)
+                {
+                    static_assert(false,
+                                  "PropertyGraph::add_edge_impl(from, to): "
+                                  "tried to enforce edge uniqueness "
+                                  "on multigraph");
+                }
+
                 // If we expose add_edge_unique then use this.
                 if constexpr (requires {representation_
                                             .add_edge_unique(from, to, e_id);})
@@ -938,7 +999,7 @@ public:
 
     // Remove an edge, this will have to invalidate any EdgeData reference.
     bool remove_edge(VertexID from, VertexID to)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::remove_edge(from, to): "
@@ -972,9 +1033,40 @@ public:
         return true;
     }
 
+    // Remove an edge, this will have to invalidate any EdgeData reference.
+    bool remove_edge(EdgeID e)
+        requires (multigraph && edges_mutable)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::remove_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        EdgeID res = representation_.remove_edge(e);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::remove_edge(e): "
+                          "internal library error: representation "
+                          "returned an invalid EdgeID; "
+                          "edge_id = " + std::to_string(res.value));
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return true;
+    }
+
     // Remove an edge and overwrite instead of lazy deletion.
     bool erase_edge(VertexID from, VertexID to)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::erase_edge(from, to): "
@@ -1013,11 +1105,47 @@ public:
         return true;
     }
 
+    // Remove an edge and overwrite instead of lazy deletion.
+    bool erase_edge(EdgeID e)
+        requires (multigraph && edges_mutable)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::erase_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        EdgeID res = representation_.remove_edge(e);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::erase_edge(e): "
+                          "internal library error: representation "
+                          "returned an invalid EdgeID; "
+                          "edge_id = " + std::to_string(res.value));
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        if constexpr (has_edge_data)
+        {
+            auto temp = std::move(edges_.data[res.value]);
+        }
+
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return true;
+    }
+
     // Remove an edge and move its data.
     //
     // Returns false if the edge doesn't exist.
     bool extract_edge(VertexID from, VertexID to, EdgeData & out)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::extract_edge(from, to, out): "
@@ -1053,9 +1181,44 @@ public:
         return true;
     }
 
+    // Remove an edge and move its data.
+    //
+    // Returns false if the edge doesn't exist.
+    bool extract_edge(EdgeID e, EdgeData & out)
+        requires (multigraph && has_edge_data && edges_mutable)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::extract_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        EdgeID res = representation_.remove_edge(e);
+
+        if (res == EdgeID::empty)
+        {
+            return false;
+        }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::extract_edge(e, out): "
+                          "internal library error: representation "
+                          "returned an invalid EdgeID; "
+                          "edge_id = " + std::to_string(res.value));
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        out = std::move(edges_.data[res.value]);
+
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return true;
+    }
+
     // Remove an edge and return the edge's data if it exists.
     std::optional<EdgeData> extract_edge(VertexID from, VertexID to)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::extract_edge(from, to): "
@@ -1091,20 +1254,53 @@ public:
         return data;
     }
 
+    // Remove an edge and return the edge's data if it exists.
+    std::optional<EdgeData> extract_edge(EdgeID e)
+        requires (multigraph && has_edge_data && edges_mutable)
+    {
+        libproject_assert(valid_edge(e),
+                          "PropertyGraph::extract_edge(e): "
+                          "invalid EdgeID; e = "
+                          + std::to_string(e.value));
+
+        EdgeID res = representation_.remove_edge(e);
+
+        if (res == EdgeID::empty)
+        {
+            return {};
+        }
+
+        libproject_assert(valid_edge(res),
+                          "PropertyGraph::extract_edge(e): "
+                          "internal library error: representation "
+                          "returned an invalid EdgeID; "
+                          "edge_id = " + std::to_string(res.value));
+
+        // If edge was not empty, remove from the list.
+        free_edges_.push_back(res);
+
+        auto data = std::move(edge_data(res));
+
+        edges_.from[res.value] = VertexID::empty;
+        edges_.to[res.value] = VertexID::empty;
+
+        return data;
+    }
+
     //
     // std::pair and EdgeID overloads.
     //
 
     EdgeID find_edge(EdgePair edge) const
         noexcept(noexcept(find_edge(edge.first, edge.second)))
-        requires EdgeQueryable<Representation>
+        requires (!multigraph && EdgeQueryable<Representation>)
     {
         return find_edge(edge.first, edge.second);
     }
 
     bool has_edge(EdgePair edge) const
         noexcept(noexcept(has_edge(edge.first, edge.second)))
-        requires EdgeQueryable<Representation>
+        requires (!multigraph && EdgeQueryable<Representation>)
     {
         return has_edge(edge.first, edge.second);
     }
@@ -1112,40 +1308,40 @@ public:
     template<typename... Args>
     std::pair<EdgeID, bool> add_edge(EdgePair edge,
                                      Args&&... args)
-        requires ((!has_edge_data && sizeof...(Args) == 0) ||
+        requires (!multigraph && ((!has_edge_data && sizeof...(Args) == 0) ||
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
-                 && edges_mutable
+                 && edges_mutable)
     {
         return add_edge(edge.first, edge.second, std::forward<Args>(args)...);
     }
 
     bool remove_edge(EdgePair edge)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         return remove_edge(edge.first, edge.second);
     }
 
     bool erase_edge(EdgePair edge)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         return erase_edge(edge.first, edge.second);
     }
 
     bool extract_edge(EdgePair edge, EdgeData & out)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         return extract_edge(edge.first, edge.second, out);
     }
 
     std::optional<EdgeData> extract_edge(EdgePair edge)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         return extract_edge(edge.first, edge.second);
     }
 
-    // Remove edge using EdgeID
+    // Remove edge using EdgeID in a simple graph.
     bool remove_edge(EdgeID e_id)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::remove_edge(e_id): "
@@ -1156,7 +1352,7 @@ public:
     }
 
     bool erase_edge(EdgeID e_id)
-        requires edges_mutable
+        requires (!multigraph && edges_mutable)
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::erase_edge(e_id): "
@@ -1168,7 +1364,7 @@ public:
 
     // Extract edge using EdgeID
     bool extract_edge(EdgeID e_id, EdgeData & out)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge(e_id, out): "
@@ -1179,7 +1375,7 @@ public:
     }
 
     std::optional<EdgeData> extract_edge(EdgeID e_id)
-        requires (has_edge_data && edges_mutable)
+        requires (!multigraph && has_edge_data && edges_mutable)
     {
         libproject_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge(e_id): "

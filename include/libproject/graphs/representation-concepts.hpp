@@ -42,7 +42,11 @@ concept EdgeQueryable = GraphRepresentation<T> &&
 {
     { rep.has_edge(v_id, v_id) } -> std::convertible_to<bool>;
     { rep.find_edge(v_id, v_id) } -> std::same_as<EdgeID>;
-};
+} &&
+(!T::multigraph || requires(const T rep, EdgeID e)
+{
+    { rep.has_edge(e) } -> std::convertible_to<bool>;
+});
 
 // Representations that allow edge modifications.
 template <typename T>
