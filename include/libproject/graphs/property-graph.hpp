@@ -645,6 +645,16 @@ public:
         noexcept(noexcept(representation_.find_edges(from, to)))
         requires (multigraph && EdgeQueryable<Representation>)
     {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::find_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::find_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
         return representation_.find_edges(from, to);
     }
 
@@ -754,44 +764,6 @@ public:
         noexcept(noexcept(representation_.has_edge(from, to)))
         requires EdgeQueryable<Representation>
     {
-        libproject_assert(valid_vertex(from),
-                          "PropertyGraph::has_edge(from, to): "
-                          "invalid VertexID; from = "
-                          + std::to_string(from.value));
-
-        libproject_assert(valid_vertex(to),
-                          "PropertyGraph::has_edge(from, to): "
-                          "invalid VertexID; to = "
-                          + std::to_string(to.value));
-
-        return representation_.has_edge(from, to);
-    }
-
-    bool has_edge(EdgeID e) const
-        noexcept(noexcept(representation_.has_edge(e)))
-        requires (multigraph && EdgeQueryable<Representation>)
-    {
-        libproject_assert(valid_edge(e),
-                          "PropertyGraph::has_edge(e): "
-                          "invalid EdgeID; e = "
-                          + std::to_string(e.value));
-
-        return representation_.has_edge(e);
-    }
-
-    // TODO: should we default to has_edge(e) if it exists?
-    bool has_edge(EdgeID e) const
-        noexcept(noexcept(representation_.has_edge(VertexID{}, VertexID{})))
-        requires (!multigraph && EdgeQueryable<Representation>)
-    {
-        libproject_assert(valid_edge(e),
-                          "PropertyGraph::has_edge(e): "
-                          "invalid EdgeID; e = "
-                          + std::to_string(e.value));
-
-        VertexID from = source(e);
-        VertexID to = target(e);
-
         libproject_assert(valid_vertex(from),
                           "PropertyGraph::has_edge(from, to): "
                           "invalid VertexID; from = "
