@@ -41,11 +41,18 @@ concept EdgeQueryable = GraphRepresentation<T> &&
                         requires(const T rep, VertexID v_id)
 {
     { rep.has_edge(v_id, v_id) } -> std::convertible_to<bool>;
-    { rep.find_edge(v_id, v_id) } -> std::same_as<EdgeID>;
 } &&
+(T::multigraph || requires(const T rep, VertexID v_id)
+{
+    { rep.find_edge(v_id, v_id) } -> std::convertible_to<bool>;
+}) &&
 (!T::multigraph || requires(const T rep, EdgeID e)
 {
-    { rep.has_edge(e) } -> std::convertible_to<bool>;
+    { rep.find_edges(e) } -> std::ranges::range;
+
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.find_edges(e))>,
+                          EdgeID>;
 });
 
 // Representations that allow edge modifications.
