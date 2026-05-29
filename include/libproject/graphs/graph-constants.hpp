@@ -82,6 +82,21 @@ namespace libproject::graphs
     static_assert(std::is_trivially_copyable_v<EdgeID>);
     static_assert(sizeof(EdgeID) == sizeof(GRAPH_EDGE_ID_TYPE));
 
+    struct RepresentationConfig
+    {
+        RepresentationConfig(bool dir)
+        :Directed(dir)
+        {}
+
+        RepresentationConfig(bool dir, bool multi)
+        :Directed(dir),
+        Multigraph(multi)
+        {}
+
+        bool Directed{false};
+        bool Multigraph{false};
+    };
+
     // For global views over all edges
     struct EdgeView
     {
