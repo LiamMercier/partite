@@ -21,7 +21,7 @@ class AdjacencyList
 {
 public:
     static constexpr bool directed = Config.Directed;
-    static constexpr bool multigraph = false;
+    static constexpr bool multigraph = Config.Multigraph;
 
 public:
     // Create an AdjacencyList with all zero edges.
@@ -388,7 +388,15 @@ public:
         {
             // Count this self loop and record in our array.
             num_self_loops_ += 1;
-            self_loop_[from.value] = 1;
+
+            if constexpr (!multigraph)
+            {
+                self_loop_[from.value] = 1;
+            }
+            else
+            {
+                self_loop_[from.value] += 1;
+            }
         }
 
         return edge_id;
@@ -561,7 +569,15 @@ public:
         }
         else if (e_id != EdgeID::empty)
         {
-            self_loop_[from.value] = 0;
+            if constexpr (!multigraph)
+            {
+                self_loop_[from.value] = 0;
+            }
+            else
+            {
+                self_loop_[from.value] -= 1;
+            }
+
             num_self_loops_ -= 1;
 
             libproject_assert(num_self_loops_ + 1 >
@@ -1042,7 +1058,15 @@ private:
             else
             {
                 num_self_loops_ += 1;
-                self_loop_[ev.from.value] += 1;
+
+                if constexpr (!multigraph)
+                {
+                    self_loop_[ev.from.value] = 1;
+                }
+                else
+                {
+                    self_loop_[ev.from.value] += 1;
+                }
             }
         }
     }
@@ -1133,7 +1157,7 @@ private:
     }
 
     AdjacencyList(ListStorage adj,
-                  std::vector<uint8_t> self_loop_state,
+                  std::vector<loop_count_type> self_loop_state,
                   size_t loop_count)
         requires (!directed)
     :adj_(std::move(adj)),
