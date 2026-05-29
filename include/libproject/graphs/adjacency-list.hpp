@@ -277,7 +277,49 @@ public:
         return EdgeID::empty;
     }
 
-    // TODO: find_edges
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        requires (multigraph && directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return out_edges_[from.value]
+               | std::views::filter([this, to](auto ie){
+                    return ie.first == to;
+                })
+               | std::views::transform([this](auto ie){
+                    return ie.second;
+                });
+    }
+
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        requires (multigraph && !directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return adj_[from.value]
+               | std::views::filter([this, to](auto ie){
+                    return ie.first == to;
+                })
+               | std::views::transform([this](auto ie){
+                    return ie.second;
+                });
+    }
 
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (directed)
