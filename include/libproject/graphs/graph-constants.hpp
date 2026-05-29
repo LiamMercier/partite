@@ -84,11 +84,11 @@ namespace libproject::graphs
 
     struct RepresentationConfig
     {
-        RepresentationConfig(bool dir)
+        constexpr RepresentationConfig(bool dir)
         :Directed(dir)
         {}
 
-        RepresentationConfig(bool dir, bool multi)
+        constexpr RepresentationConfig(bool dir, bool multi)
         :Directed(dir),
         Multigraph(multi)
         {}

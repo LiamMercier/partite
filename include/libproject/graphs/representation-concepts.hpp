@@ -44,7 +44,7 @@ concept EdgeQueryable = GraphRepresentation<T> &&
 } &&
 (T::multigraph || requires(const T rep, VertexID v_id)
 {
-    { rep.find_edge(v_id, v_id) } -> std::convertible_to<bool>;
+    { rep.find_edge(v_id, v_id) } -> std::convertible_to<EdgeID>;
 }) &&
 (!T::multigraph || requires(const T rep, EdgeID e)
 {
@@ -62,14 +62,14 @@ concept EdgeMutable = GraphRepresentation<T> &&
 {
     { rep.add_edge(v, v, e) } -> std::same_as<EdgeID>;
 } &&
-(T::multigraph || requires(const T rep, VertexID v)
+(T::multigraph || requires(T rep, VertexID v)
 {
     { rep.remove_edge(v, v) } -> std::same_as<EdgeID>;
 }) &&
-(!T::multigraph || requires(const T rep, EdgeID e)
+(!T::multigraph || requires(T rep, EdgeID e)
 {
     { rep.remove_edge(e) } -> std::same_as<EdgeID>;
-});;
+});
 
 // Representations that can be cleared.
 template <typename T>
