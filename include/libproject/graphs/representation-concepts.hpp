@@ -66,9 +66,9 @@ concept EdgeMutable = GraphRepresentation<T> &&
 {
     { rep.remove_edge(v, v) } -> std::same_as<EdgeID>;
 }) &&
-(!T::multigraph || requires(T rep, EdgeID e)
+(!T::multigraph || requires(T rep, VertexID v, EdgeID e)
 {
-    { rep.remove_edge(e) } -> std::same_as<EdgeID>;
+    { rep.remove_edge(v, v, e) } -> std::same_as<EdgeID>;
 });
 
 // Representations that can be cleared.

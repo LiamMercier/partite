@@ -1014,7 +1014,10 @@ public:
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
 
-        EdgeID res = representation_.remove_edge(e);
+        VertexID from = source(e);
+        VertexID to = target(e);
+
+        EdgeID res = representation_.remove_edge(from, to, e);
 
         if (res == EdgeID::empty)
         {
@@ -1086,7 +1089,10 @@ public:
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
 
-        EdgeID res = representation_.remove_edge(e);
+        VertexID from = source(e);
+        VertexID to = target(e);
+
+        EdgeID res = representation_.remove_edge(from, to, e);
 
         if (res == EdgeID::empty)
         {
@@ -1160,11 +1166,14 @@ public:
         requires (multigraph && has_edge_data && edges_mutable)
     {
         libproject_assert(valid_edge(e),
-                          "PropertyGraph::extract_edge(e): "
+                          "PropertyGraph::extract_edge(e, out): "
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
 
-        EdgeID res = representation_.remove_edge(e);
+        VertexID from = source(e);
+        VertexID to = target(e);
+
+        EdgeID res = representation_.remove_edge(from, to, e);
 
         if (res == EdgeID::empty)
         {
@@ -1235,7 +1244,10 @@ public:
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
 
-        EdgeID res = representation_.remove_edge(e);
+        VertexID from = source(e);
+        VertexID to = target(e);
+
+        EdgeID res = representation_.remove_edge(from, to, e);
 
         if (res == EdgeID::empty)
         {
