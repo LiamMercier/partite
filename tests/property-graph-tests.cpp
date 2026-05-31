@@ -1663,6 +1663,10 @@ TYPED_TEST(PropertyGraphTest, Compress)
 
         // Remove some vertices and edges.
 
+        // Visualization for simple graphs.
+        //
+        // Multigraph case not shown.
+
         // Right now, our arrays look like
         //
         //      -----------------
@@ -1722,27 +1726,42 @@ TYPED_TEST(PropertyGraphTest, Compress)
         // 2 -> 2
         // 4 -> 3
         // empty otherwise.
-        std::vector<EdgeID> good_edge_map =
+        std::vector<EdgeID> good_edge_map;
+
+        if constexpr (!Graph::multigraph)
         {
-            EdgeID::empty, 1, 2,
-            EdgeID::empty, 3, EdgeID::empty,
-            0, EdgeID::empty
-        };
+            good_edge_map = {
+                EdgeID::empty, 1, 2,
+                EdgeID::empty, 3, EdgeID::empty,
+                0, EdgeID::empty
+            };
+        }
+        else
+        {
+            good_edge_map = {
+                EdgeID::empty, 1, 2, EdgeID::empty,
+                4, EdgeID::empty, 6, EdgeID::empty,
+                8, 9, 10, EdgeID::empty,
+                12, EdgeID::empty, 13, EdgeID::empty,
+                11, 7, 5, EdgeID::empty,
+                3, EdgeID::empty, 0, EdgeID::empty,
+            };
+        }
 
         auto res = graph.compress();
 
         // Check vertex mapping lines up.
-        for (size_t i = 0; i <= 6; i++)
+        for (size_t i = 0; i < good_vertex_map.size(); i++)
         {
-            ASSERT_EQ(res.old_to_new_vertex[i],
-                      good_vertex_map[i]);
+            ASSERT_EQ(res.old_to_new_vertex[i].value,
+                      good_vertex_map[i].value) << "failed for i = " << i;
         }
 
         // Check edge mapping lines up.
-        for (size_t i = 0; i <= 7; i++)
+        for (size_t i = 0; i < good_edge_map.size(); i++)
         {
-            ASSERT_EQ(res.old_to_new_edge[i],
-                      good_edge_map[i]);
+            ASSERT_EQ(res.old_to_new_edge[i].value,
+                      good_edge_map[i].value);
         }
 
         // Check each edge exists.
@@ -1760,7 +1779,15 @@ TYPED_TEST(PropertyGraphTest, Compress)
         }
 
         ASSERT_EQ(graph.vertex_count(), 5);
-        ASSERT_EQ(graph.edge_count(), 4);
+
+        if constexpr (!Graph::multigraph)
+        {
+            ASSERT_EQ(graph.edge_count(), 4);
+        }
+        else
+        {
+            ASSERT_EQ(graph.edge_count(), 14);
+        }
     }
 }
 
@@ -1857,7 +1884,15 @@ TYPED_TEST(PropertyGraphTest, CompressVertices)
         }
 
         ASSERT_EQ(graph.vertex_count(), 5);
-        ASSERT_EQ(graph.edge_count(), 5);
+
+        if constexpr (!Graph::multigraph)
+        {
+            ASSERT_EQ(graph.edge_count(), 5);
+        }
+        else
+        {
+            ASSERT_EQ(graph.edge_count(), 15);
+        }
     }
 }
 
@@ -1939,12 +1974,27 @@ TYPED_TEST(PropertyGraphTest, CompressEdges)
         // 2 -> 2
         // 4 -> 3
         // empty otherwise.
-        std::vector<EdgeID> good_edge_map =
+        std::vector<EdgeID> good_edge_map;
+
+        if constexpr (!Graph::multigraph)
         {
-            EdgeID::empty, 1, 2,
-            EdgeID::empty, 3, EdgeID::empty,
-            0, EdgeID::empty
-        };
+            good_edge_map = {
+                EdgeID::empty, 1, 2,
+                EdgeID::empty, 3, EdgeID::empty,
+                0, EdgeID::empty
+            };
+        }
+        else
+        {
+            good_edge_map = {
+                EdgeID::empty, 1, 2, EdgeID::empty,
+                4, EdgeID::empty, 6, EdgeID::empty,
+                8, 9, 10, EdgeID::empty,
+                12, EdgeID::empty, 13, EdgeID::empty,
+                11, 7, 5, EdgeID::empty,
+                3, EdgeID::empty, 0, EdgeID::empty,
+            };
+        }
 
         auto res = graph.compress_edges();
 
@@ -1967,7 +2017,15 @@ TYPED_TEST(PropertyGraphTest, CompressEdges)
         }
 
         ASSERT_EQ(graph.vertex_count(), 5);
-        ASSERT_EQ(graph.edge_count(), 4);
+
+        if constexpr (!Graph::multigraph)
+        {
+            ASSERT_EQ(graph.edge_count(), 4);
+        }
+        else
+        {
+            ASSERT_EQ(graph.edge_count(), 14);
+        }
     }
 }
 
