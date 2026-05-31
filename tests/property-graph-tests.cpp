@@ -5,6 +5,8 @@
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
 
+// TODO: multigraph revisal
+
 using namespace libproject::graphs;
 
 //
@@ -1454,18 +1456,40 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
 
         // Extract a real edge, we expect to get int(8)
         {
-            std::optional<EdgeData> edata = graph.extract_edge(0, 2);
+            std::optional<EdgeData> edata;
+
+            if constexpr (!Graph::multigraph)
+            {
+                edata = graph.extract_edge(0, 2);
+            }
+            else
+            {
+                edata = graph.extract_edge(8);
+            }
+
             ASSERT_TRUE(edata);
             ASSERT_EQ(*edata, 8);
         }
 
         // Now try to extract again, we should not get an edge back.
         {
-            std::optional<EdgeData> edata = graph.extract_edge(0, 2);
+            std::optional<EdgeData> edata;
+
+            if constexpr (!Graph::multigraph)
+            {
+                edata = graph.extract_edge(0, 2);
+            }
+
             ASSERT_FALSE(edata);
 
+            bool success = false;
             EdgeData e_data;
-            bool success = graph.extract_edge(0, 2, e_data);
+
+            if constexpr (!Graph::multigraph)
+            {
+                success = graph.extract_edge(0, 2, e_data);
+            }
+
             ASSERT_FALSE(success);
         }
 
@@ -1478,7 +1502,16 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
 
         // Try erasing
         {
-            bool success = graph.erase_edge(0, 4);
+            bool success = false;
+            if constexpr (!Graph::multigraph)
+            {
+                success = graph.erase_edge(0, 4);
+            }
+            else
+            {
+                success = graph.erase_edge(10);
+            }
+
             ASSERT_TRUE(success);
 
             success = graph.erase_edge(EdgeID{11});
@@ -1649,7 +1682,14 @@ TYPED_TEST(PropertyGraphTest, Compress)
         // from |X 1 1 X 2 X 3 X|
         // to   |X 2 3 X 3 X 5 X|
         //      -----------------
-        graph.remove_edge(0, 1);
+        if constexpr (!Graph::multigraph)
+        {
+            graph.remove_edge(0, 1);
+        }
+        else
+        {
+            graph.remove_edge(0);
+        }
 
         // Now, lets call compress to reduce the array size.
         //
@@ -1872,7 +1912,14 @@ TYPED_TEST(PropertyGraphTest, CompressEdges)
         // from |X 1 1 X 2 X 3 X|
         // to   |X 2 3 X 3 X 5 X|
         //      -----------------
-        graph.remove_edge(0, 1);
+        if constexpr (!Graph::multigraph)
+        {
+            graph.remove_edge(0, 1);
+        }
+        else
+        {
+            graph.remove_edge(0);
+        }
 
         // We expect the following edge mapping
         //

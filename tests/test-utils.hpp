@@ -34,6 +34,16 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>>,
                 std::monostate,
                 std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>>,
+                std::monostate,
+                std::monostate>,
 
     // EdgeData but no VertexData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
@@ -46,6 +56,18 @@ using TestGraphs = ::testing::Types
                 int,
                 std::monostate>,
     GraphConfig<PropertyGraph<AdjacencyList<false>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    int>,
                 int,
                 std::monostate>,
 
@@ -62,6 +84,20 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>, int, int>,
                 int,
                 int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    int,
+                    int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    int,
+                    int>,
+                int,
+                int>,
 
     // VertexData but no EdgeData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
@@ -74,6 +110,20 @@ using TestGraphs = ::testing::Types
                 std::monostate,
                 int>,
     GraphConfig<PropertyGraph<AdjacencyList<false>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    std::monostate,
+                    int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    std::monostate,
+                    int>,
                 std::monostate,
                 int>
 >;

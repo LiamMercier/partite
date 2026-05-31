@@ -46,12 +46,12 @@ concept EdgeQueryable = GraphRepresentation<T> &&
 {
     { rep.find_edge(v_id, v_id) } -> std::convertible_to<EdgeID>;
 }) &&
-(!T::multigraph || requires(const T rep, EdgeID e)
+(!T::multigraph || requires(const T rep, VertexID v)
 {
-    { rep.find_edges(e) } -> std::ranges::range;
+    { rep.find_edges(v, v) } -> std::ranges::range;
 
     requires std::same_as<std::ranges::range_value_t
-                            <decltype(rep.find_edges(e))>,
+                            <decltype(rep.find_edges(v, v))>,
                           EdgeID>;
 });
 
