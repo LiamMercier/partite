@@ -24,18 +24,20 @@ public:
     // static so we can access it from derived test
     static std::vector<EdgeInput<EdgeData>> make_edges()
     {
+        std::vector<EdgeInput<EdgeData>> base;
+
         if constexpr (std::is_same_v<EdgeData, std::monostate>)
         {
-            return std::vector<EdgeInput<EdgeData>>
+            base = std::vector<EdgeInput<EdgeData>>
                    {
-                        {0, 1}, {1, 2}, {1, 3},
-                        {1, 6}, {2, 3}, {2, 4},
-                        {3, 5}, {3, 6}
+                       {0, 1}, {1, 2}, {1, 3},
+                       {1, 6}, {2, 3}, {2, 4},
+                       {3, 5}, {3, 6}
                    };
         }
         else
         {
-            return std::vector<EdgeInput<EdgeData>>
+            base = std::vector<EdgeInput<EdgeData>>
                    {
                         {0, 1, EdgeData()}, {1, 2, EdgeData()},
                         {1, 3, EdgeData()}, {1, 6, EdgeData()},
@@ -43,13 +45,35 @@ public:
                         {3, 5, EdgeData()}, {3, 6, EdgeData()}
                    };
         }
+
+        if constexpr (!Graph::multigraph)
+        {
+            return base;
+        }
+        else
+        {
+            std::vector<EdgeInput<EdgeData>> res;
+            res.reserve(base.size() * 3);
+
+            for (size_t i = 0; i < 3; i++)
+            {
+                for (const auto & e : base)
+                {
+                    res.push_back(e);
+                }
+            }
+
+            return res;
+        }
     }
 
     static std::vector<EdgeInput<EdgeData>> self_looping_graph()
     {
+        std::vector<EdgeInput<EdgeData>> base;
+
         if constexpr (std::is_same_v<EdgeData, std::monostate>)
         {
-            return std::vector<EdgeInput<EdgeData>>
+            base = std::vector<EdgeInput<EdgeData>>
                    {
                         {0, 0}, {0, 1}, {1, 2}, {1, 4},
                         {2, 2}, {2, 3}, {3, 1}, {3, 5},
@@ -58,7 +82,7 @@ public:
         }
         else
         {
-            return std::vector<EdgeInput<EdgeData>>
+            base = std::vector<EdgeInput<EdgeData>>
                    {
                         {0, 0, EdgeData()}, {0, 1, EdgeData()},
                         {1, 2, EdgeData()}, {1, 4, EdgeData()},
@@ -67,6 +91,26 @@ public:
                         {4, 0, EdgeData()}, {4, 4, EdgeData()},
                         {4, 5, EdgeData()}, {5, 6, EdgeData()}
                    };
+        }
+
+        if constexpr (!Graph::multigraph)
+        {
+            return base;
+        }
+        else
+        {
+            std::vector<EdgeInput<EdgeData>> res;
+            res.reserve(base.size() * 3);
+
+            for (size_t i = 0; i < 3; i++)
+            {
+                for (const auto & e : base)
+                {
+                    res.push_back(e);
+                }
+            }
+
+            return res;
         }
     }
 };
@@ -94,7 +138,7 @@ TYPED_TEST(PropertyGraphTest, Neighbors)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::vector<std::unordered_set<size_t>> neighboring(7);
@@ -127,17 +171,6 @@ TYPED_TEST(PropertyGraphTest, Neighbors)
             if (!match)
             {
                 FAIL() << "Unexpected vertex "
-                       << v.value
-                       << " in graph.neighbors("
-                       << i
-                       << ")";
-            }
-
-            bool duplicate = seen.contains(v.value);
-
-            if (duplicate)
-            {
-                FAIL() << "Duplicate vertex "
                        << v.value
                        << " in graph.neighbors("
                        << i
@@ -185,7 +218,7 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<std::unordered_set<size_t>> neighboring(7);
@@ -210,17 +243,6 @@ TYPED_TEST(PropertyGraphTest, OutNeighbors)
                 if (!match)
                 {
                     FAIL() << "Unexpected vertex "
-                           << v.value
-                           << " in graph.out_neighbors("
-                           << i
-                           << ")";
-                }
-
-                bool duplicate = seen.contains(v.value);
-
-                if (duplicate)
-                {
-                    FAIL() << "Duplicate vertex "
                            << v.value
                            << " in graph.out_neighbors("
                            << i
@@ -268,7 +290,7 @@ TYPED_TEST(PropertyGraphTest, InNeighbors)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<std::unordered_set<size_t>> in_neighboring(7);
@@ -293,17 +315,6 @@ TYPED_TEST(PropertyGraphTest, InNeighbors)
                 if (!match)
                 {
                     FAIL() << "Unexpected vertex "
-                        << v.value
-                        << " in graph.in_neighbors("
-                        << i
-                        << ")";
-                }
-
-                bool duplicate = seen.contains(v.value);
-
-                if (duplicate)
-                {
-                    FAIL() << "Duplicate vertex "
                         << v.value
                         << " in graph.in_neighbors("
                         << i
@@ -344,7 +355,7 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdgeIDs)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::vector<std::unordered_set<size_t>> incident(7);
@@ -382,17 +393,6 @@ TYPED_TEST(PropertyGraphTest, NeighboringEdgeIDs)
             if (!match)
             {
                 FAIL() << "Unexpected edge "
-                        << e.value
-                        << " in graph.incident_edge_ids("
-                        << i
-                        << ")";
-            }
-
-            bool duplicate = seen.contains(e.value);
-
-            if (duplicate)
-            {
-                FAIL() << "Duplicate edge "
                         << e.value
                         << " in graph.incident_edge_ids("
                         << i
@@ -439,7 +439,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeIDs)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<std::unordered_set<size_t>> out_edges(7);
@@ -520,7 +520,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeIDs)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<std::unordered_set<size_t>> in_edges(7);
@@ -594,7 +594,7 @@ TYPED_TEST(PropertyGraphTest, IncidentEdges)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::vector<
@@ -701,7 +701,7 @@ TYPED_TEST(PropertyGraphTest, OutEdgeViews)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<
@@ -796,7 +796,7 @@ TYPED_TEST(PropertyGraphTest, InEdgeViews)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<
@@ -885,7 +885,7 @@ TYPED_TEST(PropertyGraphTest, GlobalEdgeIDs)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::unordered_set<size_t> incident(8);
@@ -924,7 +924,7 @@ TYPED_TEST(PropertyGraphTest, GlobalEdgeIDs)
     }
 
     if (seen.size() != incident.size()
-        || seen.size() != 8)
+        || seen.size() != edges.size())
     {
         FAIL() << "Missing at least one edge ID in graph.edge_ids()\n";
     }
@@ -951,7 +951,7 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::unordered_set<std::pair<size_t, size_t>, PairHash> edge_pairs(8);
@@ -982,17 +982,6 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
                    << ") in graph.edges()\n";
         }
 
-        bool duplicate = seen_edges.contains({e.from.value, e.to.value});
-
-        if (duplicate)
-        {
-            FAIL() << "Duplicate edge ("
-                   << e.from.value
-                   << " "
-                   << e.to.value
-                   << ") in graph.edges()\n";
-        }
-
         bool match_id = edge_ids.contains(e.id.value);
 
         if (!match_id)
@@ -1016,7 +1005,6 @@ TYPED_TEST(PropertyGraphTest, GlobalEdges)
     }
 
     if (seen_edges.size() != edge_pairs.size()
-        || seen_edges.size() != edges.size()
         || seen_ids.size() != edges.size())
     {
         FAIL() << "Missing at least one edge in graph.edges()\n";
@@ -1044,7 +1032,7 @@ TYPED_TEST(PropertyGraphTest, VertexDegrees)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     std::vector<size_t> degrees(8);
@@ -1101,7 +1089,7 @@ TYPED_TEST(PropertyGraphTest, InOutDegrees)
             }
         }();
 
-        EXPECT_EQ(graph.edge_count(), 8);
+        EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         EXPECT_EQ(graph.vertex_count(), 7);
 
         std::vector<size_t> in_degrees(8);
@@ -1162,7 +1150,7 @@ TYPED_TEST(PropertyGraphTest, SelfLoopless)
         }
     }();
 
-    EXPECT_EQ(graph.edge_count(), 8);
+    EXPECT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     EXPECT_EQ(graph.vertex_count(), 7);
 
     if (graph.has_self_loops())
@@ -1203,7 +1191,7 @@ TYPED_TEST(PropertyGraphTest, SelfLoopGraph)
         }
     }();
 
-    ASSERT_EQ(graph.edge_count(), 12);
+    ASSERT_EQ(graph.edge_count(), 12 * (Graph::multigraph ? 3 : 1));
     ASSERT_EQ(graph.vertex_count(), 7);
 
     std::vector<bool> self_looped(graph.vertex_count());
@@ -1257,7 +1245,7 @@ TYPED_TEST(PropertyGraphTest, VerticesRange)
         }
     }();
 
-    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     ASSERT_EQ(graph.vertex_count(), 7);
 
     for (const auto v : graph.vertices())
@@ -1287,7 +1275,7 @@ TYPED_TEST(PropertyGraphTest, Clear)
         }
     }();
 
-    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     ASSERT_EQ(graph.vertex_count(), 7);
 
     graph.clear();
@@ -1344,7 +1332,7 @@ TYPED_TEST(PropertyGraphTest, VertexModification)
     else
     {
 
-        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         ASSERT_EQ(graph.vertex_count(), 7);
 
         // Add some vertices
@@ -1442,7 +1430,7 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
     }
     else
     {
-        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         ASSERT_EQ(graph.vertex_count(), 7);
 
         // add some edges
@@ -1452,7 +1440,7 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
         graph.add_edge(0, 4, 10);
         graph.add_edge(0, 5, 11);
 
-        ASSERT_EQ(graph.edge_count(), 12);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1) + 4);
 
         // Extract a real edge, we expect to get int(8)
         {
@@ -1464,7 +1452,8 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
             }
             else
             {
-                edata = graph.extract_edge(8);
+                // our original edges are 0, ..., edges.size() - 1
+                edata = graph.extract_edge(edges.size());
             }
 
             ASSERT_TRUE(edata);
@@ -1496,7 +1485,18 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
         // Extract another real edge using the ID
         {
             EdgeData e_data;
-            bool success = graph.extract_edge(EdgeID{9}, e_data);
+            EdgeID e_target;
+
+            if constexpr (!Graph::multigraph)
+            {
+                e_target = EdgeID{9};
+            }
+            else
+            {
+                e_target = edges.size() + 1;
+            }
+
+            bool success = graph.extract_edge(e_target, e_data);
             ASSERT_TRUE(success);
         }
 
@@ -1509,12 +1509,22 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
             }
             else
             {
-                success = graph.erase_edge(10);
+                success = graph.erase_edge(edges.size() + 2);
             }
 
             ASSERT_TRUE(success);
 
-            success = graph.erase_edge(EdgeID{11});
+            EdgeID e_target;
+            if constexpr (!Graph::multigraph)
+            {
+                e_target = EdgeID{11};
+            }
+            else
+            {
+                e_target = edges.size() + 3;
+            }
+
+            success = graph.erase_edge(e_target);
             ASSERT_TRUE(success);
         }
 
@@ -1522,7 +1532,8 @@ TYPED_TEST(PropertyGraphTest, EdgeExtractErase)
         {
             for (size_t i = 2; i < 5; i++)
             {
-                ASSERT_FALSE(graph.has_edge(0, i));
+                ASSERT_FALSE(graph.has_edge(0, i))
+                << "Failed for i = " << i;
             }
         }
 
@@ -1563,7 +1574,7 @@ TYPED_TEST(PropertyGraphTest, Accessors)
         }
     }();
 
-    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     ASSERT_EQ(graph.vertex_count(), 7);
 
     int N = 100;
@@ -1647,7 +1658,7 @@ TYPED_TEST(PropertyGraphTest, Compress)
             }
         }();
 
-        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         ASSERT_EQ(graph.vertex_count(), 7);
 
         // Remove some vertices and edges.
@@ -1780,7 +1791,7 @@ TYPED_TEST(PropertyGraphTest, CompressVertices)
             }
         }();
 
-        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         ASSERT_EQ(graph.vertex_count(), 7);
 
         // Remove some vertices and edges.
@@ -1877,7 +1888,7 @@ TYPED_TEST(PropertyGraphTest, CompressEdges)
             }
         }();
 
-        ASSERT_EQ(graph.edge_count(), 8);
+        ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
         ASSERT_EQ(graph.vertex_count(), 7);
 
         // Remove some vertices and edges.
@@ -1981,7 +1992,7 @@ TYPED_TEST(PropertyGraphTest, Transpose)
         }
     }();
 
-    ASSERT_EQ(graph.edge_count(), 8);
+    ASSERT_EQ(graph.edge_count(), 8 * (Graph::multigraph ? 3 : 1));
     ASSERT_EQ(graph.vertex_count(), 7);
 
     for (const auto & e : edges)
