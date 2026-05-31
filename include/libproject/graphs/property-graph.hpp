@@ -1455,7 +1455,7 @@ public:
         // Remove the vertex, with a callback to remove the edge in the
         // PropertyGraph whenever we remove one in the representation.
         representation_.remove_vertex(v, [this](EdgeID e_id){
-            this->remove_edge(e_id);
+            this->remove_edge_entry(e_id);
         });
 
         vertices_.set_dead(v.value);
@@ -1474,7 +1474,7 @@ public:
         out = std::move(vertices_[v.value]);
 
         representation_.remove_vertex(v, [this](EdgeID e_id){
-            this->remove_edge(e_id);
+            this->remove_edge_entry(e_id);
         });
 
         vertices_.set_dead(v.value);
@@ -2011,7 +2011,7 @@ private:
     // our PropertyGraph edges_ storage.
     //
     // Data must be modified elsewhere.
-    void remove_edge(EdgeID e_id)
+    void remove_edge_entry(EdgeID e_id)
     {
         edges_.from[e_id.value] = VertexID::empty;
         edges_.to[e_id.value] = VertexID::empty;
