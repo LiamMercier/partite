@@ -788,11 +788,6 @@ public:
         return true;
     }
 
-    // TODO: multigraph setup for vertex removals.
-    //
-    //       perhaps we keep a tracker of how many copies we
-    //       have swapped, and then pop the entire segment?
-
     // In a digraph, we insert (u, v) as out[u] = v, in[v] = u
     // so we need to go over the in and out lists.
     //
@@ -812,7 +807,7 @@ public:
     // Theta(deg(v) * average_degree) time (see docs/design).
     template <typename EdgeRemovalCallback>
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
-        requires (directed)
+        requires (!multigraph && directed)
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
@@ -892,7 +887,7 @@ public:
     // clear adj_list(v)
     template <typename EdgeRemovalCallback>
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
-        requires (!directed)
+        requires (!multigraph && !directed)
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
@@ -942,6 +937,119 @@ public:
         {
             self_loop_[v.value] = 0;
         }
+    }
+
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
+        requires (multigraph && directed)
+    {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
+        bool self_loop_found = false;
+
+        for (const auto & [u, e_id] : out_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & in = in_list(u);
+            size_t i = 0;
+
+            while (i < in.size())
+            {
+                if (in[i].first == v)
+                {
+                    on_edge_removed(in[i].second);
+                    in[i] = std::move(in.back());
+                    in.pop_back();
+                }
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        for (const auto & [u, e_id] : in_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & out = out_list(u);
+            size_t i = 0;
+
+            while (i < out.size())
+            {
+                if (out[i].first == v)
+                {
+                    on_edge_removed(out[i].second);
+                    out[i] = std::move(out.back());
+                    out.pop_back();
+                }
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        out_list(v).clear();
+        in_list(v).clear();
+    }
+
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
+        requires (multigraph && !directed)
+    {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
+        bool self_loop_found = false;
+
+        for (const auto & [u, e_id] : adj_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & u_list = adj_list(u);
+            size_t i = 0;
+
+            // While we have not finished, keep looking for
+            // entries with the removed vertex.
+            while (i < u_list.size())
+            {
+                if (u_list[i].first == v)
+                {
+                    on_edge_removed(u_list[i].second);
+                    u_list[i] = std::move(u_list.back());
+                    u_list.pop_back();
+                }
+                // Increment only when we do not swap.
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        adj_list(v).clear();
     }
 
     //
