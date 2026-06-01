@@ -5,8 +5,6 @@
 #include <libproject/graphs/adjacency-matrix.hpp>
 #include <libproject/graphs/adjacency-list.hpp>
 
-// TODO: multigraph revisal
-
 using namespace libproject::graphs;
 
 //
