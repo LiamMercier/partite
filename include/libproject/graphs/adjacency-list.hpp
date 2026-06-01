@@ -430,8 +430,6 @@ public:
 
         adj_list(from).push_back({to, edge_id});
 
-        // Do not insert self loops twice, otherwise
-        // neighbors(v) will return the same value twice.
         if (to != from)
         {
             adj_list(to).push_back({from, edge_id});
@@ -444,6 +442,10 @@ public:
             if constexpr (!multigraph)
             {
                 self_loop_[from.value] = 1;
+            }
+            else
+            {
+                adj_list(to).push_back({from, edge_id});
             }
         }
 
@@ -1353,6 +1355,10 @@ private:
                 if constexpr (!multigraph)
                 {
                     self_loop_[ev.from.value] = 1;
+                }
+                else
+                {
+                    adj_list(ev.to).push_back({ev.from, ev.id});
                 }
             }
         }
