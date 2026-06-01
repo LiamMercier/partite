@@ -14,12 +14,7 @@ namespace libproject::graphs
 //                      all fragmented, very bad since most
 //                      graphs are going to be sparse and large.
 
-// TODO <refactor>: we should just remove the entire self_loop_
-//                  array, because algorithms themselves can just
-//                  filter out the duplicate vertices and thus we
-//                  improve the usage for consumers who do not care.
-
-// AdjacencyList class for simple graphs.
+// AdjacencyList class.
 template <RepresentationConfig Config>
 class AdjacencyList
 {
@@ -37,14 +32,7 @@ public:
     }
 
     AdjacencyList(size_t num_vertices)
-        requires (!directed && !multigraph)
-    :adj_(num_vertices),
-    self_loop_(num_vertices)
-    {
-    }
-
-    AdjacencyList(size_t num_vertices)
-        requires (!directed && multigraph)
+        requires (!directed)
     :adj_(num_vertices)
     {
     }
@@ -429,24 +417,11 @@ public:
         }
 
         adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
 
-        if (to != from)
+        if (to == from)
         {
-            adj_list(to).push_back({from, edge_id});
-        }
-        else
-        {
-            // Count this self loop and record in our array.
             num_self_loops_ += 1;
-
-            if constexpr (!multigraph)
-            {
-                self_loop_[from.value] = 1;
-            }
-            else
-            {
-                adj_list(to).push_back({from, edge_id});
-            }
         }
 
         return edge_id;
@@ -505,18 +480,11 @@ public:
         }
 
         adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
 
-        // Do not insert self loops twice, otherwise
-        // neighbors(v) will return the same value twice.
-        if (to != from)
+        if (to == from)
         {
-            adj_list(to).push_back({from, edge_id});
-        }
-        else
-        {
-            // Count this self loop and record in our array.
             num_self_loops_ += 1;
-            self_loop_[from.value] = 1;
         }
 
         return edge_id;
@@ -605,23 +573,19 @@ public:
             }
         }
 
-        if (from != to)
+        for (size_t i = 0; i < to_adj.size(); i++)
         {
-            for (size_t i = 0; i < to_adj.size(); i++)
+            if (to_adj[i].first == from)
             {
-                if (to_adj[i].first == from)
-                {
-                    to_adj[i] = std::move(to_adj.back());
-                    to_adj.pop_back();
-                    break;
-                }
+                to_adj[i] = std::move(to_adj.back());
+                to_adj.pop_back();
+                break;
             }
         }
-        else if (e_id != EdgeID::empty)
-        {
-            self_loop_[from.value] = 0;
-            num_self_loops_ -= 1;
 
+        if (from == to && e_id != EdgeID::empty)
+        {
+            num_self_loops_ -= 1;
             libproject_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_edge(from, to): "
@@ -780,11 +744,6 @@ public:
         if (v.value == adj_.size())
         {
             adj_.emplace_back();
-
-            if constexpr (!multigraph)
-            {
-                self_loop_.emplace_back(0);
-            }
         }
 
         return true;
@@ -900,13 +859,13 @@ public:
 
         for (const auto & [u, e_id] : adj_list(v))
         {
-            auto & u_list = adj_list(u);
-
             if (u == v)
             {
                 self_loop_id = e_id;
                 continue;
             }
+
+            auto & u_list = adj_list(u);
 
             for (size_t i = 0; i < u_list.size(); i++)
             {
@@ -934,11 +893,6 @@ public:
         }
 
         adj_list(v).clear();
-
-        if constexpr (!multigraph)
-        {
-            self_loop_[v.value] = 0;
-        }
     }
 
     template <typename EdgeRemovalCallback>
@@ -1082,12 +1036,6 @@ public:
             list.clear();
         }
 
-        if constexpr (!multigraph)
-        {
-            // Quickly fill the vector with element 0.
-            std::fill(self_loop_.begin(), self_loop_.end(), 0);
-        }
-
         num_self_loops_ = 0;
     }
 
@@ -1110,16 +1058,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        if constexpr (!multigraph)
-        {
-            // A self loop adds 1 to the degree that our adjacency list
-            // would not be able to account for.
-            return adj_[v.value].size() + self_loop_[v.value];
-        }
-        else
-        {
-            return adj_[v.value].size();
-        }
+        return adj_[v.value].size();
     }
 
     size_t in_degree(VertexID v) const
@@ -1225,18 +1164,9 @@ public:
         }
         else
         {
-            if constexpr (multigraph)
-            {
-                return AdjacencyList{adj_,
-                                     num_self_loops_};
-            }
-            else
-            {
-                // Return a copy, G^T = G in an undirected graph.
-                return AdjacencyList{adj_,
-                                     self_loop_,
-                                     num_self_loops_};
-            }
+            // Return a copy, G^T = G in an undirected graph.
+            return AdjacencyList{adj_,
+                                 num_self_loops_};
         }
     }
 
@@ -1343,23 +1273,11 @@ private:
         for (auto&& ev : edge_views)
         {
             adj_list(ev.from).push_back({ev.to, ev.id});
+            adj_list(ev.to).push_back({ev.from, ev.id});
 
-            if (ev.from != ev.to)
-            {
-                adj_list(ev.to).push_back({ev.from, ev.id});
-            }
-            else
+            if (ev.from == ev.to)
             {
                 num_self_loops_ += 1;
-
-                if constexpr (!multigraph)
-                {
-                    self_loop_[ev.from.value] = 1;
-                }
-                else
-                {
-                    adj_list(ev.to).push_back({ev.from, ev.id});
-                }
             }
         }
     }
@@ -1433,11 +1351,6 @@ private:
 private:
     using ListStorage = std::vector<std::vector<std::pair<VertexID, EdgeID>>>;
 
-    // If we have a multigraph, we might have more than uint8_t max self loops.
-    //
-    // uint32_t is a safe default, we should never expect anything near this.
-    using loop_count_type = std::conditional_t<multigraph, uint32_t, uint8_t>;
-
     // For returning a copy.
     AdjacencyList(ListStorage out_edges,
                   ListStorage in_edges,
@@ -1450,18 +1363,8 @@ private:
     }
 
     AdjacencyList(ListStorage adj,
-                  std::vector<loop_count_type> self_loop_state,
                   size_t loop_count)
-        requires (!directed && !multigraph)
-    :adj_(std::move(adj)),
-    self_loop_(std::move(self_loop_state)),
-    num_self_loops_{loop_count}
-    {
-    }
-
-    AdjacencyList(ListStorage adj,
-                  size_t loop_count)
-        requires (!directed && multigraph)
+        requires (!directed)
     :adj_(std::move(adj)),
     num_self_loops_{loop_count}
     {
@@ -1485,14 +1388,6 @@ private:
         !directed,
         ListStorage,
         std::monostate> adj_;
-
-    // State storage for self loops in an undirected graph.
-    //
-    // We can either store this or the degree, and this is cheaper
-    // while also reducing our cost for has_self_loop(v)
-    std::conditional_t<!directed && !multigraph,
-                       std::vector<loop_count_type>,
-                       std::monostate> self_loop_;
 
     // We need to count this on add and remove, or we are forced
     // to do Theta(V) average time iteration when it is requested.
