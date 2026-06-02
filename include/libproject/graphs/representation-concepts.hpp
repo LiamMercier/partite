@@ -55,6 +55,13 @@ concept EdgeQueryable = GraphRepresentation<T> &&
                           EdgeID>;
 });
 
+template <typename T>
+concept EdgeCountable = GraphRepresentation<T> &&
+                        requires(const T rep, VertexID v)
+{
+    { rep.edge_count(v, v) } -> std::convertible_to<size_t>;
+};
+
 // Representations that allow edge modifications.
 template <typename T>
 concept EdgeMutable = GraphRepresentation<T> &&

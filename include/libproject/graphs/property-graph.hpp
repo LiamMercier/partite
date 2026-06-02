@@ -1271,6 +1271,8 @@ public:
         return data;
     }
 
+    // TODO <feature>: erase_edges for multigraph users
+
     //
     // std::pair and EdgeID overloads.
     //
@@ -1506,6 +1508,23 @@ public:
         }
 
         return edges_.size();
+    }
+
+    size_t edge_count(VertexID from, VertexID to) const
+        noexcept(noexcept(representation_.edge_count(from, to)))
+        requires EdgeCountable<Representation>
+    {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::edge_count(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::edge_count(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return representation_.edge_count(from, to);
     }
 
     size_t degree(VertexID v) const
