@@ -2078,3 +2078,61 @@ TYPED_TEST(PropertyGraphTest, Transpose)
     ASSERT_EQ(GT.edge_count(), graph.edge_count());
     ASSERT_EQ(GT.vertex_count(), graph.vertex_count());
 }
+
+TYPED_TEST(PropertyGraphTest, PairwiseEdgeCount)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    auto edges = TestFixture::self_looping_graph();
+
+    Graph graph = [&]() -> Graph
+    {
+        if constexpr(!std::is_same_v<VertexData, std::monostate>)
+        {
+            std::vector<VertexData> vertices(7);
+            return Graph(vertices, edges);
+        }
+        else
+        {
+            return Graph(7, edges);
+        }
+    }();
+
+    ASSERT_EQ(graph.edge_count(), 12 * (Graph::multigraph ? 3 : 1));
+    ASSERT_EQ(graph.vertex_count(), 7);
+
+    VertexPairSet edge_counts(graph.vertex_count());
+
+    for (const auto & e : edges)
+    {
+        if constexpr (Graph::directed)
+        {
+            edge_counts[{e.from, e.to}] += 1;
+        }
+        else
+        {
+            edge_counts[{e.from, e.to}] += 1;
+
+            if (e.to != e.from)
+            {
+                edge_counts[{e.to, e.from}] += 1;
+            }
+        }
+    }
+
+    for (const auto & e : edges)
+    {
+        ASSERT_EQ(graph.edge_count(e.from, e.to),
+                (edge_counts[{e.from, e.to}]))
+                << "Failure for from = " << e.from.value
+                << " to = " << e.to.value;
+
+        ASSERT_EQ(graph.edge_count(e.to, e.from),
+                (edge_counts[{e.to, e.from}]))
+                << "Failure for from = " << e.from.value
+                << " to = " << e.to.value;
+    }
+
+}

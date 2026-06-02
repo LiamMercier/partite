@@ -260,6 +260,16 @@ struct PairHash
     }
 };
 
+struct VertexPairHash
+{
+    std::size_t operator()(const std::pair<VertexID, VertexID> & pair) const
+    {
+        auto h1 = std::hash<size_t>()(pair.first.value);
+        auto h2 = std::hash<size_t>()(pair.second.value);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    }
+};
+
 struct VertexIDHash
 {
     std::size_t operator()(const VertexID & v) const
@@ -320,6 +330,10 @@ using IncidentEdgeSet = std::unordered_set<IncidentEdge,
                                            IncidentEdgeHash,
                                            IncidentEdgeEqual>;
 using EdgeViewSet = std::unordered_set<EdgeView, EdgeViewHash, EdgeViewEqual>;
+
+using VertexPairSet = std::unordered_map<std::pair<VertexID, VertexID>,
+                                         size_t,
+                                         VertexPairHash>;
 
 template <typename Graph, typename EdgeDataFunction>
 Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
