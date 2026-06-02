@@ -2136,3 +2136,97 @@ TYPED_TEST(PropertyGraphTest, PairwiseEdgeCount)
     }
 
 }
+
+TYPED_TEST(PropertyGraphTest, RemoveEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    if constexpr (!Graph::multigraph)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::self_looping_graph();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        ASSERT_EQ(graph.edge_count(), 12 * (Graph::multigraph ? 3 : 1));
+        ASSERT_EQ(graph.vertex_count(), 7);
+
+        for (const auto & e : edges)
+        {
+            // Assert that at least one edge exists.
+            ASSERT_TRUE(graph.has_edge(e.from, e.to));
+        }
+
+        for (const auto & e : edges)
+        {
+            // Remove all edges.
+            graph.remove_edges(e.from, e.to);
+
+            // Ensure every edge was removed, not just some.
+            ASSERT_FALSE(graph.has_edge(e.from, e.to));
+        }
+    }
+}
+
+TYPED_TEST(PropertyGraphTest, EraseEdges)
+{
+    using Graph = typename TestFixture::Graph;
+    using EdgeData = typename TestFixture::EdgeData;
+    using VertexData = typename TestFixture::VertexData;
+
+    if constexpr (!Graph::multigraph)
+    {
+        return;
+    }
+    else
+    {
+        auto edges = TestFixture::self_looping_graph();
+
+        Graph graph = [&]() -> Graph
+        {
+            if constexpr(!std::is_same_v<VertexData, std::monostate>)
+            {
+                std::vector<VertexData> vertices(7);
+                return Graph(vertices, edges);
+            }
+            else
+            {
+                return Graph(7, edges);
+            }
+        }();
+
+        ASSERT_EQ(graph.edge_count(), 12 * (Graph::multigraph ? 3 : 1));
+        ASSERT_EQ(graph.vertex_count(), 7);
+
+        for (const auto & e : edges)
+        {
+            // Assert that at least one edge exists.
+            ASSERT_TRUE(graph.has_edge(e.from, e.to));
+        }
+
+        for (const auto & e : edges)
+        {
+            // Remove all edges.
+            graph.erase_edges(e.from, e.to);
+
+            // Ensure every edge was removed, not just some.
+            ASSERT_FALSE(graph.has_edge(e.from, e.to));
+        }
+    }
+}
