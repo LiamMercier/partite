@@ -1271,6 +1271,70 @@ public:
         return data;
     }
 
+    // Remove all edges between the two vertices.
+    void remove_edges(VertexID from, VertexID to)
+        requires (multigraph && edges_mutable)
+    {
+        libproject_assert(valid_vertex(from),
+                          "PropertyGraph::remove_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "PropertyGraph::remove_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        auto edge_cb = [this](EdgeID e_id){
+                            this->remove_edge_entry(e_id);
+                        };
+
+        // If our representation exposes a bulk removal operation, use this.
+        //
+        // Otherwise, query the edges and remove them.
+        if constexpr
+            (requires { representation_.remove_edges(from, to, edge_cb); })
+        {
+            representation_.remove_edges(from, to, edge_cb);
+        }
+        else if constexpr (EdgeQueryable<Representation>)
+        {
+            auto edges_view = representation_.find_edges(from, to);
+
+            std::vector<EdgeID> edges;
+            std::ranges::copy(edges_view, std::back_inserter(edges));
+
+            for (const auto & e : edges)
+            {
+                EdgeID res = representation_.remove_edge(from, to, e);
+
+                libproject_assert(valid_edge(res),
+                                  "PropertyGraph::remove_edges(e): "
+                                  "internal library error: representation "
+                                  "returned an invalid EdgeID; "
+                                  "edge_id = " + std::to_string(res.value));
+
+                libproject_assert(e == res,
+                                  "PropertyGraph::remove_edges(e): "
+                                  "internal library error: representation "
+                                  "returned a different EdgeID; "
+                                  "edge_id = " + std::to_string(res.value)
+                                  + ", expected edge_id = "
+                                  + std::to_string(e.value));
+
+                remove_edge_entry(res);
+            }
+        }
+        else
+        {
+            static_assert(false,
+                          "PropertyGraph::remove_edges(from, to): "
+                          "representation does not expose suitable "
+                          "remove_edges(from, to, callback) and edges "
+                          "are not queryable with find_edges(from, to).");
+        }
+    }
+
     // TODO <feature>: erase_edges for multigraph users
 
     //
