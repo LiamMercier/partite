@@ -1039,6 +1039,43 @@ public:
         num_self_loops_ = 0;
     }
 
+    // Iterate and count each instance.
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+        requires (directed)
+    {
+        auto & out_adj = out_list(from);
+        size_t total = 0;
+
+        for (const auto & [vertex, _] : out_adj)
+        {
+            if (vertex == to)
+            {
+                total += 1;
+            }
+        }
+
+        return total;
+    }
+
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+        requires (!directed)
+    {
+        auto & adj = adj_list(from);
+        size_t total = 0;
+
+        for (const auto & [vertex, _] : adj)
+        {
+            if (vertex == to)
+            {
+                total += 1;
+            }
+        }
+
+        // If we are looking at self loops, each add_edge causes a duplicate
+        // which we must remove from the count.
+        return (from != to) ? total : total / 2;
+    }
+
     size_t degree(VertexID v) const
         requires (directed)
     {

@@ -544,6 +544,11 @@ public:
     // Utility functions
     //
 
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+    {
+        return has_edge(from, to) ? 1 : 0;
+    }
+
     size_t degree(VertexID v) const noexcept
     {
         libproject_assert(valid_vertex(v),
