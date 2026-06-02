@@ -371,7 +371,25 @@ Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
         }
     }
 
-    return Graph{n, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{n, res};
+    }
+    else
+    {
+        return Graph{n, edges};
+    }
 }
 
 template <typename Graph, typename EdgeDataFunction>
@@ -439,7 +457,25 @@ Graph make_grid_graph(size_t length, EdgeDataFunction make_data)
         }
     }
 
-    return Graph{v_count, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{v_count, res};
+    }
+    else
+    {
+        return Graph{v_count, edges};
+    }
 }
 
 // Create a cluster graph (k disjoint clusters of N vertices).
@@ -506,7 +542,25 @@ Graph make_cluster_graph(size_t N,
         }
     }
 
-    return Graph{N, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{N, res};
+    }
+    else
+    {
+        return Graph{N, edges};
+    }
 }
 
 // Create a graph with three paths between source and target, where
@@ -611,8 +665,25 @@ Graph make_greedy_trap(size_t p1_hops,
         edges.push_back({VertexID{source}, VertexID{target}});
     }
 
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
 
-    return Graph{curr_vertex_id + 1, edges};
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 // Create a graph with a zero weight cycle.
@@ -669,7 +740,25 @@ Graph make_zero_cycle_graph(size_t path_hops,
                          make_data(0)});
     }
 
-    return Graph{curr_vertex_id + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 // Create a graph with a negative weight cycle.
@@ -724,7 +813,25 @@ Graph make_negative_cycle_graph(size_t path_hops,
                          make_data(-1)});
     }
 
-    return Graph{curr_vertex_id + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 template <typename Graph, typename EdgeDataFunction>
@@ -838,7 +945,25 @@ Graph make_negative_DAG(size_t layers,
                      VertexID{layer_max},
                      make_data(-1)});
 
-    return Graph{layer_max + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{layer_max + 1, res};
+    }
+    else
+    {
+        return Graph{layer_max + 1, edges};
+    }
 }
 
 // Create a graph with a zero weight cycle.
@@ -859,5 +984,23 @@ Graph make_overflow_graph(EdgeDataFunction make_data)
                      VertexID{2},
                      make_data(w_max)});
 
-    return Graph{V_count, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{V_count, res};
+    }
+    else
+    {
+        return Graph{V_count, edges};
+    }
 }
