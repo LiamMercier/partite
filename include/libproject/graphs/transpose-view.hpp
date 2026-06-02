@@ -25,6 +25,7 @@ public:
     using EdgePair = typename Graph::EdgePair;
 
     static constexpr bool directed = Graph::directed;
+    static constexpr bool multigraph = Graph::multigraph;
 
 public:
     explicit TransposeView(const Graph & graph) noexcept
@@ -34,8 +35,15 @@ public:
 // Transposed operations
 public:
     decltype(auto) find_edge(VertexID from, VertexID to) const
+        requires (!multigraph)
     {
         return graph_->find_edge(to, from);
+    }
+
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        requires (multigraph)
+    {
+        return graph_->find_edges(to, from);
     }
 
     decltype(auto) endpoints(EdgeID e_id) const noexcept
@@ -182,11 +190,13 @@ public:
     //
 
     decltype(auto) find_edge(EdgePair edge) const
+        requires (!multigraph)
     {
         return find_edge(edge.first, edge.second);
     }
 
     decltype(auto) has_edge(EdgePair edge) const
+        requires (!multigraph)
     {
         return has_edge(edge.first, edge.second);
     }

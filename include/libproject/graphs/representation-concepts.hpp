@@ -15,6 +15,9 @@ concept GraphRepresentation = requires(const T rep)
     // Ensure we have properly set Directed.
     { T::directed } -> std::convertible_to<bool>;
 
+    // Ensure we know if the representation support multigraphs.
+    { T::multigraph } -> std::convertible_to<bool>;
+
     // Ensure we can query the max valid vertex.
     { rep.max_vertex_id() } -> std::integral;
 };
@@ -38,17 +41,42 @@ concept EdgeQueryable = GraphRepresentation<T> &&
                         requires(const T rep, VertexID v_id)
 {
     { rep.has_edge(v_id, v_id) } -> std::convertible_to<bool>;
-    { rep.find_edge(v_id, v_id) } -> std::same_as<EdgeID>;
+} &&
+(T::multigraph || requires(const T rep, VertexID v_id)
+{
+    { rep.find_edge(v_id, v_id) } -> std::convertible_to<EdgeID>;
+}) &&
+(!T::multigraph || requires(const T rep, VertexID v)
+{
+    { rep.find_edges(v, v) } -> std::ranges::range;
+
+    requires std::same_as<std::ranges::range_value_t
+                            <decltype(rep.find_edges(v, v))>,
+                          EdgeID>;
+});
+
+template <typename T>
+concept EdgeCountable = GraphRepresentation<T> &&
+                        requires(const T rep, VertexID v)
+{
+    { rep.edge_count(v, v) } -> std::convertible_to<size_t>;
 };
 
 // Representations that allow edge modifications.
 template <typename T>
 concept EdgeMutable = GraphRepresentation<T> &&
-                      requires(T rep, VertexID v_id, EdgeID e_id)
+                      requires(T rep, VertexID v, EdgeID e)
 {
-    { rep.add_edge(v_id, v_id, e_id) } -> std::same_as<EdgeID>;
-    { rep.remove_edge(v_id, v_id) } -> std::same_as<EdgeID>;
-};
+    { rep.add_edge(v, v, e) } -> std::same_as<EdgeID>;
+} &&
+(T::multigraph || requires(T rep, VertexID v)
+{
+    { rep.remove_edge(v, v) } -> std::same_as<EdgeID>;
+}) &&
+(!T::multigraph || requires(T rep, VertexID v, EdgeID e)
+{
+    { rep.remove_edge(v, v, e) } -> std::same_as<EdgeID>;
+});
 
 // Representations that can be cleared.
 template <typename T>

@@ -17,7 +17,9 @@ class AdjacencyMatrix
 {
 public:
     static constexpr bool directed = Directed;
+    static constexpr bool multigraph = false;
 
+public:
     // Create an AdjacencyMatrix with all zero edges.
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
@@ -541,6 +543,11 @@ public:
     //
     // Utility functions
     //
+
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+    {
+        return has_edge(from, to) ? 1 : 0;
+    }
 
     size_t degree(VertexID v) const noexcept
     {

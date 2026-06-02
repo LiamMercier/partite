@@ -34,6 +34,16 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>>,
                 std::monostate,
                 std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>>,
+                std::monostate,
+                std::monostate>,
 
     // EdgeData but no VertexData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, int>,
@@ -46,6 +56,18 @@ using TestGraphs = ::testing::Types
                 int,
                 std::monostate>,
     GraphConfig<PropertyGraph<AdjacencyList<false>, int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    int>,
+                int,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    int>,
                 int,
                 std::monostate>,
 
@@ -62,6 +84,20 @@ using TestGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>, int, int>,
                 int,
                 int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    int,
+                    int>,
+                int,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    int,
+                    int>,
+                int,
+                int>,
 
     // VertexData but no EdgeData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::monostate, int>,
@@ -74,6 +110,20 @@ using TestGraphs = ::testing::Types
                 std::monostate,
                 int>,
     GraphConfig<PropertyGraph<AdjacencyList<false>, std::monostate, int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    std::monostate,
+                    int>,
+                std::monostate,
+                int>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    std::monostate,
+                    int>,
                 std::monostate,
                 int>
 >;
@@ -93,6 +143,16 @@ using TestStringGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>>,
                 std::monostate,
                 std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>>,
+                std::monostate,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>>,
+                std::monostate,
+                std::monostate>,
 
     // EdgeData but no VertexData
     GraphConfig<PropertyGraph<AdjacencyMatrix<true>, std::string>,
@@ -105,6 +165,18 @@ using TestStringGraphs = ::testing::Types
                 std::string,
                 std::monostate>,
     GraphConfig<PropertyGraph<AdjacencyList<false>, std::string>,
+                std::string,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    std::string>,
+                std::string,
+                std::monostate>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    std::string>,
                 std::string,
                 std::monostate>,
 
@@ -121,26 +193,58 @@ using TestStringGraphs = ::testing::Types
     GraphConfig<PropertyGraph<AdjacencyList<false>, std::string, std::string>,
                 std::string,
                 std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    std::string,
+                    std::string>,
+                std::string,
+                std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    std::string,
+                    std::string>,
+                std::string,
+                std::string>,
 
     // VertexData but no EdgeData
-    GraphConfig<PropertyGraph<AdjacencyMatrix<true>,
-                              std::monostate,
-                              std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyMatrix<true>,
+                    std::monostate,
+                    std::string>,
                 std::monostate,
                 std::string>,
-    GraphConfig<PropertyGraph<AdjacencyMatrix<false>,
-                              std::monostate,
-                              std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyMatrix<false>,
+                    std::monostate,
+                    std::string>,
                 std::monostate,
                 std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<true>,
-                              std::monostate,
-                              std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<true>,
+                    std::monostate,
+                    std::string>,
                 std::monostate,
                 std::string>,
-    GraphConfig<PropertyGraph<AdjacencyList<false>,
-                              std::monostate,
-                              std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<false>,
+                    std::monostate,
+                    std::string>,
+                std::monostate,
+                std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(true, true)>,
+                    std::monostate,
+                    std::string>,
+                std::monostate,
+                std::string>,
+    GraphConfig<PropertyGraph<
+                AdjacencyList<
+                    RepresentationConfig(false, true)>,
+                    std::monostate,
+                    std::string>,
                 std::monostate,
                 std::string>
 >;
@@ -152,6 +256,16 @@ struct PairHash
         // boost hash combine constants to prevent collisions in new use case.
         auto h1 = std::hash<size_t>()(pair.first);
         auto h2 = std::hash<size_t>()(pair.second);
+        return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
+    }
+};
+
+struct VertexPairHash
+{
+    std::size_t operator()(const std::pair<VertexID, VertexID> & pair) const
+    {
+        auto h1 = std::hash<size_t>()(pair.first.value);
+        auto h2 = std::hash<size_t>()(pair.second.value);
         return h1 ^ (h2 + 0x9e3779b9 + (h1 << 6) + (h1 >> 2));
     }
 };
@@ -217,6 +331,10 @@ using IncidentEdgeSet = std::unordered_set<IncidentEdge,
                                            IncidentEdgeEqual>;
 using EdgeViewSet = std::unordered_set<EdgeView, EdgeViewHash, EdgeViewEqual>;
 
+using VertexPairSet = std::unordered_map<std::pair<VertexID, VertexID>,
+                                         size_t,
+                                         VertexPairHash>;
+
 template <typename Graph, typename EdgeDataFunction>
 Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
 {
@@ -267,7 +385,25 @@ Graph make_perfect_binary_tree(size_t h, EdgeDataFunction make_data)
         }
     }
 
-    return Graph{n, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{n, res};
+    }
+    else
+    {
+        return Graph{n, edges};
+    }
 }
 
 template <typename Graph, typename EdgeDataFunction>
@@ -335,7 +471,25 @@ Graph make_grid_graph(size_t length, EdgeDataFunction make_data)
         }
     }
 
-    return Graph{v_count, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{v_count, res};
+    }
+    else
+    {
+        return Graph{v_count, edges};
+    }
 }
 
 // Create a cluster graph (k disjoint clusters of N vertices).
@@ -402,7 +556,25 @@ Graph make_cluster_graph(size_t N,
         }
     }
 
-    return Graph{N, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{N, res};
+    }
+    else
+    {
+        return Graph{N, edges};
+    }
 }
 
 // Create a graph with three paths between source and target, where
@@ -507,8 +679,25 @@ Graph make_greedy_trap(size_t p1_hops,
         edges.push_back({VertexID{source}, VertexID{target}});
     }
 
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
 
-    return Graph{curr_vertex_id + 1, edges};
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 // Create a graph with a zero weight cycle.
@@ -565,7 +754,25 @@ Graph make_zero_cycle_graph(size_t path_hops,
                          make_data(0)});
     }
 
-    return Graph{curr_vertex_id + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 // Create a graph with a negative weight cycle.
@@ -620,7 +827,25 @@ Graph make_negative_cycle_graph(size_t path_hops,
                          make_data(-1)});
     }
 
-    return Graph{curr_vertex_id + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{curr_vertex_id + 1, res};
+    }
+    else
+    {
+        return Graph{curr_vertex_id + 1, edges};
+    }
 }
 
 template <typename Graph, typename EdgeDataFunction>
@@ -734,7 +959,25 @@ Graph make_negative_DAG(size_t layers,
                      VertexID{layer_max},
                      make_data(-1)});
 
-    return Graph{layer_max + 1, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{layer_max + 1, res};
+    }
+    else
+    {
+        return Graph{layer_max + 1, edges};
+    }
 }
 
 // Create a graph with a zero weight cycle.
@@ -755,5 +998,23 @@ Graph make_overflow_graph(EdgeDataFunction make_data)
                      VertexID{2},
                      make_data(w_max)});
 
-    return Graph{V_count, edges};
+    if constexpr (Graph::multigraph)
+    {
+        std::vector<EdgeInput<EdgeData>> res;
+        res.reserve(edges.size() * 2);
+
+        for (size_t i = 0; i < 2; i++)
+        {
+            for (const auto & e : edges)
+            {
+                res.push_back(e);
+            }
+        }
+
+        return Graph{V_count, res};
+    }
+    else
+    {
+        return Graph{V_count, edges};
+    }
 }

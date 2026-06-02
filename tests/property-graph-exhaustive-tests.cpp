@@ -164,18 +164,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u.value);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate vertex "
-                                       + std::to_string(u.value)
-                                       + " for neighbors("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -212,18 +200,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate vertex "
-                                       + std::to_string(u.value)
-                                       + " for out_neighbors("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -253,18 +229,6 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected vertex "
-                                       + std::to_string(u.value)
-                                       + " for in_neighbors("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate vertex "
                                        + std::to_string(u.value)
                                        + " for in_neighbors("
                                        + std::to_string(v.value)
@@ -320,18 +284,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate EdgeID "
-                                       + std::to_string(u.value)
-                                       + " for incident_edge_ids("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -368,18 +320,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate EdgeID "
-                                       + std::to_string(u.value)
-                                       + " for out_edge_ids("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -409,18 +349,6 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected EdgeID "
-                                       + std::to_string(u.value)
-                                       + " for in_edge_ids("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate EdgeID "
                                        + std::to_string(u.value)
                                        + " for in_edge_ids("
                                        + std::to_string(v.value)
@@ -478,20 +406,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate IncidentEdge (neighbor: "
-                                       + std::to_string(u.neighbor.value)
-                                       + ", id: "
-                                       + std::to_string(u.id.value)
-                                       + ") for incident_edges("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -530,20 +444,6 @@ SubtestResultPair
                     return {fail, false};
                 }
 
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate IncidentEdge (neighbor: "
-                                       + std::to_string(u.neighbor.value)
-                                       + ", id: "
-                                       + std::to_string(u.id.value)
-                                       + ") for out_edges("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
                 seen.insert(u);
             }
 
@@ -573,20 +473,6 @@ SubtestResultPair
                 if (!match)
                 {
                     std::string fail = "Unexpected IncidentEdge (neighbor: "
-                                       + std::to_string(u.neighbor.value)
-                                       + ", id: "
-                                       + std::to_string(u.id.value)
-                                       + ") for in_edges("
-                                       + std::to_string(v.value)
-                                       + ")";
-                    return {fail, false};
-                }
-
-                bool duplicate = seen.contains(u);
-
-                if (duplicate)
-                {
-                    std::string fail = "Duplicate IncidentEdge (neighbor: "
                                        + std::to_string(u.neighbor.value)
                                        + ", id: "
                                        + std::to_string(u.id.value)
@@ -892,6 +778,7 @@ SubtestResultPair
             }
         }
 
+        if constexpr (!Graph::multigraph)
         {
             EdgeID found = graph.find_edge(edge.from, edge.to);
             EdgeID found_pair = graph.find_edge(EdgePair{edge.from, edge.to});
@@ -928,6 +815,25 @@ SubtestResultPair
                                    + "; expected "
                                    + std::to_string(id);
                 return {fail, false};
+            }
+        }
+        else
+        {
+            // Multigraph's in this test only have one edge.
+            for (const auto & e : graph.find_edges(edge.from, edge.to))
+            {
+                if (e != id)
+                {
+                    std::string fail = "find_edges("
+                                       + std::to_string(edge.from.value)
+                                       + ", "
+                                       + std::to_string(edge.to.value)
+                                       + ") returned "
+                                       + std::to_string(e.value)
+                                       + "; expected "
+                                       + std::to_string(id);
+                    return {fail, false};
+                }
             }
         }
 
@@ -980,25 +886,29 @@ SubtestResultPair
 
         {
             bool found = graph.has_edge(edge.from, edge.to);
-            bool found_pair = graph.has_edge(EdgePair{edge.from, edge.to});
 
-            bool match = (found == found_pair);
-
-            if (!match)
+            if constexpr (!Graph::multigraph)
             {
-                std::string fail = "Value mismatch; has_edge("
-                                   + std::to_string(edge.from.value)
-                                   + ", "
-                                   + std::to_string(edge.to.value)
-                                   + ") returned "
-                                   + std::to_string(found)
-                                   + " but has_edge(EdgePair{"
-                                   + std::to_string(edge.from.value)
-                                   + ", "
-                                   + std::to_string(edge.to.value)
-                                   + "}) returned "
-                                   + std::to_string(found_pair);
-                return {fail, false};
+                bool found_pair = graph.has_edge(EdgePair{edge.from, edge.to});
+
+                bool match = (found == found_pair);
+
+                if (!match)
+                {
+                    std::string fail = "Value mismatch; has_edge("
+                                    + std::to_string(edge.from.value)
+                                    + ", "
+                                    + std::to_string(edge.to.value)
+                                    + ") returned "
+                                    + std::to_string(found)
+                                    + " but has_edge(EdgePair{"
+                                    + std::to_string(edge.from.value)
+                                    + ", "
+                                    + std::to_string(edge.to.value)
+                                    + "}) returned "
+                                    + std::to_string(found_pair);
+                    return {fail, false};
+                }
             }
 
             bool expected = (found == true);
@@ -1119,33 +1029,66 @@ SubtestResultPair
 
     for (const auto & edge : edges)
     {
-        auto t_eid = tv.find_edge(edge.to, edge.from);
-        auto valid_eid = graph.find_edge(edge.from, edge.to);
+        EdgeID valid_eid;
 
-        bool match = (t_eid == valid_eid);
-
-        // Also test pair overloads.
-        auto t_eid_pair = tv.find_edge(EdgePair{edge.to, edge.from});
-        auto valid_eid_pair = graph.find_edge(EdgePair{edge.from, edge.to});
-
-        if (!match)
+        if constexpr (!Graph::multigraph)
         {
-            std::string fail = "find_edge("
-                               + std::to_string(edge.to.value)
-                               + ", "
-                               + std::to_string(edge.from.value)
-                               + ") returned "
-                               + std::to_string(t_eid.value)
-                               + "; expected "
-                               + std::to_string(valid_eid.value);
-            return {fail, false};
+            auto t_eid = tv.find_edge(edge.to, edge.from);
+            valid_eid = graph.find_edge(edge.from, edge.to);
+
+            bool match = (t_eid == valid_eid);
+
+            // Also test pair overloads.
+            auto t_eid_pair = tv.find_edge(EdgePair{edge.to, edge.from});
+            auto valid_eid_pair = graph.find_edge(EdgePair{edge.from, edge.to});
+
+            if (!match)
+            {
+                std::string fail = "find_edge("
+                                + std::to_string(edge.to.value)
+                                + ", "
+                                + std::to_string(edge.from.value)
+                                + ") returned "
+                                + std::to_string(t_eid.value)
+                                + "; expected "
+                                + std::to_string(valid_eid.value);
+                return {fail, false};
+            }
+        }
+        else
+        {
+            for (const auto & e : tv.find_edges(edge.to, edge.from))
+            {
+                for (const auto & e2 : graph.find_edges(edge.from, edge.to))
+                {
+                    if (e != e2)
+                    {
+                        std::string fail = "Value mismatch; tv.find_edges("
+                                           + std::to_string(edge.to.value)
+                                           + ", "
+                                           + std::to_string(edge.from.value)
+                                           + ") returned "
+                                           + std::to_string(e.value)
+                                           + " but graph.find_edges("
+                                           + std::to_string(edge.from.value)
+                                           + ", "
+                                           + std::to_string(edge.to.value)
+                                           + ") returned "
+                                           + std::to_string(e2.value);
+
+                        return {fail, false};
+                    }
+
+                    valid_eid = e;
+                }
+            }
         }
 
         auto t_ep = tv.endpoints(valid_eid);
         auto valid_ep = graph.endpoints(valid_eid);
 
-        match = (t_ep.first == valid_ep.second)
-                && (t_ep.second == valid_ep.first);
+        bool match = (t_ep.first == valid_ep.second)
+                     && (t_ep.second == valid_ep.first);
 
         if (!match)
         {
@@ -1188,8 +1131,11 @@ SubtestResultPair
             return {fail, false};
         }
 
-        match = (tv.has_edge(edge.to, edge.from))
-                && (tv.has_edge(EdgePair{edge.to, edge.from}));
+        if constexpr (!Graph::multigraph)
+        {
+            match = (tv.has_edge(edge.to, edge.from))
+                    && (tv.has_edge(EdgePair{edge.to, edge.from}));
+        }
 
         if (!match)
         {
@@ -1888,6 +1834,8 @@ public:
     // Generator for each distinct labeled graph of 4 vertices.
     static std::vector<EdgeInput<EdgeData>> compute_edges(size_t i)
     {
+        using id_type = VertexID::underlying_type;
+
         // For the directed case, we simply map the bit vector
         // of i to each edge. For example, we map (0, 0)
         // to be i[0], (1, 0) to be i[4 + 0], etc.
@@ -1901,9 +1849,9 @@ public:
             std::vector<EdgeInput<EdgeData>> edges;
             edges.reserve(v_count * v_count);
 
-            for (size_t u = 0; u < v_count; u++)
+            for (id_type u = 0; u < v_count; u++)
             {
-                for (size_t v = 0; v < v_count; v++)
+                for (id_type v = 0; v < v_count; v++)
                 {
                     size_t index = u * v_count + v;
                     if (i & (size_t{1} << index))
@@ -1942,11 +1890,11 @@ public:
 
             size_t index = 0;
 
-            for (size_t u = 0; u < v_count; u++)
+            for (id_type u = 0; u < v_count; u++)
             {
                 // Start at v = u, since (u, u - N)
                 // is unnecessary to check.
-                for (size_t v = u; v < v_count; v++)
+                for (id_type v = u; v < v_count; v++)
                 {
                     if (i & (size_t{1} << index))
                     {
@@ -2030,7 +1978,6 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
     for (const auto & graph : TestFixture::all_graphs())
     {
         auto edges = TestFixture::compute_edges(i);
-        i++;
 
         {
             auto res = assert_edges_exist(graph, edges);
@@ -2193,6 +2140,7 @@ TYPED_TEST(PropertyGraphExhaustiveTest, ValidateGraphs)
                                     << res.first;
         }
 
+        i++;
         continue;
     }
 }

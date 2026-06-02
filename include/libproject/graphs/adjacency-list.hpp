@@ -14,13 +14,13 @@ namespace libproject::graphs
 //                      all fragmented, very bad since most
 //                      graphs are going to be sparse and large.
 
-
-// AdjacencyList class for simple graphs.
-template <bool Directed>
+// AdjacencyList class.
+template <RepresentationConfig Config>
 class AdjacencyList
 {
 public:
-    static constexpr bool directed = Directed;
+    static constexpr bool directed = Config.Directed;
+    static constexpr bool multigraph = Config.Multigraph;
 
 public:
     // Create an AdjacencyList with all zero edges.
@@ -33,8 +33,7 @@ public:
 
     AdjacencyList(size_t num_vertices)
         requires (!directed)
-    :adj_(num_vertices),
-    self_loop_(num_vertices)
+    :adj_(num_vertices)
     {
     }
 
@@ -227,7 +226,7 @@ public:
     //
 
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
-        requires (directed)
+        requires (!multigraph && directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::find_edge(from, to): "
@@ -252,7 +251,7 @@ public:
     }
 
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
-        requires (!directed)
+        requires (!multigraph && !directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::find_edge(from, to): "
@@ -274,6 +273,50 @@ public:
         }
 
         return EdgeID::empty;
+    }
+
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        requires (multigraph && directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return out_edges_[from.value]
+               | std::views::filter([this, to](auto ie){
+                    return ie.first == to;
+                })
+               | std::views::transform([this](auto ie){
+                    return ie.second;
+                });
+    }
+
+    decltype(auto) find_edges(VertexID from, VertexID to) const
+        requires (multigraph && !directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::find_edges(from, to): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        return adj_[from.value]
+               | std::views::filter([this, to](auto ie){
+                    return ie.first == to;
+                })
+               | std::views::transform([this](auto ie){
+                    return ie.second;
+                });
     }
 
     bool has_edge(VertexID from, VertexID to) const noexcept
@@ -328,17 +371,20 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (directed)
     {
-        libproject_assert(find_edge(from, to) == EdgeID::empty,
-                          "AdjacencyList::add_edge(from, to, edge_id) "
-                          "tried to insert duplicate edge; from = "
-                          + std::to_string(from.value)
-                          + ", to = "
-                          + std::to_string(to.value)
-                          + ", edge_id = "
-                          + std::to_string(edge_id.value)
-                          + " (existing edge has ID "
-                          + std::to_string(find_edge(from, to).value)
-                          + ")");
+        if constexpr (!multigraph)
+        {
+            libproject_assert(find_edge(from, to) == EdgeID::empty,
+                              "AdjacencyList::add_edge(from, to, edge_id) "
+                              "tried to insert duplicate edge; from = "
+                              + std::to_string(from.value)
+                              + ", to = "
+                              + std::to_string(to.value)
+                              + ", edge_id = "
+                              + std::to_string(edge_id.value)
+                              + " (existing edge has ID "
+                              + std::to_string(find_edge(from, to).value)
+                              + ")");
+        }
 
         out_list(from).push_back({to, edge_id});
         in_list(to).push_back({from, edge_id});
@@ -355,31 +401,27 @@ public:
     EdgeID add_edge(VertexID from, VertexID to, EdgeID edge_id)
         requires (!directed)
     {
-        libproject_assert(find_edge(from, to) == EdgeID::empty,
-                          "AdjacencyList::add_edge(from, to, edge_id) "
-                          "tried to insert duplicate edge; from = "
-                          + std::to_string(from.value)
-                          + ", to = "
-                          + std::to_string(to.value)
-                          + ", edge_id = "
-                          + std::to_string(edge_id.value)
-                          + " (existing edge has ID "
-                          + std::to_string(find_edge(from, to).value)
-                          + ")");
+        if constexpr (!multigraph)
+        {
+            libproject_assert(find_edge(from, to) == EdgeID::empty,
+                              "AdjacencyList::add_edge(from, to, edge_id) "
+                              "tried to insert duplicate edge; from = "
+                              + std::to_string(from.value)
+                              + ", to = "
+                              + std::to_string(to.value)
+                              + ", edge_id = "
+                              + std::to_string(edge_id.value)
+                              + " (existing edge has ID "
+                              + std::to_string(find_edge(from, to).value)
+                              + ")");
+        }
 
         adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
 
-        // Do not insert self loops twice, otherwise
-        // neighbors(v) will return the same value twice.
-        if (to != from)
+        if (to == from)
         {
-            adj_list(to).push_back({from, edge_id});
-        }
-        else
-        {
-            // Count this self loop and record in our array.
             num_self_loops_ += 1;
-            self_loop_[from.value] = 1;
         }
 
         return edge_id;
@@ -387,7 +429,7 @@ public:
 
     // Ensure the edge being added is unique
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
-        requires (directed)
+        requires (!multigraph && directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
@@ -418,7 +460,7 @@ public:
     }
 
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
-        requires (!directed)
+        requires (!multigraph && !directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
@@ -438,18 +480,11 @@ public:
         }
 
         adj_list(from).push_back({to, edge_id});
+        adj_list(to).push_back({from, edge_id});
 
-        // Do not insert self loops twice, otherwise
-        // neighbors(v) will return the same value twice.
-        if (to != from)
+        if (to == from)
         {
-            adj_list(to).push_back({from, edge_id});
-        }
-        else
-        {
-            // Count this self loop and record in our array.
             num_self_loops_ += 1;
-            self_loop_[from.value] = 1;
         }
 
         return edge_id;
@@ -458,7 +493,7 @@ public:
     // For a digraph we find "to" in out_edges_[from]
     // and find "from" in in_edges_[to]
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
-        requires (directed)
+        requires (!multigraph && directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to): "
@@ -511,7 +546,7 @@ public:
     }
 
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
-        requires (!directed)
+        requires (!multigraph && !directed)
     {
         libproject_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to): "
@@ -538,11 +573,62 @@ public:
             }
         }
 
+        for (size_t i = 0; i < to_adj.size(); i++)
+        {
+            if (to_adj[i].first == from)
+            {
+                to_adj[i] = std::move(to_adj.back());
+                to_adj.pop_back();
+                break;
+            }
+        }
+
+        if (from == to && e_id != EdgeID::empty)
+        {
+            num_self_loops_ -= 1;
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_edge(from, to): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
+        }
+
+        return e_id;
+    }
+
+    EdgeID remove_edge(VertexID from, VertexID to, EdgeID e) noexcept
+        requires (multigraph && !directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::remove_edge(from, to, e): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::remove_edge(from, to, e): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        EdgeID e_id = EdgeID::empty;
+        auto & from_adj = adj_list(from);
+        auto & to_adj = adj_list(to);
+
+        for (size_t i = 0; i < from_adj.size(); i++)
+        {
+            if (from_adj[i].second == e)
+            {
+                e_id = from_adj[i].second;
+                from_adj[i] = std::move(from_adj.back());
+                from_adj.pop_back();
+                break;
+            }
+        }
+
         if (from != to)
         {
             for (size_t i = 0; i < to_adj.size(); i++)
             {
-                if (to_adj[i].first == from)
+                if (to_adj[i].second == e)
                 {
                     to_adj[i] = std::move(to_adj.back());
                     to_adj.pop_back();
@@ -552,7 +638,61 @@ public:
         }
         else if (e_id != EdgeID::empty)
         {
-            self_loop_[from.value] = 0;
+            num_self_loops_ -= 1;
+
+            libproject_assert(num_self_loops_ + 1 >
+                              num_self_loops_,
+                              "AdjacencyList::remove_edge(from, to): "
+                              "internal library error: num_self_loops_ "
+                              "underflowed");
+        }
+
+        return e_id;
+    }
+
+    // For a digraph we find "to" in out_edges_[from]
+    // and find "from" in in_edges_[to]
+    EdgeID remove_edge(VertexID from, VertexID to, EdgeID e) noexcept
+        requires (multigraph && directed)
+    {
+        libproject_assert(valid_vertex(from),
+                          "AdjacencyList::remove_edge(from, to, e): "
+                          "invalid VertexID; from = "
+                          + std::to_string(from.value));
+
+        libproject_assert(valid_vertex(to),
+                          "AdjacencyList::remove_edge(from, to, e): "
+                          "invalid VertexID; to = "
+                          + std::to_string(to.value));
+
+        EdgeID e_id = EdgeID::empty;
+        auto & out_edges = out_list(from);
+
+        for (size_t i = 0; i < out_edges.size(); i++)
+        {
+            if (out_edges[i].second == e)
+            {
+                e_id = out_edges[i].second;
+                out_edges[i] = std::move(out_edges.back());
+                out_edges.pop_back();
+                break;
+            }
+        }
+
+        auto & in_edges = in_list(to);
+
+        for (size_t i = 0; i < in_edges.size(); i++)
+        {
+            if (in_edges[i].second == e)
+            {
+                in_edges[i] = std::move(in_edges.back());
+                in_edges.pop_back();
+                break;
+            }
+        }
+
+        if (from == to && e_id != EdgeID::empty)
+        {
             num_self_loops_ -= 1;
 
             libproject_assert(num_self_loops_ + 1 >
@@ -604,7 +744,6 @@ public:
         if (v.value == adj_.size())
         {
             adj_.emplace_back();
-            self_loop_.emplace_back(0);
         }
 
         return true;
@@ -629,7 +768,7 @@ public:
     // Theta(deg(v) * average_degree) time (see docs/design).
     template <typename EdgeRemovalCallback>
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
-        requires (directed)
+        requires (!multigraph && directed)
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
@@ -709,7 +848,7 @@ public:
     // clear adj_list(v)
     template <typename EdgeRemovalCallback>
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
-        requires (!directed)
+        requires (!multigraph && !directed)
     {
         libproject_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
@@ -720,13 +859,13 @@ public:
 
         for (const auto & [u, e_id] : adj_list(v))
         {
-            auto & u_list = adj_list(u);
-
             if (u == v)
             {
                 self_loop_id = e_id;
                 continue;
             }
+
+            auto & u_list = adj_list(u);
 
             for (size_t i = 0; i < u_list.size(); i++)
             {
@@ -754,7 +893,119 @@ public:
         }
 
         adj_list(v).clear();
-        self_loop_[v.value] = 0;
+    }
+
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
+        requires (multigraph && directed)
+    {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
+        bool self_loop_found = false;
+
+        for (const auto & [u, e_id] : out_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & in = in_list(u);
+            size_t i = 0;
+
+            while (i < in.size())
+            {
+                if (in[i].first == v)
+                {
+                    on_edge_removed(in[i].second);
+                    in[i] = std::move(in.back());
+                    in.pop_back();
+                }
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        for (const auto & [u, e_id] : in_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & out = out_list(u);
+            size_t i = 0;
+
+            while (i < out.size())
+            {
+                if (out[i].first == v)
+                {
+                    on_edge_removed(out[i].second);
+                    out[i] = std::move(out.back());
+                    out.pop_back();
+                }
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        out_list(v).clear();
+        in_list(v).clear();
+    }
+
+    template <typename EdgeRemovalCallback>
+    void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
+        requires (multigraph && !directed)
+    {
+        libproject_assert(valid_vertex(v),
+                          "AdjacencyList::remove_vertex(v): "
+                          "invalid VertexID; v = "
+                          + std::to_string(v.value));
+
+        bool self_loop_found = false;
+
+        for (const auto & [u, e_id] : adj_list(v))
+        {
+            if (u == v)
+            {
+                num_self_loops_ -= 1;
+                on_edge_removed(e_id);
+                continue;
+            }
+
+            auto & u_list = adj_list(u);
+            size_t i = 0;
+
+            // While we have not finished, keep looking for
+            // entries with the removed vertex.
+            while (i < u_list.size())
+            {
+                if (u_list[i].first == v)
+                {
+                    on_edge_removed(u_list[i].second);
+                    u_list[i] = std::move(u_list.back());
+                    u_list.pop_back();
+                }
+                // Increment only when we do not swap.
+                else
+                {
+                    i++;
+                }
+            }
+        }
+
+        adj_list(v).clear();
     }
 
     //
@@ -785,9 +1036,44 @@ public:
             list.clear();
         }
 
-        // Quickly fill the vector with element 0.
-        std::fill(self_loop_.begin(), self_loop_.end(), 0);
         num_self_loops_ = 0;
+    }
+
+    // Iterate and count each instance.
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+        requires (directed)
+    {
+        auto & out_adj = out_list(from);
+        size_t total = 0;
+
+        for (const auto & [vertex, _] : out_adj)
+        {
+            if (vertex == to)
+            {
+                total += 1;
+            }
+        }
+
+        return total;
+    }
+
+    size_t edge_count(VertexID from, VertexID to) const noexcept
+        requires (!directed)
+    {
+        auto & adj = adj_list(from);
+        size_t total = 0;
+
+        for (const auto & [vertex, _] : adj)
+        {
+            if (vertex == to)
+            {
+                total += 1;
+            }
+        }
+
+        // If we are looking at self loops, each add_edge causes a duplicate
+        // which we must remove from the count.
+        return (from != to) ? total : total / 2;
     }
 
     size_t degree(VertexID v) const
@@ -809,9 +1095,7 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        // A self loop adds 1 to the degree that our adjacency list
-        // would not be able to account for.
-        return adj_[v.value].size() + self_loop_[v.value];
+        return adj_[v.value].size();
     }
 
     size_t in_degree(VertexID v) const
@@ -866,8 +1150,6 @@ public:
         return false;
     }
 
-    // Use the lookup table, we already have to store this
-    // information for our degree checks.
     bool has_self_loop(VertexID v) const
         requires (!directed)
     {
@@ -876,7 +1158,15 @@ public:
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
 
-        return self_loop_[v.value];
+        for (const auto & u : adj_list(v))
+        {
+            if (u.first == v)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     bool valid_vertex(VertexID v) const
@@ -913,7 +1203,6 @@ public:
         {
             // Return a copy, G^T = G in an undirected graph.
             return AdjacencyList{adj_,
-                                 self_loop_,
                                  num_self_loops_};
         }
     }
@@ -1021,15 +1310,11 @@ private:
         for (auto&& ev : edge_views)
         {
             adj_list(ev.from).push_back({ev.to, ev.id});
+            adj_list(ev.to).push_back({ev.from, ev.id});
 
-            if (ev.from != ev.to)
-            {
-                adj_list(ev.to).push_back({ev.from, ev.id});
-            }
-            else
+            if (ev.from == ev.to)
             {
                 num_self_loops_ += 1;
-                self_loop_[ev.from.value] = 1;
             }
         }
     }
@@ -1115,11 +1400,9 @@ private:
     }
 
     AdjacencyList(ListStorage adj,
-                  std::vector<uint8_t> self_loop_state,
                   size_t loop_count)
         requires (!directed)
     :adj_(std::move(adj)),
-    self_loop_(std::move(self_loop_state)),
     num_self_loops_{loop_count}
     {
     }
@@ -1142,14 +1425,6 @@ private:
         !directed,
         ListStorage,
         std::monostate> adj_;
-
-    // State storage for self loops in an undirected graph.
-    //
-    // We can either store this or the degree, and this is cheaper
-    // while also reducing our cost for has_self_loop(v)
-    std::conditional_t<!directed,
-                       std::vector<uint8_t>,
-                       std::monostate> self_loop_;
 
     // We need to count this on add and remove, or we are forced
     // to do Theta(V) average time iteration when it is requested.
