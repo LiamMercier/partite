@@ -1,19 +1,22 @@
 # libproject
 
-Draft of a mathematics library
+A work in progress mathematics library.
 
 ### Backlog
 
 This is mostly a personal consideration list for me to track different features that I think would be interesting to see in the library.
 
-- Fill the backlog with missing tasks (ironic)
-- Safe PropertyGraph wrapper
-- Snapshot variants of our lazy ranges (i.e neighbors_snapshot(v)) for people who need to modify the graph during iteration
-- Convert unit tests for particular classes to test suites
-- Graph Concepts
-- Representation class template for users who want to make their own
-- Evaluate multigraph viability
+#### Graphs
+
+- PropertyGraph wrapper with built in safety checks
+- unique_neighbors(v) that does filtering for consumers who cannot have duplicates
+- noexcept everything that is noexcept compatible
+- Representation class template file for users who want to make their own representation
 - Evaluate changing EdgeID and VertexID types outside of compilation (i.e template)
-- Bellman-ford, A* search, DAG paths / topological sort
-- Bidirectional search, dijkstra, etc.
+- A* search, DAG paths / topological sort, Bidirectional search
+- Implicit graphs
 - Consider graph algorithms with GPU dispatch (long term idea to look into)
+
+#### Groups
+
+- Investigate different schemes for group representation
