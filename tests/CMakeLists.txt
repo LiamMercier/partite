@@ -15,7 +15,7 @@ endif()
 
 target_link_libraries(unit-tests PRIVATE
     GTest::gtest_main
-    libproject::graphs
+    partite::graphs
 )
 
 include(GoogleTest)

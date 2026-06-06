@@ -2,12 +2,12 @@
 
 #include "test-utils.hpp"
 #include "search-graph-helpers.hpp"
-#include <libproject/graphs/bfs.hpp>
-#include <libproject/graphs/dfs.hpp>
+#include <partite/graphs/bfs.hpp>
+#include <partite/graphs/dfs.hpp>
 
 #include <bit>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 TYPED_TEST_SUITE(SearchGraphFixture, TestStringGraphs);
 

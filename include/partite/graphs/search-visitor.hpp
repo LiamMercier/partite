@@ -1,8 +1,8 @@
 #pragma once
 
-#include <libproject/graphs/control-actions.hpp>
+#include <partite/graphs/control-actions.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     template <typename V>
     concept SearchVisitor = requires(V & visitor,

@@ -1,10 +1,10 @@
 #pragma once
 #include <vector>
 
-#include <libproject/internal/libproject-assert.hpp>
-#include <libproject/graphs/graph-constants.hpp>
+#include <partite/internal/libpartite-assert.hpp>
+#include <partite/graphs/graph-constants.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
 
 // TODO <optimization>: this class really needs a way to
@@ -62,7 +62,7 @@ public:
 
     decltype(auto) neighbors(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -84,7 +84,7 @@ public:
     decltype(auto) out_neighbors(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -99,7 +99,7 @@ public:
     decltype(auto) in_neighbors(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -117,7 +117,7 @@ public:
 
     decltype(auto) incident_edges(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::incident_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -139,7 +139,7 @@ public:
     decltype(auto) out_edges(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -154,7 +154,7 @@ public:
     decltype(auto) in_edges(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -172,7 +172,7 @@ public:
 
     decltype(auto) incident_edge_ids(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::incident_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -194,7 +194,7 @@ public:
     decltype(auto) out_edge_ids(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -209,7 +209,7 @@ public:
     decltype(auto) in_edge_ids(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -228,12 +228,12 @@ public:
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
         requires (!multigraph && directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::find_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::find_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -253,12 +253,12 @@ public:
     EdgeID find_edge(VertexID from, VertexID to) const noexcept
         requires (!multigraph && !directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::find_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::find_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -278,12 +278,12 @@ public:
     decltype(auto) find_edges(VertexID from, VertexID to) const
         requires (multigraph && directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::find_edges(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::find_edges(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -300,12 +300,12 @@ public:
     decltype(auto) find_edges(VertexID from, VertexID to) const
         requires (multigraph && !directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::find_edges(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::find_edges(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -322,12 +322,12 @@ public:
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::has_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::has_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -346,12 +346,12 @@ public:
     bool has_edge(VertexID from, VertexID to) const noexcept
         requires (!directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::has_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::has_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -373,7 +373,7 @@ public:
     {
         if constexpr (!multigraph)
         {
-            libproject_assert(find_edge(from, to) == EdgeID::empty,
+            libpartite_assert(find_edge(from, to) == EdgeID::empty,
                               "AdjacencyList::add_edge(from, to, edge_id) "
                               "tried to insert duplicate edge; from = "
                               + std::to_string(from.value)
@@ -403,7 +403,7 @@ public:
     {
         if constexpr (!multigraph)
         {
-            libproject_assert(find_edge(from, to) == EdgeID::empty,
+            libpartite_assert(find_edge(from, to) == EdgeID::empty,
                               "AdjacencyList::add_edge(from, to, edge_id) "
                               "tried to insert duplicate edge; from = "
                               + std::to_string(from.value)
@@ -431,12 +431,12 @@ public:
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (!multigraph && directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -462,12 +462,12 @@ public:
     EdgeID add_edge_unique(VertexID from, VertexID to, EdgeID edge_id)
         requires (!multigraph && !directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::add_edge_unique(from, to, edge_id): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -495,12 +495,12 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
         requires (!multigraph && directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::remove_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -535,7 +535,7 @@ public:
         {
             num_self_loops_ -= 1;
 
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_edge(from, to): "
                               "internal library error: num_self_loops_ "
@@ -548,12 +548,12 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to) noexcept
         requires (!multigraph && !directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::remove_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -586,7 +586,7 @@ public:
         if (from == to && e_id != EdgeID::empty)
         {
             num_self_loops_ -= 1;
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_edge(from, to): "
                               "internal library error: num_self_loops_ "
@@ -599,12 +599,12 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to, EdgeID e) noexcept
         requires (multigraph && !directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to, e): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::remove_edge(from, to, e): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -640,7 +640,7 @@ public:
         {
             num_self_loops_ -= 1;
 
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_edge(from, to): "
                               "internal library error: num_self_loops_ "
@@ -655,12 +655,12 @@ public:
     EdgeID remove_edge(VertexID from, VertexID to, EdgeID e) noexcept
         requires (multigraph && directed)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "AdjacencyList::remove_edge(from, to, e): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "AdjacencyList::remove_edge(from, to, e): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -695,7 +695,7 @@ public:
         {
             num_self_loops_ -= 1;
 
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_edge(from, to): "
                               "internal library error: num_self_loops_ "
@@ -713,7 +713,7 @@ public:
     bool add_vertex(VertexID v)
         requires (directed)
     {
-        libproject_assert(v.value <= out_edges_.size(),
+        libpartite_assert(v.value <= out_edges_.size(),
                           "AdjacencyList::add_vertex(v): "
                           "internal library error: monotonic VertexID "
                           "is larger than list size; v = "
@@ -733,7 +733,7 @@ public:
     bool add_vertex(VertexID v)
         requires (!directed)
     {
-        libproject_assert(v.value <= adj_.size(),
+        libpartite_assert(v.value <= adj_.size(),
                           "AdjacencyList::add_vertex(v): "
                           "internal library error: monotonic VertexID "
                           "is larger than list size; v = "
@@ -770,7 +770,7 @@ public:
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (!multigraph && directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -827,7 +827,7 @@ public:
         if (self_loop_id != EdgeID::empty)
         {
             num_self_loops_ -= 1;
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_vertex(v): "
                               "internal library error: num_self_loops_ "
@@ -850,7 +850,7 @@ public:
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (!multigraph && !directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -883,7 +883,7 @@ public:
         if (self_loop_id != EdgeID::empty)
         {
             num_self_loops_ -= 1;
-            libproject_assert(num_self_loops_ + 1 >
+            libpartite_assert(num_self_loops_ + 1 >
                               num_self_loops_,
                               "AdjacencyList::remove_vertex(v): "
                               "internal library error: num_self_loops_ "
@@ -899,7 +899,7 @@ public:
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (multigraph && directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -968,7 +968,7 @@ public:
     void remove_vertex(VertexID v, EdgeRemovalCallback on_edge_removed)
         requires (multigraph && !directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::remove_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1079,7 +1079,7 @@ public:
     size_t degree(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1090,7 +1090,7 @@ public:
     size_t degree(VertexID v) const
         requires (!directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1101,7 +1101,7 @@ public:
     size_t in_degree(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1112,7 +1112,7 @@ public:
     size_t out_degree(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1134,7 +1134,7 @@ public:
     bool has_self_loop(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::has_self_loop(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1153,7 +1153,7 @@ public:
     bool has_self_loop(VertexID v) const
         requires (!directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::has_self_loop(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1234,12 +1234,12 @@ private:
 
         for (auto&& ev: edge_views)
         {
-            libproject_assert(valid_vertex(ev.from),
+            libpartite_assert(valid_vertex(ev.from),
                               "AdjacencyList::build(edge_views): "
                               "invalid VertexID; from = "
                               + std::to_string(ev.from.value));
 
-            libproject_assert(valid_vertex(ev.to),
+            libpartite_assert(valid_vertex(ev.to),
                               "AdjacencyList::build(edge_views): "
                               "invalid VertexID; to = "
                               + std::to_string(ev.to.value));
@@ -1279,7 +1279,7 @@ private:
 
         for (auto&& ev: edge_views)
         {
-            libproject_assert(valid_vertex(ev.from),
+            libpartite_assert(valid_vertex(ev.from),
                               "AdjacencyList::build(edge_views): "
                               "invalid VertexID; from = "
                               + std::to_string(ev.from.value));
@@ -1291,7 +1291,7 @@ private:
             // need to allocate this extra space.
             if (ev.from != ev.to)
             {
-                libproject_assert(valid_vertex(ev.to),
+                libpartite_assert(valid_vertex(ev.to),
                                   "AdjacencyList::build(edge_views): "
                                   "invalid VertexID; to = "
                                   + std::to_string(ev.to.value));
@@ -1322,7 +1322,7 @@ private:
     auto & out_list(VertexID v)
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1333,7 +1333,7 @@ private:
     const auto & out_list(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::out_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1344,7 +1344,7 @@ private:
     auto & in_list(VertexID v)
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1355,7 +1355,7 @@ private:
     const auto & in_list(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::in_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1366,7 +1366,7 @@ private:
     auto & adj_list(VertexID v)
         requires (!directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::adj_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1377,7 +1377,7 @@ private:
     const auto & adj_list(VertexID v) const
         requires (!directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyList::adj_list(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));

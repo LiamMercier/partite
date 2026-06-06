@@ -2,9 +2,9 @@
 
 #include "test-utils.hpp"
 #include "dijkstra-helpers.hpp"
-#include <libproject/graphs/dijkstra.hpp>
+#include <partite/graphs/dijkstra.hpp>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 // Test that checks the default PQ generally works.
 //

@@ -3,13 +3,13 @@
 #include <variant>
 #include <numeric>
 
-#include <libproject/internal/libproject-assert.hpp>
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/graph-inputs.hpp>
-#include <libproject/graphs/representation-concepts.hpp>
-#include <libproject/graphs/transpose-view.hpp>
+#include <partite/internal/libpartite-assert.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-inputs.hpp>
+#include <partite/graphs/representation-concepts.hpp>
+#include <partite/graphs/transpose-view.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
 
 // TODO <optimization>: We can add a new template parameter
@@ -100,7 +100,7 @@ public:
             {
                 const auto & [from, to] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(num_vertices, "
                                   "edge_range): edge references "
@@ -117,7 +117,7 @@ public:
             {
                 auto && [from, to, data] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(num_vertices, "
                                   "edge_range): edge references "
@@ -159,7 +159,7 @@ public:
             {
                 const auto & [from, to] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(vertex_range, "
                                   "edge_range): edge references "
@@ -176,7 +176,7 @@ public:
             {
                 auto && [from, to, data] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(vertex_range, "
                                   "edge_range): edge references "
@@ -220,7 +220,7 @@ public:
             {
                 const auto & [from, to] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(num_vertices, "
                                   "edge_range): edge references "
@@ -237,7 +237,7 @@ public:
             {
                 auto && [from, to, data] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(num_vertices, "
                                   "edge_range): edge references "
@@ -279,7 +279,7 @@ public:
             {
                 const auto & [from, to] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(vertex_range, "
                                   "edge_range): edge references "
@@ -296,7 +296,7 @@ public:
             {
                 auto && [from, to, data] = item;
 
-                libproject_assert(from.value < vertices_.size()
+                libpartite_assert(from.value < vertices_.size()
                                   && to.value < vertices_.size(),
                                   "PropertyGraph::PropertyGraph(vertex_range, "
                                   "edge_range): edge references "
@@ -377,7 +377,7 @@ public:
         noexcept(noexcept(representation_.neighbors(v)))
         requires (!directed) && NeighborsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -391,7 +391,7 @@ public:
         requires (directed) &&
                  OutNeighborsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -405,7 +405,7 @@ public:
         requires (directed) &&
                  OutNeighborsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::out_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -418,7 +418,7 @@ public:
         noexcept(noexcept(representation_.in_neighbors(v)))
         requires (directed) && InNeighborsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::in_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -436,7 +436,7 @@ public:
         requires (!directed) &&
                  IncidentEdgesQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -458,7 +458,7 @@ public:
                  IncidentEdgeIDsQueryable<Representation> &&
                  !IncidentEdgesQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -477,7 +477,7 @@ public:
                  (OutEdgesQueryable<Representation>
                   || OutEdgeIDsQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::incident_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -491,7 +491,7 @@ public:
         requires (directed) &&
                  OutEdgesQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::out_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -512,7 +512,7 @@ public:
                  !OutEdgesQueryable<Representation> &&
                  OutEdgeIDsQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::out_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -529,7 +529,7 @@ public:
         noexcept(noexcept(representation_.in_edges(v)))
         requires (directed) && InEdgesQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::in_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -550,7 +550,7 @@ public:
                  !InEdgesQueryable<Representation> &&
                  InEdgeIDsQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::in_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -571,7 +571,7 @@ public:
         requires (!directed &&
                  IncidentEdgeIDsQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -584,7 +584,7 @@ public:
         noexcept(noexcept(out_edge_ids(v)))
         requires(directed) && OutEdgeIDsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::incident_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -598,7 +598,7 @@ public:
         noexcept(noexcept(representation_.out_edge_ids(v)))
         requires (directed) && OutEdgeIDsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::out_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -611,7 +611,7 @@ public:
         noexcept(noexcept(representation_.in_edge_ids(v)))
         requires (directed) && InEdgeIDsQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::in_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -628,12 +628,12 @@ public:
         noexcept(noexcept(representation_.find_edge(from, to)))
         requires (!multigraph && EdgeQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::find_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::find_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -645,12 +645,12 @@ public:
         noexcept(noexcept(representation_.find_edges(from, to)))
         requires (multigraph && EdgeQueryable<Representation>)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::find_edges(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::find_edges(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -661,12 +661,12 @@ public:
     // Given an edge ID, find the vertices such that (u, v) has this ID.
     EdgePair endpoints(EdgeID e_id) const noexcept
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::endpoints(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
 
-        libproject_assert(valid_vertex(source(e_id))
+        libpartite_assert(valid_vertex(source(e_id))
                           && valid_vertex(target(e_id)),
                           "PropertyGraph::endpoints(e_id): "
                           "internal library error: valid_edge(e_id) "
@@ -682,7 +682,7 @@ public:
     EdgeData & edge_data(EdgeID e_id) noexcept
         requires (has_edge_data)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::edge_data(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -694,7 +694,7 @@ public:
     const EdgeData & edge_data(EdgeID e_id) const noexcept
         requires (has_edge_data)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::edge_data(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -705,7 +705,7 @@ public:
     VertexData & vertex_data(VertexID v) noexcept
         requires (has_vertex_data)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::vertex_data(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -716,7 +716,7 @@ public:
     const VertexData & vertex_data(VertexID v) const noexcept
         requires (has_vertex_data)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::vertex_data(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -726,12 +726,12 @@ public:
 
     VertexID source(EdgeID e_id) const noexcept
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::source(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
 
-        libproject_assert(valid_vertex(edges_.from[e_id.value]),
+        libpartite_assert(valid_vertex(edges_.from[e_id.value]),
                           "PropertyGraph::source(e_id): "
                           "internal library error: valid_edge(e_id) "
                           "returned true but source vertex is invalid; "
@@ -744,12 +744,12 @@ public:
 
     VertexID target(EdgeID e_id) const noexcept
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::target(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
 
-        libproject_assert(valid_vertex(edges_.to[e_id.value]),
+        libpartite_assert(valid_vertex(edges_.to[e_id.value]),
                           "PropertyGraph::target(e_id): "
                           "internal library error: valid_edge(e_id) "
                           "returned true but target vertex is invalid; "
@@ -764,12 +764,12 @@ public:
         noexcept(noexcept(representation_.has_edge(from, to)))
         requires EdgeQueryable<Representation>
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::has_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::has_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -787,12 +787,12 @@ public:
                   (has_edge_data && std::constructible_from<EdgeData, Args...>))
                  && edges_mutable
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::add_edge_impl(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::add_edge_impl(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -840,7 +840,7 @@ public:
             // for range based constructors where representation has .build().
             else if constexpr (Policy == EdgeInsertPolicy::PushBack)
             {
-                libproject_assert(false,
+                libpartite_assert(false,
                                   "PropertyGraph::push_back_edge(from, to): "
                                   "internal library error: tried to use "
                                   "free edge "
@@ -862,7 +862,7 @@ public:
                 return {rep_edge, false};
             }
 
-            libproject_assert(e_id.value < edges_.size(),
+            libpartite_assert(e_id.value < edges_.size(),
                               "PropertyGraph::add_edge(from, to): "
                               "internal library error: free edges list "
                               "returned EdgeID out of range; "
@@ -942,7 +942,7 @@ public:
             // If an edge already existed, stop now.
             if (rep_edge != e_id)
             {
-                libproject_assert(valid_edge(e_id),
+                libpartite_assert(valid_edge(e_id),
                                   "PropertyGraph::add_edge(from, to): "
                                   "internal library error: representation "
                                   "returned an invalid EdgeID; "
@@ -973,12 +973,12 @@ public:
     bool remove_edge(VertexID from, VertexID to)
         requires (!multigraph && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::remove_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::remove_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -990,7 +990,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::remove_edge(from, to): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1009,7 +1009,7 @@ public:
     bool remove_edge(EdgeID e)
         requires (multigraph && edges_mutable)
     {
-        libproject_assert(valid_edge(e),
+        libpartite_assert(valid_edge(e),
                           "PropertyGraph::remove_edge(e): "
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
@@ -1024,7 +1024,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::remove_edge(e): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1043,12 +1043,12 @@ public:
     bool erase_edge(VertexID from, VertexID to)
         requires (!multigraph && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::erase_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::erase_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1060,7 +1060,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::erase_edge(from, to): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1084,7 +1084,7 @@ public:
     bool erase_edge(EdgeID e)
         requires (multigraph && edges_mutable)
     {
-        libproject_assert(valid_edge(e),
+        libpartite_assert(valid_edge(e),
                           "PropertyGraph::erase_edge(e): "
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
@@ -1099,7 +1099,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::erase_edge(e): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1125,12 +1125,12 @@ public:
     bool extract_edge(VertexID from, VertexID to, EdgeData & out)
         requires (!multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::extract_edge(from, to, out): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::extract_edge(from, to, out): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1142,7 +1142,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::extract_edge(from, to, out): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1165,7 +1165,7 @@ public:
     bool extract_edge(EdgeID e, EdgeData & out)
         requires (multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_edge(e),
+        libpartite_assert(valid_edge(e),
                           "PropertyGraph::extract_edge(e, out): "
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
@@ -1180,7 +1180,7 @@ public:
             return false;
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::extract_edge(e, out): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1201,12 +1201,12 @@ public:
     std::optional<EdgeData> extract_edge(VertexID from, VertexID to)
         requires (!multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::extract_edge(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::extract_edge(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1218,7 +1218,7 @@ public:
             return {};
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::extract_edge(from, to): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1239,7 +1239,7 @@ public:
     std::optional<EdgeData> extract_edge(EdgeID e)
         requires (multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_edge(e),
+        libpartite_assert(valid_edge(e),
                           "PropertyGraph::extract_edge(e): "
                           "invalid EdgeID; e = "
                           + std::to_string(e.value));
@@ -1254,7 +1254,7 @@ public:
             return {};
         }
 
-        libproject_assert(valid_edge(res),
+        libpartite_assert(valid_edge(res),
                           "PropertyGraph::extract_edge(e): "
                           "internal library error: representation "
                           "returned an invalid EdgeID; "
@@ -1275,12 +1275,12 @@ public:
     void remove_edges(VertexID from, VertexID to)
         requires (multigraph && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::remove_edges(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::remove_edges(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1308,13 +1308,13 @@ public:
             {
                 EdgeID res = representation_.remove_edge(from, to, e);
 
-                libproject_assert(valid_edge(res),
+                libpartite_assert(valid_edge(res),
                                   "PropertyGraph::remove_edges(e): "
                                   "internal library error: representation "
                                   "returned an invalid EdgeID; "
                                   "edge_id = " + std::to_string(res.value));
 
-                libproject_assert(e == res,
+                libpartite_assert(e == res,
                                   "PropertyGraph::remove_edges(e): "
                                   "internal library error: representation "
                                   "returned a different EdgeID; "
@@ -1339,12 +1339,12 @@ public:
     void erase_edges(VertexID from, VertexID to)
         requires (multigraph && edges_mutable)
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::remove_edges(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::remove_edges(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1372,13 +1372,13 @@ public:
             {
                 EdgeID res = representation_.remove_edge(from, to, e);
 
-                libproject_assert(valid_edge(res),
+                libpartite_assert(valid_edge(res),
                                   "PropertyGraph::remove_edges(e): "
                                   "internal library error: representation "
                                   "returned an invalid EdgeID; "
                                   "edge_id = " + std::to_string(res.value));
 
-                libproject_assert(e == res,
+                libpartite_assert(e == res,
                                   "PropertyGraph::remove_edges(e): "
                                   "internal library error: representation "
                                   "returned a different EdgeID; "
@@ -1455,7 +1455,7 @@ public:
     bool remove_edge(EdgeID e_id)
         requires (!multigraph && edges_mutable)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::remove_edge(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -1466,7 +1466,7 @@ public:
     bool erase_edge(EdgeID e_id)
         requires (!multigraph && edges_mutable)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::erase_edge(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -1478,7 +1478,7 @@ public:
     bool extract_edge(EdgeID e_id, EdgeData & out)
         requires (!multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge(e_id, out): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -1489,7 +1489,7 @@ public:
     std::optional<EdgeData> extract_edge(EdgeID e_id)
         requires (!multigraph && has_edge_data && edges_mutable)
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::extract_edge(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -1575,7 +1575,7 @@ public:
     void remove_vertex(VertexID v)
         requires vertices_mutable
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::remove_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1593,7 +1593,7 @@ public:
     void extract_vertex(VertexID v, VertexData & out)
         requires (vertices_mutable && has_vertex_data)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::extract_vertex(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1640,12 +1640,12 @@ public:
         noexcept(noexcept(representation_.edge_count(from, to)))
         requires EdgeCountable<Representation>
     {
-        libproject_assert(valid_vertex(from),
+        libpartite_assert(valid_vertex(from),
                           "PropertyGraph::edge_count(from, to): "
                           "invalid VertexID; from = "
                           + std::to_string(from.value));
 
-        libproject_assert(valid_vertex(to),
+        libpartite_assert(valid_vertex(to),
                           "PropertyGraph::edge_count(from, to): "
                           "invalid VertexID; to = "
                           + std::to_string(to.value));
@@ -1657,7 +1657,7 @@ public:
         noexcept(noexcept(representation_.degree(v)))
         requires DegreeQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1669,7 +1669,7 @@ public:
         noexcept(noexcept(representation_.in_degree(v)))
         requires (directed) && InDegreeQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::in_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1681,7 +1681,7 @@ public:
         noexcept(noexcept(representation_.out_degree(v)))
         requires (directed) && OutDegreeQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::out_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -1696,7 +1696,7 @@ public:
     EdgeView edge_view(EdgeID e_id) const
         noexcept(noexcept(EdgeView{source(e_id), target(e_id), e_id}))
     {
-        libproject_assert(valid_edge(e_id),
+        libpartite_assert(valid_edge(e_id),
                           "PropertyGraph::edge_view(e_id): "
                           "invalid EdgeID; e_id = "
                           + std::to_string(e_id.value));
@@ -1769,7 +1769,7 @@ public:
         noexcept(noexcept(representation_.has_self_loop(v)))
         requires SelfLoopQueryable<Representation>
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "PropertyGraph::has_self_loop(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -2143,7 +2143,7 @@ private:
         auto res = add_edge_impl<EdgeInsertPolicy::PushBack>(
                         from, to, std::forward<Args>(args)...);
 
-        libproject_assert(res.second == true,
+        libpartite_assert(res.second == true,
                           "PropertyGraph::push_back_edge(from, to): "
                           "internal library error: operation failed; "
                           "from = "
@@ -2215,7 +2215,7 @@ private:
         {
             if constexpr (has_edge_data)
             {
-                libproject_assert(from.size() == to.size(),
+                libpartite_assert(from.size() == to.size(),
                                   "PropertyGraph::EdgeArrays::size(): "
                                   "internal library error: from and to arrays "
                                   "differ in size; from.size() = "
@@ -2223,7 +2223,7 @@ private:
                                   + " to.size() = "
                                   + std::to_string(to.size()));
 
-                libproject_assert(data.size() == from.size(),
+                libpartite_assert(data.size() == from.size(),
                                   "PropertyGraph::EdgeArrays::size(): "
                                   "internal library error: dat and from arrays "
                                   "differ in size; data.size() = "
@@ -2235,7 +2235,7 @@ private:
             }
             else
             {
-                libproject_assert(from.size() == to.size(),
+                libpartite_assert(from.size() == to.size(),
                                   "PropertyGraph::EdgeArrays::size(): "
                                   "internal library error: from and to arrays "
                                   "differ in size; from.size() = "
@@ -2250,7 +2250,7 @@ private:
         // If an edge was deleted, edges_.from will be the empty vertex.
         bool alive(EdgeID e_id) const noexcept
         {
-            libproject_assert(e_id.value < from.size(),
+            libpartite_assert(e_id.value < from.size(),
                               "PropertyGraph::EdgeArrays::alive(e_id): "
                               "internal library error: out of bounds access "
                               "in from array; from.size() = "
@@ -2386,7 +2386,7 @@ private:
         {
             if constexpr (has_vertex_data)
             {
-                libproject_assert(data_.size() > 0,
+                libpartite_assert(data_.size() > 0,
                                   "PropertyGraph::VertexStorage::pop_back(): "
                                   "internal library error: "
                                   "data_ vector is empty");
@@ -2395,7 +2395,7 @@ private:
             }
             else
             {
-                libproject_assert(count_ - 1 > count_,
+                libpartite_assert(count_ - 1 > count_,
                                   "PropertyGraph::VertexStorage::pop_back(): "
                                   "internal library error: count_ underflowed");
                 count_--;
@@ -2403,7 +2403,7 @@ private:
 
             if constexpr (vertices_mutable)
             {
-                libproject_assert(alive_vertices_.size() > 0,
+                libpartite_assert(alive_vertices_.size() > 0,
                                   "PropertyGraph::VertexStorage::pop_back(): "
                                   "internal library error: "
                                   "alive_vertices_ vector is empty");
@@ -2451,7 +2451,7 @@ private:
         VertexData & operator[](size_t i) noexcept
             requires (has_vertex_data)
         {
-            libproject_assert(i < data_.size(),
+            libpartite_assert(i < data_.size(),
                               "PropertyGraph::VertexStorage::operator[] "
                               "internal library error: out of bounds access; "
                               "data_.size() = " + std::to_string(data_.size())
@@ -2463,7 +2463,7 @@ private:
         const VertexData & operator[](size_t i) const noexcept
             requires (has_vertex_data)
         {
-            libproject_assert(i < data_.size(),
+            libpartite_assert(i < data_.size(),
                               "PropertyGraph::VertexStorage::operator[] "
                               "internal library error: out of bounds access; "
                               "data_.size() = " + std::to_string(data_.size())
@@ -2475,7 +2475,7 @@ private:
         bool alive(VertexID v) const noexcept
             requires (vertices_mutable)
         {
-            libproject_assert(v.value < alive_vertices_.size(),
+            libpartite_assert(v.value < alive_vertices_.size(),
                               "PropertyGraph::VertexStorage::alive(v) "
                               "internal library error: out of bounds access; "
                               "alive_vertices_.size() = "
@@ -2488,7 +2488,7 @@ private:
         void set_alive(VertexID v) noexcept
             requires (vertices_mutable)
         {
-            libproject_assert(v.value < alive_vertices_.size(),
+            libpartite_assert(v.value < alive_vertices_.size(),
                               "PropertyGraph::VertexStorage::set_alive(v) "
                               "internal library error: out of bounds access; "
                               "alive_vertices_.size() = "
@@ -2501,7 +2501,7 @@ private:
         void set_dead(VertexID v) noexcept
             requires (vertices_mutable)
         {
-            libproject_assert(v.value < alive_vertices_.size(),
+            libpartite_assert(v.value < alive_vertices_.size(),
                               "PropertyGraph::VertexStorage::set_dead(v) "
                               "internal library error: out of bounds access; "
                               "alive_vertices_.size() = "

@@ -2,6 +2,8 @@
 
 ## Assumptions
 
+TODO: review this now that the class is multigraph
+
 The AdjacencyList class is designed assuming the graph will be sparse, and mutations will occur. Why?
 
 If the graph will be dense, it makes more sense for the user to use the AdjacencyMatrix class instead, this is what an adjacency matrix is designed for.

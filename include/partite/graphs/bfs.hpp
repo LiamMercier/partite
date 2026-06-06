@@ -1,10 +1,10 @@
 #pragma once
 
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/graph-concepts.hpp>
-#include <libproject/graphs/search-visitor.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-concepts.hpp>
+#include <partite/graphs/search-visitor.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     // Optional struct for reusing memory across BFS calls.
     //
@@ -61,6 +61,8 @@ namespace libproject::graphs
     //
     // BFS function bodies.
     //
+
+    // TODO <safety>: correctness asserts
 
     // BFS for standard graphs.
     template <IncidenceGraph Graph,

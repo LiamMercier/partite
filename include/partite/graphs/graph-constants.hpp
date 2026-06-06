@@ -9,7 +9,7 @@
 #define GRAPH_EDGE_ID_TYPE uint32_t
 #endif
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     struct VertexID;
     struct EdgeID;

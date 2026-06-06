@@ -5,10 +5,10 @@
 #include <ranges>
 #include <cstddef>
 
-#include <libproject/internal/libproject-assert.hpp>
-#include <libproject/graphs/graph-constants.hpp>
+#include <partite/internal/libpartite-assert.hpp>
+#include <partite/graphs/graph-constants.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
 
 
@@ -24,7 +24,7 @@ public:
     AdjacencyMatrix(size_t num_vertices)
     :vertex_count_(num_vertices)
     {
-        libproject_assert(num_vertices > 0,
+        libpartite_assert(num_vertices > 0,
                           "AdjacencyMatrix::AdjacencyMatrix(num_vertices): "
                           "invalid matrix size; num_vertices = "
                           + std::to_string(num_vertices));
@@ -59,7 +59,7 @@ public:
 
     decltype(auto) neighbors(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -83,7 +83,7 @@ public:
     decltype(auto) in_neighbors(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::in_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -105,7 +105,7 @@ public:
     decltype(auto) out_neighbors(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::out_neighbors(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -130,7 +130,7 @@ public:
 
     decltype(auto) incident_edges(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::incident_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -157,7 +157,7 @@ public:
     decltype(auto) in_edges(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::in_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -182,7 +182,7 @@ public:
     decltype(auto) out_edges(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::out_edges(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -209,7 +209,7 @@ public:
 
     decltype(auto) incident_edge_ids(VertexID v) const
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::incident_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -255,7 +255,7 @@ public:
     decltype(auto) in_edge_ids(VertexID v) const
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::in_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -279,7 +279,7 @@ public:
     decltype(auto) out_edge_ids(VertexID v) const
             requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::out_edge_ids(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -308,7 +308,7 @@ public:
     {
         size_t index = compute_index(from, to);
 
-        libproject_assert(index < adj_.size(),
+        libpartite_assert(index < adj_.size(),
                           "AdjacencyMatrix::find_edge(from, to): "
                           "out of bounds access; index = "
                           + std::to_string(index)
@@ -328,7 +328,7 @@ public:
     {
         size_t index = compute_index(from, to);
 
-        libproject_assert(index < adj_.size(),
+        libpartite_assert(index < adj_.size(),
                           "AdjacencyMatrix::has_edge(from, to): "
                           "out of bounds access; index = "
                           + std::to_string(index)
@@ -355,7 +355,7 @@ public:
     {
         size_t index = compute_index(from, to);
 
-        libproject_assert(index < adj_.size(),
+        libpartite_assert(index < adj_.size(),
                           "AdjacencyMatrix::add_edge(from, to, id): "
                           "out of bounds access; index = "
                           + std::to_string(index)
@@ -373,14 +373,14 @@ public:
 
         if constexpr (!directed)
         {
-            libproject_assert(from.value < deg_.size(),
+            libpartite_assert(from.value < deg_.size(),
                               "AdjacencyMatrix::add_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " deg_.size() = "
                               + std::to_string(deg_.size()));
 
-            libproject_assert(to.value < deg_.size(),
+            libpartite_assert(to.value < deg_.size(),
                               "AdjacencyMatrix::add_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
@@ -392,14 +392,14 @@ public:
         }
         else
         {
-            libproject_assert(from.value < out_deg_.size(),
+            libpartite_assert(from.value < out_deg_.size(),
                               "AdjacencyMatrix::add_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " out_deg_.size() = "
                               + std::to_string(out_deg_.size()));
 
-            libproject_assert(to.value < in_deg_.size(),
+            libpartite_assert(to.value < in_deg_.size(),
                               "AdjacencyMatrix::add_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
@@ -423,7 +423,7 @@ public:
     {
         size_t index = compute_index(from, to);
 
-        libproject_assert(index < adj_.size(),
+        libpartite_assert(index < adj_.size(),
                           "AdjacencyMatrix::remove_edge(from, to): "
                           "out of bounds access; index = "
                           + std::to_string(index)
@@ -443,14 +443,14 @@ public:
 
         if constexpr (!directed)
         {
-            libproject_assert(from.value < deg_.size(),
+            libpartite_assert(from.value < deg_.size(),
                               "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " deg_.size() = "
                               + std::to_string(deg_.size()));
 
-            libproject_assert(to.value < deg_.size(),
+            libpartite_assert(to.value < deg_.size(),
                               "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
@@ -462,14 +462,14 @@ public:
         }
         else
         {
-            libproject_assert(from.value < out_deg_.size(),
+            libpartite_assert(from.value < out_deg_.size(),
                               "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; from = "
                               + std::to_string(from.value)
                               + " out_deg_.size() = "
                               + std::to_string(out_deg_.size()));
 
-            libproject_assert(to.value < in_deg_.size(),
+            libpartite_assert(to.value < in_deg_.size(),
                               "AdjacencyMatrix::remove_edge(from, to, id): "
                               "out of bounds access; to = "
                               + std::to_string(to.value)
@@ -501,7 +501,7 @@ public:
         // Set degree to zero for all vertices.
         if constexpr (!directed)
         {
-            libproject_assert(deg_.size() == vertex_count_,
+            libpartite_assert(deg_.size() == vertex_count_,
                               "AdjacencyMatrix::clear(): degree list size "
                               "does not equal vertex count; "
                               "vertex_count_ = "
@@ -516,7 +516,7 @@ public:
         }
         else
         {
-            libproject_assert(in_deg_.size() == vertex_count_,
+            libpartite_assert(in_deg_.size() == vertex_count_,
                               "AdjacencyMatrix::clear(): degree list size "
                               "does not equal vertex count; "
                               "vertex_count_ = "
@@ -524,7 +524,7 @@ public:
                               + ", in_deg_.size() = "
                               + std::to_string(in_deg_.size()));
 
-            libproject_assert(out_deg_.size() == vertex_count_,
+            libpartite_assert(out_deg_.size() == vertex_count_,
                               "AdjacencyMatrix::clear(): degree list size "
                               "does not equal vertex count; "
                               "vertex_count_ = "
@@ -551,7 +551,7 @@ public:
 
     size_t degree(VertexID v) const noexcept
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -569,7 +569,7 @@ public:
     size_t in_degree(VertexID v) const noexcept
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::in_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -580,7 +580,7 @@ public:
     size_t out_degree(VertexID v) const noexcept
         requires (directed)
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::out_degree(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));
@@ -625,7 +625,7 @@ public:
 
     bool has_self_loop(VertexID v) const noexcept
     {
-        libproject_assert(valid_vertex(v),
+        libpartite_assert(valid_vertex(v),
                           "AdjacencyMatrix::has_self_loop(v): "
                           "invalid VertexID; v = "
                           + std::to_string(v.value));

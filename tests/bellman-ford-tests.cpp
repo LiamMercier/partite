@@ -2,9 +2,9 @@
 
 #include "test-utils.hpp"
 #include "bellman-ford-helpers.hpp"
-#include <libproject/graphs/bellman-ford.hpp>
+#include <partite/graphs/bellman-ford.hpp>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 template <typename WeightFunction, typename Numeric>
 struct TestLoggingVisitor : NoOpBellmanFordVisitor

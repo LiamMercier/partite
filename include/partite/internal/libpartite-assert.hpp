@@ -4,7 +4,7 @@
 #include <cstdlib>
 
 template <typename T>
-inline void libproject_assert(bool cond, const T & msg)
+inline void libpartite_assert(bool cond, const T & msg)
 {
 #ifndef NDEBUG
     if (!cond)

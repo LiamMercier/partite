@@ -1,6 +1,6 @@
-# libproject
+# Partite
 
-A work in progress mathematics library.
+Partite is a work in progress mathematics library.
 
 ### Backlog
 
@@ -17,6 +17,6 @@ This is mostly a personal consideration list for me to track different features 
 - Implicit graphs
 - Consider graph algorithms with GPU dispatch (long term idea to look into)
 
-#### Groups
+#### Groups & Abstract Algebra
 
-- Investigate different schemes for group representation
+- Investigate different schemes for group / ring representation

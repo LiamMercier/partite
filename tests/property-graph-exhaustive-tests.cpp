@@ -1,10 +1,10 @@
 #include <gtest/gtest.h>
 
 #include "test-utils.hpp"
-#include <libproject/graphs/graph-concepts.hpp>
-#include <libproject/graphs/property-graph.hpp>
-#include <libproject/graphs/adjacency-matrix.hpp>
-#include <libproject/graphs/adjacency-list.hpp>
+#include <partite/graphs/graph-concepts.hpp>
+#include <partite/graphs/property-graph.hpp>
+#include <partite/graphs/adjacency-matrix.hpp>
+#include <partite/graphs/adjacency-list.hpp>
 
 using SubtestResultPair = std::pair<std::string, bool>;
 
@@ -1776,7 +1776,7 @@ SubtestResultPair
     return {std::string(), true};
 }
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 // Test suite for each permutation of a graph of 4 vertices.
 template <typename Config>

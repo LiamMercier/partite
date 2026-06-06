@@ -1,11 +1,11 @@
 #pragma once
 
-#include <libproject/internal/libproject-assert.hpp>
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/graph-concepts.hpp>
-#include <libproject/graphs/control-actions.hpp>
+#include <partite/internal/libpartite-assert.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-concepts.hpp>
+#include <partite/graphs/control-actions.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     template <typename PQ, typename Numeric>
     concept DijkstraCompatiblePQ = requires (PQ & pq,
@@ -179,7 +179,7 @@ namespace libproject::graphs
         {
             size_t n = size();
 
-            libproject_assert(n > 0,
+            libpartite_assert(n > 0,
                               "DijkstraDefaultMinPQ::extract_min(): "
                               "internal library error: tried to extract from "
                               "an empty heap");
@@ -223,7 +223,7 @@ namespace libproject::graphs
             // Theoretically impossible, dijkstra will never try
             // to decrease key on a node that was extracted since
             // its SSSP was already found.
-            libproject_assert(i != OUTSIDE_HEAP,
+            libpartite_assert(i != OUTSIDE_HEAP,
                               "DijkstraDefaultMinPQ::decrease_key(v, dist): "
                               "tried to decrease key for vertex "
                               "outside the heap; v = "
@@ -233,7 +233,7 @@ namespace libproject::graphs
                               "(2) workspace reused without epoch increment "
                               "(stale state).");
 
-            libproject_assert(i < size(),
+            libpartite_assert(i < size(),
                               "DijkstraDefaultMinPQ::decrease_key(v, dist): "
                               "internal library error: tried to access heap "
                               "index out of bounds; v = "
@@ -243,7 +243,7 @@ namespace libproject::graphs
                               + ", size = "
                               + std::to_string(size()));
 
-            libproject_assert(heap_distances[i] > dist,
+            libpartite_assert(heap_distances[i] > dist,
                               "DijkstraDefaultMinPQ::decrease_key(v, dist): "
                               "internal library error: tried to decrease "
                               "key to a larger key; previous key = "
@@ -508,7 +508,7 @@ namespace libproject::graphs
             }
         }
 
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "dijkstra(graph, source, w, workspace, visitor): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
@@ -642,7 +642,7 @@ namespace libproject::graphs
                     }
                 }
 
-                libproject_assert(w_e >= 0,
+                libpartite_assert(w_e >= 0,
                                   "dijkstra(graph, source, w, "
                                   "workspace, visitor): detected "
                                   "negative edge weight; EdgeID = "
@@ -652,7 +652,7 @@ namespace libproject::graphs
                                   + ") = "
                                   + std::to_string(w_e));
 
-                libproject_assert(
+                libpartite_assert(
                     !(d_min >= Workspace::INF - w_e),
                     "dijkstra(graph, source, w, workspace, visitor): "
                     "relaxation overflow detected; from = "
@@ -738,7 +738,7 @@ namespace libproject::graphs
                                std::invoke_result_t<WeightFunction, EdgeID>
                            >;
 
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "dijkstra(graph, source, w, visitor): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
@@ -800,14 +800,14 @@ namespace libproject::graphs
         requires (DijkstraWeightFunction
                   <WeightFunction, typename Workspace::numeric_type>)
     {
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "dijkstra(graph, source, target, w, workspace): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
                           + ", graph.vertex_count() = "
                           + std::to_string(graph.vertex_count()));
 
-        libproject_assert(target < graph.vertex_count(),
+        libpartite_assert(target < graph.vertex_count(),
                           "dijkstra(graph, source, target, w, workspace): "
                           "target vertex is invalid; target = "
                           + std::to_string(source.value)
@@ -839,14 +839,14 @@ namespace libproject::graphs
                                std::invoke_result_t<WeightFunction, EdgeID>
                            >;
 
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "dijkstra(graph, source, target, w): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
                           + ", graph.vertex_count() = "
                           + std::to_string(graph.vertex_count()));
 
-        libproject_assert(target < graph.vertex_count(),
+        libpartite_assert(target < graph.vertex_count(),
                           "dijkstra(graph, source, target, w): "
                           "target vertex is invalid; target = "
                           + std::to_string(source.value)

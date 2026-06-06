@@ -3,12 +3,12 @@
 #include <tuple>
 #include <unordered_set>
 
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/property-graph.hpp>
-#include <libproject/graphs/adjacency-matrix.hpp>
-#include <libproject/graphs/adjacency-list.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/property-graph.hpp>
+#include <partite/graphs/adjacency-matrix.hpp>
+#include <partite/graphs/adjacency-list.hpp>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 template <typename GraphT, typename EdgeDataT, typename VertexDataT>
 struct GraphConfig

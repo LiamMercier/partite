@@ -2,9 +2,9 @@
 
 #include <ranges>
 
-#include <libproject/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-constants.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     template <typename Graph>
     concept DirectedGraph = Graph::directed;

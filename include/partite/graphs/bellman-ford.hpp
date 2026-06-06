@@ -1,11 +1,11 @@
 #pragma once
 
-#include <libproject/internal/libproject-assert.hpp>
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/graph-concepts.hpp>
-#include <libproject/graphs/control-actions.hpp>
+#include <partite/internal/libpartite-assert.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-concepts.hpp>
+#include <partite/graphs/control-actions.hpp>
 
-namespace libproject::graphs
+namespace partite::graphs
 {
     // Optional struct for a default usable workspace.
     //
@@ -248,7 +248,7 @@ namespace libproject::graphs
             }
         }
 
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "bellman_ford(graph, source, w, workspace, visitor): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)
@@ -374,7 +374,7 @@ namespace libproject::graphs
                 }
 
                 // Check for overflow and underflow.
-                libproject_assert(
+                libpartite_assert(
                     !(w_e > 0 && d_from >= Workspace::INF - w_e),
                     "bellman_ford(graph, source, w, workspace, visitor): "
                     "relaxation overflow detected; from = "
@@ -388,7 +388,7 @@ namespace libproject::graphs
                     + ", w(e) = "
                     + std::to_string(w_e));
 
-                libproject_assert(
+                libpartite_assert(
                     !(w_e < 0 && d_from < NumericLowest - w_e),
                     "bellman_ford(graph, source, w, workspace, visitor): "
                     "relaxation underflow detected; from = "
@@ -478,7 +478,7 @@ namespace libproject::graphs
                                std::invoke_result_t<WeightFunction, EdgeID>
                            >;
 
-        libproject_assert(source < graph.vertex_count(),
+        libpartite_assert(source < graph.vertex_count(),
                           "bellman_ford(graph, source, w, visitor): "
                           "source vertex is invalid; source = "
                           + std::to_string(source.value)

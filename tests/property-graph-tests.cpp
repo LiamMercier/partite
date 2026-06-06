@@ -1,11 +1,11 @@
 #include <gtest/gtest.h>
 
 #include "test-utils.hpp"
-#include <libproject/graphs/property-graph.hpp>
-#include <libproject/graphs/adjacency-matrix.hpp>
-#include <libproject/graphs/adjacency-list.hpp>
+#include <partite/graphs/property-graph.hpp>
+#include <partite/graphs/adjacency-matrix.hpp>
+#include <partite/graphs/adjacency-list.hpp>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 //
 // Typed test for different graph types on neighbor functions.

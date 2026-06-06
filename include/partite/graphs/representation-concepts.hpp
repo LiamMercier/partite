@@ -2,11 +2,11 @@
 
 #include <ranges>
 
-#include <libproject/graphs/graph-constants.hpp>
-#include <libproject/graphs/graph-inputs.hpp>
+#include <partite/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-inputs.hpp>
 
 // Definition of a graph topology
-namespace libproject::graphs
+namespace partite::graphs
 {
 
 template <typename T>

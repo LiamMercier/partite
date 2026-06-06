@@ -3,9 +3,9 @@
 
 #include <gtest/gtest.h>
 
-#include <libproject/graphs/graph-constants.hpp>
+#include <partite/graphs/graph-constants.hpp>
 
-using namespace libproject::graphs;
+using namespace partite::graphs;
 
 TEST(GraphConstants, VertexIDConstruction)
 {
